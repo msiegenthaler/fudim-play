@@ -1,0 +1,21 @@
+@(dims: Iterable[Dimension], addForm: Form[String])
+
+@import helper._
+
+@main("Dimensions") {
+
+	<h2>Dimensions</h2>
+	<ul>
+	  @dims.map { dimension =>
+      <li>
+      	@dimension.name
+      </li>
+    }
+	</ul>
+
+  @form(routes.Dimensions.add) {
+      @inputText(addForm("name"))
+
+      <input type="submit" value="Create">
+  }
+}

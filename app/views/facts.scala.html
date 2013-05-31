@@ -1,0 +1,20 @@
+@(facts: Iterable[Fact], addForm: Form[String])
+
+@import helper._
+
+@main("Facts") {
+	<ul>
+	  @facts.map { fact =>
+      <li>
+        <a href="@routes.Facts.view(fact.name)">@fact.name</a>
+        (over <ul>@fact.dimensions.map { d => <li>d.name</li> }</ul>)
+      </li>
+    }
+	</ul>
+
+  @form(routes.Facts.add) {
+      @inputText(addForm("name"))
+
+      <input type="submit" value="Create">
+  }
+}

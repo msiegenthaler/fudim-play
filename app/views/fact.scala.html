@@ -1,0 +1,14 @@
+@(fact: Fact)
+
+@import helper._
+
+@main("Fact "+fact.name) {
+  <h2>Dimensions</h2>
+	<ul>
+	  @fact.dimensions.map { dim =>
+      <li>
+        <a href="@routes.Dimensions.get(dim.name)">@dim.name</a>
+      </li>
+    }
+	</ul>
+}

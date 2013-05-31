@@ -22,8 +22,9 @@ object Facts extends Controller {
       })
   }
 
-  def view(name: String) = TODO
+  def view(name: String) = Action {
+    Fact.find(name).map(fact => Ok(views.html.fact(fact))).getOrElse(NotFound)
+  }
 
-  
   val addForm = Form("name" -> nonEmptyText)
 }

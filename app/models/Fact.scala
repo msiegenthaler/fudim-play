@@ -13,6 +13,13 @@ object Fact {
       as(get[String]("name") ~ get[Option[String]]("dimension") *)
     vs.groupBy(_._1).map(v ⇒ Fact(v._1, v._2.map(_._2).flatten.map(Dimension.apply)))
   }
+  def find(name: String): Option[Fact] = DB.withConnection { implicit c ⇒
+    val vs = SQL("select name, dimension from fact f left outer join fact_dimension fd on f.id = fd.fact where name = {name}").
+      on("name" -> name).
+      as(get[String]("name") ~ get[Option[String]]("dimension") *)
+    if (vs.length == 0) None
+    else Some(Fact(name, vs.map(_._2).flatten.map(Dimension.apply)))
+  }
 
   def save(fact: Fact) = DB.withConnection { implicit c ⇒
     val id = SQL("select id from fact where name={name}").on("name" -> fact.name).as(scalar[Long].singleOpt) match {

@@ -5,8 +5,10 @@
 # Home page
 GET     /                           controllers.Application.index
 
-GET 		/dimension									controllers.Dimensions.index
-POST		/dimension									controllers.Dimensions.add
+GET     /dimension									controllers.Dimensions.index
+POST    /dimension									controllers.Dimensions.add
+GET     /dimension/:name						controllers.Dimensions.get(name: String)
+POST    /dimension/:name						controllers.Dimensions.addValue(name: String)
 
 
 # Map static resources from the /public folder to the /assets URL path

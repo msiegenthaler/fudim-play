@@ -1,0 +1,22 @@
+@(dimension: Dimension, values: Traversable[String], addForm: Form[String])
+
+@import helper._
+
+@main("Dimension "+dimension.name) {
+	<h2>Values</h2>
+	<ul>
+	  @values.map { v =>
+      <li>
+      	@v
+      </li>
+    }
+	</ul>
+
+  @form(routes.Dimensions.addValue(dimension.name)) {
+      @inputText(addForm("value"))
+
+      <input type="submit" value="Add">
+  }
+  
+  <a href="@routes.Dimensions.index">Dimensions</a>
+}

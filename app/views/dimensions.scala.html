@@ -3,12 +3,10 @@
 @import helper._
 
 @main("Dimensions") {
-
-	<h2>Dimensions</h2>
 	<ul>
 	  @dims.map { dimension =>
       <li>
-      	@dimension.name
+        <a href="@routes.Dimensions.get(dimension.name)">@dimension.name</a>
       </li>
     }
 	</ul>

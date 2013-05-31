@@ -16,7 +16,7 @@ object Facts extends Controller {
     addForm.bindFromRequest.fold(
       errors ⇒ BadRequest(views.html.facts(Fact.all, errors)),
       name ⇒ {
-        val fact = Fact(name, Nil)
+        val fact = Fact(name, Set.empty)
         Fact.save(fact)
         Redirect(routes.Facts.view(name))
       })

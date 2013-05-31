@@ -5,20 +5,20 @@ import anorm.SqlParser._
 import play.api.db._
 import play.api.Play.current
 
-case class Fact(name: String, dimensions: List[Dimension])
+case class Fact(name: String, dimensions: Set[Dimension])
 
 object Fact {
   def all: Iterable[Fact] = DB.withConnection { implicit c ⇒
     val vs = SQL("select name, dimension from fact f left outer join fact_dimension fd on f.id = fd.fact").
       as(get[String]("name") ~ get[Option[String]]("dimension") *)
-    vs.groupBy(_._1).map(v ⇒ Fact(v._1, v._2.map(_._2).flatten.map(Dimension.apply)))
+    vs.groupBy(_._1).map(v ⇒ Fact(v._1, v._2.map(_._2).flatten.map(Dimension.apply).toSet))
   }
   def find(name: String): Option[Fact] = DB.withConnection { implicit c ⇒
     val vs = SQL("select name, dimension from fact f left outer join fact_dimension fd on f.id = fd.fact where name = {name}").
       on("name" -> name).
       as(get[String]("name") ~ get[Option[String]]("dimension") *)
     if (vs.length == 0) None
-    else Some(Fact(name, vs.map(_._2).flatten.map(Dimension.apply)))
+    else Some(Fact(name, vs.map(_._2).flatten.map(Dimension.apply).toSet))
   }
 
   def save(fact: Fact) = DB.withConnection { implicit c ⇒

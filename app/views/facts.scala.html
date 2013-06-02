@@ -7,7 +7,7 @@
 	  @facts.map { fact =>
       <li>
         <a href="@routes.Facts.view(fact.name)">@fact.name</a>
-        (over <ul>@fact.dimensions.map { d => <li>d.name</li> }</ul>)
+        (over <ul>@fact.dimensions.map { d => <li>@d.name</li> }</ul>)
       </li>
     }
 	</ul>

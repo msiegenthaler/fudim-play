@@ -7,11 +7,17 @@
 	  @facts.map { fact =>
       <li>
         <a href="@routes.Facts.view(fact.name)">@fact.name</a>
-        (over <ul>@fact.dimensions.map { d => <li>@d.name</li> }</ul>)
+        @if(fact.dimensions.isEmpty) {
+          (dimensionless)
+        } else {
+          over:
+            <ul class="inline">@fact.dimensions.map { d => <li>@d.name</li> }</ul>
+        }
       </li>
     }
 	</ul>
 
+  <h2>Add Fact</h2>
   @form(routes.Facts.add) {
       @inputText(addForm("name"))
 

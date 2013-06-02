@@ -27,4 +27,13 @@
     }
 	</ul>
 	}
+
+	<h2>Tables</h2>
+	<ul>
+    @fact.dimensions.flatMap(d1 => fact.dimensions.map((d1, _))).filterNot(v => v._1 == v._2).map { v =>
+      <li>
+        @v._1.name / @v._2.name
+      </li>
+    }
+	</ul>
 }

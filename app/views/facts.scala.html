@@ -1,20 +1,26 @@
 @(facts: Iterable[Fact], addForm: Form[String])
 
 @import helper._
+@implicitField = @{ FieldConstructor(inlineElementConstructor.f) }
 
 @main("Facts") {
 	<ul>
 	  @facts.map { fact =>
       <li>
         <a href="@routes.Facts.view(fact.name)">@fact.name</a>
-        (over <ul>@fact.dimensions.map { d => <li>@d.name</li> }</ul>)
+        @if(fact.dimensions.isEmpty) {
+          (dimensionless)
+        } else {
+          over:
+            <ul class="inline">@fact.dimensions.map { d => <li>@d.name</li> }</ul>
+        }
       </li>
     }
 	</ul>
 
-  @form(routes.Facts.add) {
-      @inputText(addForm("name"))
+  @form(routes.Facts.add, 'class -> "form-inline") {
+      @inputText(addForm("name"), 'label -> "Name", 'placeholder -> "Name of Fact")
 
-      <input type="submit" value="Create">
+      <input type="submit" value="Add">
   }
 }

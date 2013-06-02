@@ -1,9 +1,9 @@
 @(dimension: Dimension, values: Traversable[String], addForm: Form[String])
 
 @import helper._
+@implicitField = @{ FieldConstructor(inlineElementConstructor.f) }
 
 @main("Dimension "+dimension.name) {
-	<h2>Values</h2>
 	<ul>
 	  @values.map { v =>
       <li>
@@ -12,11 +12,9 @@
     }
 	</ul>
 
-  @form(routes.Dimensions.addValue(dimension.name)) {
-      @inputText(addForm("value"))
+  @form(routes.Dimensions.addValue(dimension.name), 'class -> "form-inline") {
+      @inputText(addForm("value"), 'label -> "Value", 'placeholder -> "New Value")
 
       <input type="submit" value="Add">
   }
-  
-  <a href="@routes.Dimensions.index">Dimensions</a>
 }

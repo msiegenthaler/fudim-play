@@ -1,4 +1,4 @@
-@(fact: Fact)
+@(fact: Fact, dims: Iterable[Dimension])
 
 @import helper._
 
@@ -8,7 +8,23 @@
 	  @fact.dimensions.map { dim =>
       <li>
         <a href="@routes.Dimensions.get(dim.name)">@dim.name</a>
+        @form(routes.Facts.removeDimension(fact.name, dim.name)) {
+          <input type="submit" value="Remove">
+        }
       </li>
     }
 	</ul>
+	
+	@if(!dims.isEmpty) {
+	<h2>Add Dimension</h2>
+	<ul>
+    @dims.map { dim =>
+      <li>
+        @form(routes.Facts.addDimension(fact.name, dim.name)) {
+          @dim.name <input type="submit" value="Add">
+        }
+      </li>
+    }
+	</ul>
+	}
 }

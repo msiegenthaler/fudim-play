@@ -25,12 +25,13 @@ object Fact {
     val id = SQL("select id from fact where name={name}").on("name" -> fact.name).as(scalar[Long].singleOpt) match {
       case Some(id) ⇒
         SQL("update fact set name={name} where id={id}").on("name" -> fact.name, "id" -> id).executeUpdate
+        SQL("delete from fact_dimension where fact={fact}").on("fact" -> id).executeUpdate
         id
       case None ⇒
         SQL("insert into fact(name) values({name})").on("name" -> fact.name).executeInsert().get
     }
     fact.dimensions.foreach { d ⇒
-      SQL("insert into fact_dimension(fact, dimension) values ({fact}, {dim}").on("fact" -> id, "dim" -> d.name).executeUpdate
+      SQL("insert into fact_dimension(fact, dimension) values ({fact}, {dim})").on("fact" -> id, "dim" -> d.name).executeUpdate
     }
   }
 }

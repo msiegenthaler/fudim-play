@@ -13,6 +13,8 @@ POST    /dimension/:name            controllers.Dimensions.addValue(name: String
 GET     /fact                       controllers.Facts.list
 POST    /fact                       controllers.Facts.add
 GET     /fact/:name                 controllers.Facts.view(name: String)
+POST    /fact/:name/dimension/:dim/add     controllers.Facts.addDimension(name: String, dim: String)
+POST    /fact/:name/dimension/:dim/remove  controllers.Facts.removeDimension(name: String, dim: String)
 
 
 # Map static resources from the /public folder to the /assets URL path

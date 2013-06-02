@@ -23,7 +23,24 @@ object Facts extends Controller {
   }
 
   def view(name: String) = Action {
-    Fact.find(name).map(fact => Ok(views.html.fact(fact))).getOrElse(NotFound)
+    Fact.find(name).map { fact ⇒
+      val dims = Dimension.all.filterNot(fact.dimensions.contains)
+      Ok(views.html.fact(fact, dims))
+    }.getOrElse(NotFound)
+  }
+  def addDimension(factName: String, dimensionName: String) = Action {
+    Fact.find(factName).map { fact ⇒
+      val f2 = fact.copy(dimensions = fact.dimensions + Dimension(dimensionName))
+      Fact.save(f2)
+      Redirect(routes.Facts.view(factName))
+    }.getOrElse(NotFound)
+  }
+  def removeDimension(factName: String, dimensionName: String) = Action {
+    Fact.find(factName).map { fact ⇒
+      val f2 = fact.copy(dimensions = fact.dimensions - Dimension(dimensionName))
+      Fact.save(f2)
+      Redirect(routes.Facts.view(factName))
+    }.getOrElse(NotFound)
   }
 
   val addForm = Form("name" -> nonEmptyText)

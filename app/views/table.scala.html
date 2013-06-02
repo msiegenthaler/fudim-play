@@ -1,9 +1,15 @@
-@(fact: Fact, d1: Dimension, d1Values: Iterable[String], d2: Dimension, d2Values: Iterable[String])
+@(fact: Fact, d1: Dimension, d1Values: Iterable[String], d2: Dimension, d2Values: Iterable[String], rest: Point)
 
 @import helper._
 @import helper.twitterBootstrap._
 
 @main("Fact "+fact.name+" ("+d1.name+" / "+d2.name+")") {
+
+  <ul>
+    @rest.on.map { d =>
+      <li>@d.name = @rest.valueOf(d)</li>
+    }
+  </ul>
 
   <table>
     <thead>

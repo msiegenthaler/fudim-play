@@ -11,8 +11,10 @@ object Tables extends Controller {
     val r = for {
       fact ← Fact.find(factName)
       d1 ← fact.dimensions.find(_.name == d1Name)
+      d1Values = Dimension.values(d1)
       d2 ← fact.dimensions.find(_.name == d2Name)
-    } yield Ok(views.html.table(fact, d1, d2))
+      d2Values = Dimension.values(d2)
+    } yield Ok(views.html.table(fact, d1, d1Values, d2, d2Values))
     r.getOrElse(NotFound)
   }
 }

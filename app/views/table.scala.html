@@ -1,8 +1,29 @@
-@(fact: Fact, d1: Dimension, d2: Dimension)
+@(fact: Fact, d1: Dimension, d1Values: Iterable[String], d2: Dimension, d2Values: Iterable[String])
 
 @import helper._
 @import helper.twitterBootstrap._
 
 @main("Fact "+fact.name+" ("+d1.name+" / "+d2.name+")") {
+
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+      @d1Values.map { v =>
+        <th>@v</th>
+      }
+      </tr>
+    </thead>
+    <tbody>
+    @d2Values.map { v =>
+      <tr>
+        <th>@v</th>
+      @d1Values.map { x =>
+        <td></td>
+      }
+      </tr>
+    }
+    </tbody>
+  </table>
 
 }

@@ -10,6 +10,9 @@ class Point private (private val values: Map[Dimension, String]) {
     if (on.contains(v._1)) throw new IllegalArgumentException("Dimension " + v._1 + " already contained in " + this)
     new Point(values + v)
   }
+  def -(v: Dimension): Point = {
+    new Point(values - v)
+  }
 
   def mod(d: Dimension, newValue: String): Point = {
     if (!on.contains(d)) throw new IllegalArgumentException(this.toString + " does not contain dimension " + d)

@@ -1,13 +1,32 @@
-@(fact: Fact, d1: Dimension, d1Values: Iterable[String], d2: Dimension, d2Values: Iterable[String], rest: Point)
+@(fact: Fact, d1: Dimension, d1Values: Iterable[String], d2: Dimension, d2Values: Iterable[String], filter: DimensionsFilter)
 
 @import helper._
 @import helper.twitterBootstrap._
 
 @main("Fact "+fact.name+" ("+d1.name+" / "+d2.name+")") {
 
-  <ul>
-    @rest.on.map { d =>
-      <li>@d.name = @rest.valueOf(d)</li>
+  <ul class="unstyled form-horizontal">
+    @filter.restrictions.map { r =>
+      <li>
+          <div class="control-group">
+            <label class="control-label" for="@r.dimension.name">@r.dimension.name</label>
+            <div class="controls">
+              <div class="btn-group">
+                <button class="btn dropdown-toggle" data-toggle="dropdown">
+                  @r.label
+                  <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu">
+                @filter.availableRestrictionsFor(r.dimension).map { ar =>
+                  <li>
+                    <a href="@routes.Tables.show(fact.name, d1.name, d2.name, filter.change(ar).point)">@ar.label</a>
+                  </li>
+                 }
+                </ul>
+              </div>
+            </div>
+         </div>
+      </li>
     }
   </ul>
 

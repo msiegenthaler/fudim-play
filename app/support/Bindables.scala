@@ -23,6 +23,8 @@ object Bindables {
       value.on.map(d ⇒ key + "." + enc(d.name) + "=" + enc(value.valueOf(d).get)).mkString("&")
     }
 
+    override def javascriptUnbind: String = "window.fudim.point.unbind"
+
     private def enc(s: String) = URLEncoder.encode(s, "UTF-8")
     private def dec(s: String) = URLDecoder.decode(s, "UTF-8")
   }

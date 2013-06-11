@@ -2,6 +2,7 @@
 
 @import helper._
 @import helper.twitterBootstrap._
+@import support.JsHelper._
 
 @main("Fact "+fact.name+" ("+d1.name+" / "+d2.name+")") {
 
@@ -30,29 +31,25 @@
     }
   </ul>
 
-  <table class="table table-striped table-hover table-condensed">
+  <table id="factvalue-table" class="table table-striped table-hover table-condensed" point="@serializePoint(filter.point)" fact="@urlEncode(fact.name)">
     <thead>
       <tr>
         <th></th>
-      @d1Values.map { x =>
-        <th>@x</th>
+      @d1Values.zipWithIndex.map { x =>
+        <th id="x-@x._2" point="@serializePoint(Point(d1, x._1))">@x._1</th>
       }
       </tr>
     </thead>
     <tbody>
-    @d2Values.map { y =>
+    @d2Values.zipWithIndex.map { y =>
       <tr>
-        <th>@y</th>
-      @d1Values.map { x =>
-        <td>
-          @valueAt(x, y).map { v =>
-            @v
-          }
-        </td>
+        <th id="y-@y._2" point="@serializePoint(Point(d2, y._1))">@y._1</th>
+      @d1Values.zipWithIndex.map { x =>
+        <td id="c-@x._2-@y._2">@valueAt(x._1, y._1).getOrElse("")</td>
       }
       </tr>
     }
     </tbody>
   </table>
 
-}
+}(List("table.js"))

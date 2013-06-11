@@ -43,5 +43,21 @@ object Facts extends Controller {
     }.getOrElse(NotFound)
   }
 
+  def get(factName: String, at: Point) = Action {
+    val r = for {
+      fact ← Fact.find(factName)
+      value ← FactValue.get(fact, at)
+    } yield Ok(value)
+    r.getOrElse(NotFound)
+  }
+  def save(factName: String, at: Point) = Action { request ⇒
+    val r = for {
+      fact ← Fact.find(factName)
+      value = request.body.asText.filterNot(_.isEmpty)
+      _ = FactValue.set(fact, at, value)
+    } yield Ok(value.getOrElse(""))
+    r.getOrElse(NotFound)
+  }
+
   val addForm = Form("name" -> nonEmptyText)
 }

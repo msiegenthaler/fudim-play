@@ -16,8 +16,12 @@ GET     /fact/:name                 controllers.Facts.view(name: String)
 POST    /fact/:name/dimension/:dim/add     controllers.Facts.addDimension(name: String, dim: String)
 POST    /fact/:name/dimension/:dim/remove  controllers.Facts.removeDimension(name: String, dim: String)
 
+GET     /fact/:name/value           controllers.Facts.get(name: String, pos: Point)
+PUT     /fact/:name/value           controllers.Facts.save(name: String, pos: Point)
+
 GET     /fact/:name/table/:d1/:d2   controllers.Tables.show(name: String, d1: String, d2: String, filter: Point ?= Point.empty)
 
 
 # Map static resources from the /public folder to the /assets URL path
+GET     /assets/javascripts/routes.js   controllers.Application.javascriptRoutes()
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

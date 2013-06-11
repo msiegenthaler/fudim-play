@@ -13,6 +13,10 @@ object FactValue {
     else idAndValue(fact, at).map(_._2)
   }
 
+  def set(fact: Fact, at: Point, value: Option[String]): Unit = value match {
+    case Some(value) ⇒ set(fact, at, value)
+    case None ⇒ remove(fact, at)
+  }
   def set(fact: Fact, at: Point, value: String): Unit = DB.withConnection { implicit c ⇒
     if (!at.defines(fact.dimensions)) throw new IllegalArgumentException("at not fully defined")
 
@@ -30,13 +34,23 @@ object FactValue {
         }
     }
   }
+  def remove(fact: Fact, at: Point): Boolean = DB.withConnection { implicit c ⇒
+    if (!at.defines(fact.dimensions)) throw new IllegalArgumentException("at not fully defined")
+    idAndValue(fact, at) match {
+      case None ⇒ false //does not exist, so nothing to delete
+      case Some((id, _)) ⇒
+        SQL("delete from factValue where id={id}").on("id" -> id).executeUpdate
+        SQL("delete from factValue_dimension where factValue={id}").on("id" -> id).executeUpdate
+        true
+    }
+  }
 
   private def idAndValue(fact: Fact, at: Point)(implicit c: Connection): Option[(Int, String)] = {
     val sql = "select fv.id as id, fv.value as value from factValue fv inner join fact f on f.id = fv.fact"
     val (psql, pon) = pointSelector("fv", at)
     val mapper = int("id") ~ str("value") map { case a ~ b ⇒ (a, b) }
     val pon2: Map[Any, ParameterValue[_]] = pon + ("fact" -> fact.name)
-    SQL(sql + " " + psql+" where f.name={fact}").on(pon2.toList: _*).as(mapper.singleOpt)
+    SQL(sql + " " + psql + " where f.name={fact}").on(pon2.toList: _*).as(mapper.singleOpt)
   }
 
   private def pointSelector(fv: String, at: Point) = {

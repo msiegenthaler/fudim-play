@@ -1,6 +1,6 @@
 package models
 
-class Point private (private val values: Map[Dimension, String]) {
+class Point private (val values: Map[Dimension, String]) {
   def on = values.keys.toSet
   def defines(ds: Traversable[Dimension]) = ds.filterNot(on.contains).isEmpty
 

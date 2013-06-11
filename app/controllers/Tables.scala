@@ -8,7 +8,7 @@ import models._
 import views.html.defaultpages.notFound
 
 object Tables extends Controller {
-  def show(factName: String, d1Name: String, d2Name: String, fixed: Point = Point.empty) = Action { request ⇒
+  def show(factName: String, d1Name: String, d2Name: String, fixed: Point = Point.empty) = Action {
     val r = for {
       fact ← Fact.find(factName)
       d1 ← fact.dimensions.find(_.name == d1Name)
@@ -17,10 +17,15 @@ object Tables extends Controller {
       d2Values = Dimension.values(d2)
     } yield {
       val filterDims = fact.dimensions - d1 - d2
-      val filter = filterDims.map { d ⇒
+      val filter = DimensionsFilter(filterDims.map { d ⇒
         fixed.valueOf(d).map(DimensionSelection(d, _)).getOrElse(DimensionUnrestricted(d))
-      }.toList
-      Ok(views.html.table(fact, d1, d1Values, d2, d2Values, DimensionsFilter(filter)))
+      }.toList)
+      def valueAt(v1: String, v2: String): Option[String] = {
+        val at = filter.point + (d1 -> v1) + (d2 -> v2)
+        val v = FactValue.get(fact, at)
+        v
+      }
+      Ok(views.html.table(fact, d1, d1Values, d2, d2Values, filter, valueAt))
     }
     r.getOrElse(NotFound)
   }

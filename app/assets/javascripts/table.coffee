@@ -5,15 +5,17 @@ splitId = (id) ->
   y = id.substring(i+1)
   [x, y]
 
-flashSuccessful = (cell) -> cell
+flashSuccessful = (cell) ->
+  cell.effect("highlight", { color: "#eeffee" })
 
-flashFailed = (cell) -> cell
+flashFailed = (cell) ->
+  cell.effect("highlight", { color: "#ff8888" })
   
 
 $("table#factvalue-table td").editable(
   (value, s) ->
     cell = $(this)
-    oldValue = cell.text()
+    oldValue = this.revert
     table = $("#factvalue-table")
     fact = decodeURIComponent(table.attr("fact"))   
     

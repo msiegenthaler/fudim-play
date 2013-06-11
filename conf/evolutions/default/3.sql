@@ -16,5 +16,6 @@ CREATE TABLE fact_dimension (
 
 # --- !Downs
 
+DROP SEQUENCE fact_id_seq;
 DROP TABLE fact;
 DROP TABLE fact_dimension;

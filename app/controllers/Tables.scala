@@ -22,7 +22,7 @@ object Tables extends Controller {
       }.toList)
       def valueAt(v1: String, v2: String): Option[String] = {
         val at = filter.point + (d1 -> v1) + (d2 -> v2)
-        val v = FactValue.get(fact, at)
+        val v = fact.get(at)
         v
       }
       Ok(views.html.table(fact, d1, d1Values, d2, d2Values, filter, valueAt))

@@ -5,20 +5,47 @@ import anorm.SqlParser._
 import play.api.db._
 import play.api.Play.current
 
-case class Fact(name: String, dimensions: Set[Dimension])
+sealed trait Fact {
+  /** Unique name of the fact. */
+  def name: String
+  def dimensions: Set[Dimension]
+
+  def get(at: Point): Option[String]
+  /** Set the value at the point to value. Throws an ValueCannotBeSetException if not settable. */
+  def set(at: Point, value: Option[String]): Unit = throw ValueCannotBeSetException(this, at)
+  final def set(at: Point, value: String): Unit = set(at, Some(value))
+  /** Whether the value at the point can be set. */
+  def canSet(at: Point): Boolean = false
+}
+
+/** Fact that is backed by a database store for all fully defined points. */
+sealed trait DatabaseBacked extends Fact {
+  override def get(at: Point) = {
+    Some(at).filter(_.defines(dimensions)).flatMap(FactValue.get(this, _))
+  }
+  override def set(at: Point, value: Option[String]) = {
+    if (!canSet(at)) throw ValueCannotBeSetException(this, at)
+    else FactValue.set(this, at, value)
+  }
+  override def canSet(at: Point) = at.defines(dimensions)
+}
+
+case class DataFact(name: String, dimensions: Set[Dimension]) extends DatabaseBacked
+
+case class ValueCannotBeSetException(fact: Fact, at: Point) extends RuntimeException(s"Cannot set value of $fact.name at $at")
 
 object Fact {
   def all: Iterable[Fact] = DB.withConnection { implicit c ⇒
     val vs = SQL("select name, dimension from fact f left outer join fact_dimension fd on f.id = fd.fact").
       as(get[String]("name") ~ get[Option[String]]("dimension") *)
-    vs.groupBy(_._1).map(v ⇒ Fact(v._1, v._2.map(_._2).flatten.map(Dimension.apply).toSet))
+    vs.groupBy(_._1).map(v ⇒ DataFact(v._1, v._2.map(_._2).flatten.map(Dimension.apply).toSet))
   }
   def find(name: String): Option[Fact] = DB.withConnection { implicit c ⇒
     val vs = SQL("select name, dimension from fact f left outer join fact_dimension fd on f.id = fd.fact where name = {name}").
       on("name" -> name).
       as(get[String]("name") ~ get[Option[String]]("dimension") *)
     if (vs.length == 0) None
-    else Some(Fact(name, vs.map(_._2).flatten.map(Dimension.apply).toSet))
+    else Some(DataFact(name, vs.map(_._2).flatten.map(Dimension.apply).toSet))
   }
 
   def save(fact: Fact) = DB.withConnection { implicit c ⇒

@@ -32,22 +32,22 @@ object InitialData {
     Dimension.addValue(kostenart, "Material")
     Dimension.addValue(kostenart, "Gemeinkosten")
 
-    val umsatz = Fact("Umsatz", Set(monat, project))
+    val umsatz = DataFact("Umsatz", Set(monat, project))
     Fact.save(umsatz)
 
-    val kosten = Fact("Kosten", Set(monat, project, kostenart))
+    val kosten = DataFact("Kosten", Set(monat, project, kostenart))
     Fact.save(kosten)
 
     val rnd = new Random(1)
     for (m ← Dimension.values(monat)) {
       for (p ← Dimension.values(project)) {
         val at = Point.empty + (monat -> m) + (project -> p)
-        FactValue.set(umsatz, at, (rnd.nextInt(1000) + 9500).toString)
+        umsatz.set(at, (rnd.nextInt(1000) + 9500).toString)
 
         val k = rnd.nextInt(1000) + 8500
-        FactValue.set(kosten, at + (kostenart -> "Mitarbeiter"), (k * 0.7).round.toString)
-        FactValue.set(kosten, at + (kostenart -> "Externe"), (k * 0.05).round.toString)
-        FactValue.set(kosten, at + (kostenart -> "Gemeinkosten"), (k * 0.25).round.toString)
+        kosten.set(at + (kostenart -> "Mitarbeiter"), (k * 0.7).round.toString)
+        kosten.set(at + (kostenart -> "Externe"), (k * 0.05).round.toString)
+        kosten.set(at + (kostenart -> "Gemeinkosten"), (k * 0.25).round.toString)
       }
     }
 

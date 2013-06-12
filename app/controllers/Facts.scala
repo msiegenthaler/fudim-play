@@ -16,7 +16,7 @@ object Facts extends Controller {
     addForm.bindFromRequest.fold(
       errors ⇒ BadRequest(views.html.facts(Fact.all, errors)),
       name ⇒ {
-        val fact = Fact(name, Set.empty)
+        val fact = DataFact(name, Set.empty)
         Fact.save(fact)
         Redirect(routes.Facts.view(name))
       })
@@ -29,24 +29,32 @@ object Facts extends Controller {
     }.getOrElse(NotFound)
   }
   def addDimension(factName: String, dimensionName: String) = Action {
-    Fact.find(factName).map { fact ⇒
-      val f2 = fact.copy(dimensions = fact.dimensions + Dimension(dimensionName))
-      Fact.save(f2)
-      Redirect(routes.Facts.view(factName))
+    Fact.find(factName).map {
+      _ match {
+        case fact: DataFact ⇒
+          val f2 = fact.copy(dimensions = fact.dimensions + Dimension(dimensionName))
+          Fact.save(f2)
+          Redirect(routes.Facts.view(factName))
+        case _ => throw new IllegalArgumentException
+      }
     }.getOrElse(NotFound)
   }
   def removeDimension(factName: String, dimensionName: String) = Action {
-    Fact.find(factName).map { fact ⇒
-      val f2 = fact.copy(dimensions = fact.dimensions - Dimension(dimensionName))
-      Fact.save(f2)
-      Redirect(routes.Facts.view(factName))
+    Fact.find(factName).map {
+      _ match {
+        case fact: DataFact ⇒
+          val f2 = fact.copy(dimensions = fact.dimensions - Dimension(dimensionName))
+          Fact.save(f2)
+          Redirect(routes.Facts.view(factName))
+        case _ => throw new IllegalArgumentException
+      }
     }.getOrElse(NotFound)
   }
 
   def get(factName: String, at: Point) = Action {
     val r = for {
       fact ← Fact.find(factName)
-      value ← FactValue.get(fact, at)
+      value ← fact.get(at)
     } yield Ok(value)
     r.getOrElse(NotFound)
   }
@@ -54,7 +62,7 @@ object Facts extends Controller {
     val r = for {
       fact ← Fact.find(factName)
       value = request.body.asText.filterNot(_.isEmpty)
-      _ = FactValue.set(fact, at, value)
+      _ = fact.set(at, value)
     } yield Ok(value.getOrElse(""))
     r.getOrElse(NotFound)
   }

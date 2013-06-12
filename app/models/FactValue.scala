@@ -6,8 +6,7 @@ import play.api.db._
 import play.api.Play.current
 import java.sql.Connection
 
-object FactValue {
-
+private object FactValue {
   def get(fact: Fact, at: Point): Option[String] = DB.withConnection { implicit c ⇒
     if (!at.defines(fact.dimensions)) None
     else idAndValue(fact, at).map(_._2)

@@ -30,22 +30,22 @@ object Dimension {
     get(name).getOrElse(throw new IllegalStateException(s"Insert of dimension $name failed"))
   }
 
-  private def values(of: Dimension): List[String] = DB.withConnection { implicit c ⇒
-    SQL("select content from dimension_value where dimension = {dim}").on("dim" -> of).
+  private def values(of: DatabaseDimension): List[String] = DB.withConnection { implicit c ⇒
+    SQL("select content from dimension_value where dimension = {dim}").on("dim" -> of.id).
       as(scalar[String] *)
   }
-  private def addValue(to: Dimension, v: String) = DB.withConnection { implicit c ⇒
-    val max = SQL("select max(nr) from dimension_value where dimension = {dim}").on("dim" -> to.name).single(scalar[Long] ?)
-    SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").on("dim" -> to, "nr" -> max.getOrElse(0), "val" -> v).executeUpdate
+  private def addValue(to: DatabaseDimension, v: String) = DB.withConnection { implicit c ⇒
+    val max = SQL("select max(nr) from dimension_value where dimension = {dim}").on("dim" -> to.id).single(scalar[Long] ?)
+    SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").on("dim" -> to.id, "nr" -> max.getOrElse(0), "val" -> v).executeUpdate
   }
 
   private val dimension: RowParser[Dimension] = {
-    str("name") map {
-      case name ⇒ DatabaseDimension(name)
+    long("id") ~ str("name") map {
+      case id ~ name ⇒ DatabaseDimension(id, name)
     }
   }
 
-  private case class DatabaseDimension(name: String) extends Dimension {
+  private case class DatabaseDimension(id: Long, name: String) extends Dimension {
     override def values = Dimension.values(this)
     override def add(v: String) = addValue(this, v)
   }

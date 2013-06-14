@@ -33,10 +33,17 @@ object CubeData {
 
 /** Editable date in a multi-dimensional space. */
 trait EditableCubeData[D] extends CubeData[D] {
-  /** Set the value of at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
-  def set(at: Point, value: Option[D]): Unit
   /** Whether the value at this point can be set. */
   def isSettable(at: Point): Boolean
+  /** Set the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
+  def set(at: Point, value: Option[D]): Unit
+  /** Remove the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
+  def remove(at: Point) = set(at, None)
+
+  /** Set data in this cube. Slice/dice does apply (non-matching are not changed). */
+  def setAll(value: Option[D]): Unit
+  /** Remove all data in this cube. Slice/dice does apply (non-matching are not deleted). */
+  def clear = setAll(None)
 }
 case class ValueCannotBeSetException(at: Point) extends RuntimeException(s"Cannot set value at $at")
 

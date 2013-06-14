@@ -3,7 +3,7 @@
 # --- !Ups
 
 CREATE TABLE dimension (
-		name varchar(1024) not null
+  name varchar(1024) not null
 );
 
 

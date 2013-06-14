@@ -3,6 +3,7 @@ package models
 class Point private (val values: Map[Dimension, String]) {
   def on = values.keys.toSet
   def defines(ds: Traversable[Dimension]) = ds.filterNot(on.contains).isEmpty
+  def definesExactly(ds: Traversable[Dimension]) = ds == on
 
   def valueOf(d: Dimension) = values.get(d)
 

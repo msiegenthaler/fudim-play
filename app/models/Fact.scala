@@ -21,13 +21,13 @@ sealed trait Fact {
 /** Fact that is backed by a database store for all fully defined points. */
 sealed trait DatabaseBackedFact extends Fact {
   override def get(at: Point) = {
-    Some(at).filter(_.defines(dimensions)).flatMap(FactDatabaseStore.get(this, _))
+    Some(at).filter(_.definesExactly(dimensions)).flatMap(FactDatabaseStore.get(this, _))
   }
   override def set(at: Point, value: Option[String]) = {
     if (!canSet(at)) throw ValueCannotBeSetException(this, at)
     else FactDatabaseStore.set(this, at, value)
   }
-  override def canSet(at: Point) = at.defines(dimensions)
+  override def canSet(at: Point) = at.definesExactly(dimensions)
 }
 
 case class DataFact(name: String, dimensions: Set[Dimension]) extends DatabaseBackedFact

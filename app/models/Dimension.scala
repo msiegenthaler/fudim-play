@@ -39,8 +39,8 @@ object Dimension {
     SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").on("dim" -> to.id, "nr" -> max.getOrElse(0), "val" -> v).executeUpdate
   }
 
-  private val dimension: RowParser[Dimension] = {
-    long("id") ~ str("name") map {
+  private[models] val dimension: RowParser[Dimension] = {
+    long("dimension.id") ~ str("dimension.name") map {
       case id ~ name ⇒ DatabaseDimension(id, name)
     }
   }

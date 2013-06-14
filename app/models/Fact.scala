@@ -4,6 +4,7 @@ import anorm._
 import anorm.SqlParser._
 import play.api.db._
 import play.api.Play.current
+import java.sql.Connection
 
 sealed trait Fact {
   /** Unique name of the fact. */
@@ -36,17 +37,20 @@ case class ValueCannotBeSetException(fact: Fact, at: Point) extends RuntimeExcep
 
 object Fact {
   def get(name: String): Option[Fact] = DB.withConnection { implicit c ⇒
-    val vs = SQL("select name, dimension from fact f left outer join fact_dimension fd on f.id = fd.fact where name = {name}").
-      on("name" -> name).
-      as(str("name") ~ str("dimension").? *)
-    if (vs.length == 0) None
-    else Some(DataFact(name, vs.map(_._2).flatten.flatMap(Dimension.get).toSet))
+    SQL("select id from fact where name={name}").on("name" -> name).as(scalar[Long].singleOpt).map { id ⇒
+      DataFact(name, dimensionsFor(id))
+    }
+  }
+  def all: Iterable[Fact] = DB.withConnection { implicit c ⇒
+    SQL("select id, name from fact").as(long("id") ~ str("name") *).map(_ match {
+      case id ~ name ⇒ DataFact(name, dimensionsFor(id))
+    })
   }
 
-  def all: Iterable[Fact] = DB.withConnection { implicit c ⇒
-    val vs = SQL("select name, dimension from fact f left outer join fact_dimension fd on f.id = fd.fact").
-      as(str("name") ~ str("dimension").? *)
-    vs.groupBy(_._1).map(v ⇒ DataFact(v._1, v._2.map(_._2).flatten.flatMap(Dimension.get).toSet))
+  private def dimensionsFor(factId: Long)(implicit c: Connection) = {
+    SQL("""select d.* from fact_dimension fd
+           left outer join dimension d on d.id = fd.dimension
+           where fd.fact = {id}""").on("id" -> factId).as(Dimension.dimension *).toSet
   }
 
   def save(fact: Fact) = DB.withConnection { implicit c ⇒
@@ -59,7 +63,8 @@ object Fact {
         SQL("insert into fact(name) values({name})").on("name" -> fact.name).executeInsert().get
     }
     fact.dimensions.foreach { d ⇒
-      SQL("insert into fact_dimension(fact, dimension) values ({fact}, {dim})").on("fact" -> id, "dim" -> d.name).executeUpdate
+      SQL("""insert into fact_dimension(fact, dimension)
+             select {fact}, d.id from dimension d where d.name = {dim}""").on("fact" -> id, "dim" -> d.name).executeUpdate
     }
   }
 }

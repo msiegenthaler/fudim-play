@@ -22,7 +22,7 @@ CREATE TABLE fact (
 
 CREATE TABLE fact_dimension (
   fact integer not null,
-  dimension varchar(1024) not null
+  dimension integer not null
 );
 
 CREATE SEQUENCE factStore_id_seq;

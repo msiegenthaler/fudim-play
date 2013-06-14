@@ -1,6 +1,6 @@
 package models
 
-/** Data in a multi dimensional space. */
+/** Data in a multi-dimensional space. */
 trait CubeData[D] extends PartialFunction[Point, D] {
   /** Value at the fully defined point. Restricted to the slice and dice. */
   def get(at: Point): Option[D] = slice(at).dense.headOption.flatMap(_._2)
@@ -31,10 +31,18 @@ object CubeData {
   type DimensionFilter = Map[Dimension, String ⇒ Boolean]
 }
 
-import CubeData._
+/** Editable date in a multi-dimensional space. */
+trait EditableCubeData[D] extends CubeData[D] {
+  /** Set the value of at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
+  def set(at: Point, value: Option[D]): Unit
+  /** Whether the value at this point can be set. */
+  def isSettable(at: Point): Boolean
+}
+case class ValueCannotBeSetException(at: Point) extends RuntimeException(s"Cannot set value at $at")
 
 /** Implements the slicing/dicing. */
 trait AbstractCubeData[D] extends CubeData[D] {
+  import CubeData._
   protected type self <: CubeData[D]
 
   val slice: Point

@@ -35,8 +35,6 @@ sealed trait DatabaseBackedFact extends Fact {
 
 case class DataFact(name: String, dimensions: Set[Dimension]) extends DatabaseBackedFact
 
-case class ValueCannotBeSetException(fact: Fact, at: Point) extends RuntimeException(s"Cannot set value of $fact.name at $at")
-
 object Fact {
   def get(name: String): Option[Fact] = DB.withConnection { implicit c ⇒
     SQL("select id from fact where name={name}").on("name" -> name).as(scalar[Long].singleOpt).map { id ⇒

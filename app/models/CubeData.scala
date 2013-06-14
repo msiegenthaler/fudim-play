@@ -62,4 +62,20 @@ trait AbstractCubeData[D] extends CubeData[D] {
     derive(filters = filters + (dimension -> combFilter))
   }
   protected def derive(slice: Point = slice, filters: DimensionFilter = filters): self
+
+  /** If this point is inside this cube. */
+  protected def matches(p: Point): Boolean = {
+    slice.contains(p) &&
+      (p -- slice.on).values.forall(e ⇒ filters.get(e._1).map(f ⇒ f(e._2)).getOrElse(true))
+  }
+  /** All points in this cube. */
+  protected def allPoints: Traversable[Point] = {
+    dimensions.foldLeft(Seq(slice)) { (ps, d) ⇒
+      val coords = filters.get(d) match {
+        case Some(f) ⇒ d.values.filter(f)
+        case None ⇒ d.values
+      }
+      ps.flatMap(p ⇒ coords.map(c ⇒ p + (d -> c)))
+    }
+  }
 }

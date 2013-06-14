@@ -11,22 +11,19 @@ object Global extends GlobalSettings {
 object InitialData {
   def hasData = !Dimension.all.isEmpty
   def insert {
-    val monat = Dimension("Monat")
-    Dimension.create(monat.name)
+    val monat = Dimension.create("Monat")
     monat.add("Jan")
     monat.add("Feb")
     monat.add("Mar")
     monat.add("Apr")
     monat.add("Mai")
 
-    val project = Dimension("Projekt")
-    Dimension.create(project.name)
+    val project = Dimension.create("Projekt")
     project.add("BZ")
     project.add("AB")
     project.add("GG")
 
-    val kostenart = Dimension("Kostenart")
-    Dimension.create(kostenart.name)
+    val kostenart = Dimension.create("Kostenart")
     kostenart.add("Mitarbeiter")
     kostenart.add("Externe")
     kostenart.add("Material")

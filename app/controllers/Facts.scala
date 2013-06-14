@@ -29,24 +29,26 @@ object Facts extends Controller {
     }.getOrElse(NotFound)
   }
   def addDimension(factName: String, dimensionName: String) = Action {
+    val dimension = Dimension.get(dimensionName).getOrElse(throw new IllegalArgumentException(s"Dimension dimensionName does not exist"))
     Fact.find(factName).map {
       _ match {
         case fact: DataFact ⇒
-          val f2 = fact.copy(dimensions = fact.dimensions + Dimension(dimensionName))
+          val f2 = fact.copy(dimensions = fact.dimensions + dimension)
           Fact.save(f2)
           Redirect(routes.Facts.view(factName))
-        case _ => throw new IllegalArgumentException
+        case _ ⇒ throw new IllegalArgumentException
       }
     }.getOrElse(NotFound)
   }
   def removeDimension(factName: String, dimensionName: String) = Action {
+    val dimension = Dimension.get(dimensionName).getOrElse(throw new IllegalArgumentException(s"Dimension dimensionName does not exist"))
     Fact.find(factName).map {
       _ match {
         case fact: DataFact ⇒
-          val f2 = fact.copy(dimensions = fact.dimensions - Dimension(dimensionName))
+          val f2 = fact.copy(dimensions = fact.dimensions - dimension)
           Fact.save(f2)
           Redirect(routes.Facts.view(factName))
-        case _ => throw new IllegalArgumentException
+        case _ ⇒ throw new IllegalArgumentException
       }
     }.getOrElse(NotFound)
   }

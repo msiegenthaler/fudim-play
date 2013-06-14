@@ -11,7 +11,7 @@ object Bindables {
         val prefix = key + "."
         val values = params.filter(_._1.startsWith(prefix)).map(v ⇒ (v._1.drop(prefix.length), v._2)).filterNot(_._1.isEmpty).
           flatMap(v ⇒ v._2.map((v._1, _))).map(v ⇒ (dec(v._1), dec(v._2))).
-          map(v ⇒ (Dimension(v._1), v._2))
+          flatMap(v ⇒ Dimension.get(v._1).map((_, v._2)))
         val point = values.foldLeft(Point.empty)(_ + _)
         Some(Right(point))
       } catch {

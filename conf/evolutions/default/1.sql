@@ -34,7 +34,7 @@ CREATE TABLE factStore_value (
 
 CREATE TABLE factStore_dimension (
   id integer not null,
-  dimension varchar(1024) not null,
+  dimension integer not null,
   value varchar(1024) not null
 );
 

@@ -63,8 +63,7 @@ object Fact {
         SQL("insert into fact(name) values({name})").on("name" -> fact.name).executeInsert().get
     }
     fact.dimensions.foreach { d ⇒
-      SQL("""insert into fact_dimension(fact, dimension)
-             select {fact}, d.id from dimension d where d.name = {dim}""").on("fact" -> id, "dim" -> d.name).executeUpdate
+      SQL("insert into fact_dimension(fact, dimension) values({fact},{dim})").on("fact" -> id, "dim" -> Dimension.idOf(d)).executeUpdate
     }
   }
 }

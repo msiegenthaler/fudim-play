@@ -44,6 +44,10 @@ object Dimension {
       case id ~ name ⇒ DatabaseDimension(id, name)
     }
   }
+  private[models] def idOf(d: Dimension) = d match {
+    case DatabaseDimension(id, _) ⇒ id
+    case _ ⇒ throw new IllegalArgumentException(s"Dimension $d.name is not supported by idOf")
+  }
 
   private case class DatabaseDimension(id: Long, name: String) extends Dimension {
     override def values = Dimension.values(this)

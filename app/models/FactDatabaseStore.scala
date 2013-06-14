@@ -29,7 +29,7 @@ private object FactDatabaseStore {
         val valueId = SQL("insert into factStore_value(fact, value) values({fact}, {value})").on("fact" -> factId, "value" -> value).executeInsert().get
         at.values.foreach { v ⇒
           SQL("insert into factStore_dimension(id, dimension, value) values({id}, {dim}, {dimv})").
-            on("id" -> valueId, "dim" -> v._1.name, "dimv" -> v._2).executeInsert()
+            on("id" -> valueId, "dim" -> Dimension.idOf(v._1), "dimv" -> v._2).executeInsert()
         }
     }
   }
@@ -57,7 +57,7 @@ private object FactDatabaseStore {
       val ((d, value), i) = v
       val tn = "d" + i
       val sql = s"inner join factStore_dimension $tn on $tn.id=$fv.id and $tn.dimension={d$tn} and $tn.value={v$tn}"
-      (sql, Map[Any, ParameterValue[_]]("d" + tn -> d.name, "v" + tn -> value))
+      (sql, Map[Any, ParameterValue[_]]("d" + tn -> Dimension.idOf(d), "v" + tn -> value))
     }
     val sql = x.map(_._1).mkString(" ")
     val on = x.map(_._2).reduce(_ ++ _)

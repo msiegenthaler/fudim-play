@@ -10,7 +10,7 @@ import views.html.defaultpages.notFound
 object Tables extends Controller {
   def show(factName: String, d1Name: String, d2Name: String, fixed: Point = Point.empty) = Action {
     val r = for {
-      fact ← Fact.find(factName)
+      fact ← Fact.get(factName)
       d1 ← fact.dimensions.find(_.name == d1Name)
       d2 ← fact.dimensions.find(_.name == d2Name)
     } yield {

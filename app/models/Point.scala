@@ -1,6 +1,6 @@
 package models
 
-/** Point in a set of dimensions. */
+/** Point in a set of dimensions. Defines the coordinate in all this dimensions. */
 class Point private (val values: Map[Dimension, String]) {
   /** Dimensions defined by this point. */
   def on = values.keys.toSet
@@ -10,7 +10,7 @@ class Point private (val values: Map[Dimension, String]) {
   /** True if the point defines exactly this dimensions. */
   def definesExactly(ds: Traversable[Dimension]) = ds == on
 
-  def valueOf(d: Dimension) = values.get(d)
+  def coordinate(d: Dimension) = values.get(d)
 
   def +(v: (Dimension, String)): Point = {
     if (on.contains(v._1)) throw new IllegalArgumentException("Dimension " + v._1 + " already contained in " + this)
@@ -40,5 +40,6 @@ object Point {
   /** A point in no dimension. Same as singularity. */
   def empty = singluarity
 
+  /** One dimensional point. */
   def apply(d: Dimension, value: String) = new Point(Map(d -> value))
 }

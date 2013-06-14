@@ -20,7 +20,7 @@ object Bindables {
     }
 
     override def unbind(key: String, value: Point) = {
-      value.on.map(d ⇒ key + "." + enc(d.name) + "=" + enc(value.valueOf(d).get)).mkString("&")
+      value.on.map(d ⇒ key + "." + enc(d.name) + "=" + enc(value.coordinate(d).get)).mkString("&")
     }
 
     override def javascriptUnbind: String = "window.fudim.point.unbind"

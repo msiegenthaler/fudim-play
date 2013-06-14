@@ -16,7 +16,7 @@ object Tables extends Controller {
     } yield {
       val filterDims = fact.dimensions - d1 - d2
       val filter = DimensionsFilter(filterDims.map { d ⇒
-        fixed.valueOf(d).map(DimensionSelection(d, _)).getOrElse(DimensionUnrestricted(d))
+        fixed.coordinate(d).map(DimensionSelection(d, _)).getOrElse(DimensionUnrestricted(d))
       }.toList)
       def valueAt(v1: String, v2: String): Option[String] = {
         val at = filter.point + (d1 -> v1) + (d2 -> v2)

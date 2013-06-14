@@ -1,4 +1,4 @@
-@(fact: Fact, d1: Dimension, d1Values: Iterable[String], d2: Dimension, d2Values: Iterable[String], filter: DimensionsFilter, valueAt: (String, String) => Option[String])
+@(fact: Fact, d1: Dimension, d2: Dimension, filter: DimensionsFilter, valueAt: (String, String) => Option[String])
 
 @import helper._
 @import helper.twitterBootstrap._
@@ -35,16 +35,16 @@
     <thead>
       <tr>
         <th></th>
-      @d1Values.zipWithIndex.map { x =>
+      @d1.values.zipWithIndex.map { x =>
         <th id="x-@x._2" point="@serializePoint(Point(d1, x._1))">@x._1</th>
       }
       </tr>
     </thead>
     <tbody>
-    @d2Values.zipWithIndex.map { y =>
+    @d2.values.zipWithIndex.map { y =>
       <tr>
         <th id="y-@y._2" point="@serializePoint(Point(d2, y._1))">@y._1</th>
-      @d1Values.zipWithIndex.map { x =>
+      @d1.values.zipWithIndex.map { x =>
         <td id="c-@x._2-@y._2">@valueAt(x._1, y._1).getOrElse("")</td>
       }
       </tr>

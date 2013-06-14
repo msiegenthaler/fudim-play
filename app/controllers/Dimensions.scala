@@ -22,19 +22,24 @@ object Dimensions extends Controller {
   }
 
   def get(name: String) = Action {
-    val d = Dimension(name)
-    val vs = Dimension.values(d)
-    Ok(views.html.dimension(d, vs, addValueForm))
+    val r = for {
+      d ← Dimension.get(name)
+      vs = d.values
+    } yield Ok(views.html.dimension(d, vs, addValueForm))
+    r.getOrElse(NotFound)
   }
 
   def addValue(name: String) = Action { implicit request ⇒
-    val d = Dimension(name)
-    addValueForm.bindFromRequest.fold(
-      errors ⇒ BadRequest(views.html.dimension(d, Dimension.values(d), errors)),
-      value ⇒ {
-        Dimension.addValue(d, value)
-        Redirect(routes.Dimensions.get(name))
-      })
+    (for {
+      d ← Dimension.get(name)
+    } yield {
+      addValueForm.bindFromRequest.fold(
+        errors ⇒ BadRequest(views.html.dimension(d, d.values, errors)),
+        value ⇒ {
+          d.add(value)
+          Redirect(routes.Dimensions.get(name))
+        })
+    }).getOrElse(NotFound)
   }
 
   val addForm = Form("name" -> nonEmptyText)

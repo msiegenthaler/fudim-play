@@ -16,45 +16,55 @@ object Facts extends Controller {
     addForm.bindFromRequest.fold(
       errors ⇒ BadRequest(views.html.facts(Fact.all, errors)),
       name ⇒ {
-        val fact = Fact(name, Set.empty)
+        val fact = DataFact(name, Set.empty)
         Fact.save(fact)
         Redirect(routes.Facts.view(name))
       })
   }
 
   def view(name: String) = Action {
-    Fact.find(name).map { fact ⇒
+    Fact.get(name).map { fact ⇒
       val dims = Dimension.all.filterNot(fact.dimensions.contains)
       Ok(views.html.fact(fact, dims))
     }.getOrElse(NotFound)
   }
   def addDimension(factName: String, dimensionName: String) = Action {
-    Fact.find(factName).map { fact ⇒
-      val f2 = fact.copy(dimensions = fact.dimensions + Dimension(dimensionName))
-      Fact.save(f2)
-      Redirect(routes.Facts.view(factName))
+    val dimension = Dimension.get(dimensionName).getOrElse(throw new IllegalArgumentException(s"Dimension dimensionName does not exist"))
+    Fact.get(factName).map {
+      _ match {
+        case fact: DataFact ⇒
+          val f2 = fact.copy(dimensions = fact.dimensions + dimension)
+          Fact.save(f2)
+          Redirect(routes.Facts.view(factName))
+        case _ ⇒ throw new IllegalArgumentException
+      }
     }.getOrElse(NotFound)
   }
   def removeDimension(factName: String, dimensionName: String) = Action {
-    Fact.find(factName).map { fact ⇒
-      val f2 = fact.copy(dimensions = fact.dimensions - Dimension(dimensionName))
-      Fact.save(f2)
-      Redirect(routes.Facts.view(factName))
+    val dimension = Dimension.get(dimensionName).getOrElse(throw new IllegalArgumentException(s"Dimension dimensionName does not exist"))
+    Fact.get(factName).map {
+      _ match {
+        case fact: DataFact ⇒
+          val f2 = fact.copy(dimensions = fact.dimensions - dimension)
+          Fact.save(f2)
+          Redirect(routes.Facts.view(factName))
+        case _ ⇒ throw new IllegalArgumentException
+      }
     }.getOrElse(NotFound)
   }
 
   def get(factName: String, at: Point) = Action {
     val r = for {
-      fact ← Fact.find(factName)
-      value ← FactValue.get(fact, at)
+      fact ← Fact.get(factName)
+      value ← fact.get(at)
     } yield Ok(value)
     r.getOrElse(NotFound)
   }
   def save(factName: String, at: Point) = Action { request ⇒
     val r = for {
-      fact ← Fact.find(factName)
+      fact ← Fact.get(factName)
       value = request.body.asText.filterNot(_.isEmpty)
-      _ = FactValue.set(fact, at, value)
+      _ = fact.set(at, value)
     } yield Ok(value.getOrElse(""))
     r.getOrElse(NotFound)
   }

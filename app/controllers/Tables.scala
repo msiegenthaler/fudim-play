@@ -10,11 +10,9 @@ import views.html.defaultpages.notFound
 object Tables extends Controller {
   def show(factName: String, d1Name: String, d2Name: String, fixed: Point = Point.empty) = Action {
     val r = for {
-      fact ← Fact.find(factName)
+      fact ← Fact.get(factName)
       d1 ← fact.dimensions.find(_.name == d1Name)
-      d1Values = Dimension.values(d1)
       d2 ← fact.dimensions.find(_.name == d2Name)
-      d2Values = Dimension.values(d2)
     } yield {
       val filterDims = fact.dimensions - d1 - d2
       val filter = DimensionsFilter(filterDims.map { d ⇒
@@ -22,10 +20,10 @@ object Tables extends Controller {
       }.toList)
       def valueAt(v1: String, v2: String): Option[String] = {
         val at = filter.point + (d1 -> v1) + (d2 -> v2)
-        val v = FactValue.get(fact, at)
+        val v = fact.get(at)
         v
       }
-      Ok(views.html.table(fact, d1, d1Values, d2, d2Values, filter, valueAt))
+      Ok(views.html.table(fact, d1, d2, filter, valueAt))
     }
     r.getOrElse(NotFound)
   }
@@ -47,7 +45,7 @@ case class DimensionUnrestricted(dimension: Dimension) extends DimensionRestrict
 
 case class DimensionsFilter(restrictions: List[DimensionRestriction]) {
   def availableRestrictionsFor(d: Dimension): List[DimensionRestriction] = {
-    val v = Dimension.values(d)
+    val v = d.values.toList
     v.length match {
       case 0 ⇒ DimensionUnrestricted(d) :: Nil
       case 1 ⇒ DimensionSelection(d, v.head) :: Nil

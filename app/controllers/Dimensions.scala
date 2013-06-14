@@ -23,16 +23,16 @@ object Dimensions extends Controller {
 
   def get(name: String) = Action {
     val d = Dimension(name)
-    val vs = Dimension.values(d)
+    val vs = d.values
     Ok(views.html.dimension(d, vs, addValueForm))
   }
 
   def addValue(name: String) = Action { implicit request ⇒
     val d = Dimension(name)
     addValueForm.bindFromRequest.fold(
-      errors ⇒ BadRequest(views.html.dimension(d, Dimension.values(d), errors)),
+      errors ⇒ BadRequest(views.html.dimension(d, d.values, errors)),
       value ⇒ {
-        Dimension.addValue(d, value)
+        d.add(value)
         Redirect(routes.Dimensions.get(name))
       })
   }

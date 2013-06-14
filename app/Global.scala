@@ -13,24 +13,24 @@ object InitialData {
   def insert {
     val monat = Dimension("Monat")
     Dimension.create(monat.name)
-    Dimension.addValue(monat, "Jan")
-    Dimension.addValue(monat, "Feb")
-    Dimension.addValue(monat, "Mar")
-    Dimension.addValue(monat, "Apr")
-    Dimension.addValue(monat, "Mai")
+    monat.add("Jan")
+    monat.add("Feb")
+    monat.add("Mar")
+    monat.add("Apr")
+    monat.add("Mai")
 
     val project = Dimension("Projekt")
     Dimension.create(project.name)
-    Dimension.addValue(project, "BZ")
-    Dimension.addValue(project, "AB")
-    Dimension.addValue(project, "GG")
+    project.add("BZ")
+    project.add("AB")
+    project.add("GG")
 
     val kostenart = Dimension("Kostenart")
     Dimension.create(kostenart.name)
-    Dimension.addValue(kostenart, "Mitarbeiter")
-    Dimension.addValue(kostenart, "Externe")
-    Dimension.addValue(kostenart, "Material")
-    Dimension.addValue(kostenart, "Gemeinkosten")
+    kostenart.add("Mitarbeiter")
+    kostenart.add("Externe")
+    kostenart.add("Material")
+    kostenart.add("Gemeinkosten")
 
     val umsatz = DataFact("Umsatz", Set(monat, project))
     Fact.save(umsatz)
@@ -39,8 +39,8 @@ object InitialData {
     Fact.save(kosten)
 
     val rnd = new Random(1)
-    for (m ← Dimension.values(monat)) {
-      for (p ← Dimension.values(project)) {
+    for (m ← monat.values) {
+      for (p ← project.values) {
         val at = Point.empty + (monat -> m) + (project -> p)
         umsatz.set(at, (rnd.nextInt(1000) + 9500).toString)
 

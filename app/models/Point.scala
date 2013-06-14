@@ -16,14 +16,16 @@ class Point private (val values: Map[Dimension, String]) {
     if (on.contains(v._1)) throw new IllegalArgumentException("Dimension " + v._1 + " already contained in " + this)
     new Point(values + v)
   }
-  def -(v: Dimension): Point = {
-    new Point(values - v)
-  }
+  def -(v: Dimension): Point = new Point(values - v)
+  def --(v: Traversable[Dimension]): Point = new Point(values -- v)
 
   def mod(d: Dimension, newValue: String): Point = {
     if (!on.contains(d)) throw new IllegalArgumentException(this.toString + " does not contain dimension " + d)
     new Point(values + (d -> newValue))
   }
+
+  /** True if the other point has the same coordinate for every dimension defined by this point. */
+  def contains(other: Point) = values.forall(e ⇒ other.coordinate(e._1) == e._2)
 
   override def equals(o: Any) = o match {
     case p: Point ⇒ values == p.values

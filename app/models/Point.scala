@@ -1,8 +1,13 @@
 package models
 
+/** Point in a set of dimensions. */
 class Point private (val values: Map[Dimension, String]) {
+  /** Dimensions defined by this point. */
   def on = values.keys.toSet
+
+  /** True if the point at least this dimensions. */
   def defines(ds: Traversable[Dimension]) = ds.filterNot(on.contains).isEmpty
+  /** True if the point defines exactly this dimensions. */
   def definesExactly(ds: Traversable[Dimension]) = ds == on
 
   def valueOf(d: Dimension) = values.get(d)
@@ -30,7 +35,10 @@ class Point private (val values: Map[Dimension, String]) {
 }
 
 object Point {
+  /** A point in no dimension. Same as empty. */
   val singluarity = new Point(Map.empty)
+  /** A point in no dimension. Same as singularity. */
   def empty = singluarity
+
   def apply(d: Dimension, value: String) = new Point(Map(d -> value))
 }

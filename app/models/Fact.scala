@@ -6,9 +6,11 @@ import play.api.db._
 import play.api.Play.current
 import java.sql.Connection
 
+/** A fact has values for each coordinate in dimensions. */
 sealed trait Fact {
   /** Unique name of the fact. */
   def name: String
+  /** Dimensions that fully define the fact. */
   def dimensions: Set[Dimension]
 
   def get(at: Point): Option[String]

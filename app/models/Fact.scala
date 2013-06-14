@@ -15,7 +15,7 @@ sealed trait Fact {
 
   def get(at: Point): Option[String]
   /** Set the value at the point to value. Throws an ValueCannotBeSetException if not settable. */
-  def set(at: Point, value: Option[String]): Unit = throw ValueCannotBeSetException(this, at)
+  def set(at: Point, value: Option[String]): Unit = throw ValueCannotBeSetException(at)
   final def set(at: Point, value: String): Unit = set(at, Some(value))
   /** Whether the value at the point can be set. */
   def canSet(at: Point): Boolean = false
@@ -27,7 +27,7 @@ sealed trait DatabaseBackedFact extends Fact {
     Some(at).filter(_.definesExactly(dimensions)).flatMap(FactDatabaseStore.get(this, _))
   }
   override def set(at: Point, value: Option[String]) = {
-    if (!canSet(at)) throw ValueCannotBeSetException(this, at)
+    if (!canSet(at)) throw ValueCannotBeSetException(at)
     else FactDatabaseStore.set(this, at, value)
   }
   override def canSet(at: Point) = at.definesExactly(dimensions)

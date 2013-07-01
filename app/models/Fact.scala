@@ -26,53 +26,33 @@ sealed trait Fact {
 /** Fact that is backed by a database store for all fully defined points. */
 sealed trait DatabaseBackedFact extends Fact {
   val cube: EditableCubeData[String]
+  override def dimensions = cube.dimensions
   override def get(at: Point) = cube.get(at)
   override def set(at: Point, value: Option[String]) = cube.set(at, value)
   override def canSet(at: Point) = cube.isSettable(at)
 }
 
-private case class DataFact(name: String, dimensions: Set[Dimension], cube: EditableCubeData[String]) extends DatabaseBackedFact
+private case class DataFact(name: String, cube: EditableCubeData[String]) extends DatabaseBackedFact
 
 object Fact {
   def get(name: String): Option[Fact] = DB.withConnection { implicit c ⇒
     for {
       id ← SQL("select id from fact where name={name}").on("name" -> name).as(scalar[Long].singleOpt)
       cube ← DatabaseCubeData.load(name, classOf[String])
-      dims = dimensionsFor(id)
-    } yield (DataFact(name, dims, cube))
+    } yield (DataFact(name, cube))
   }
   def all: Iterable[Fact] = DB.withConnection { implicit c ⇒
     for {
       value ← SQL("select id, name from fact").as(long("id") ~ str("name") *)
       id ~ name = value
-      dims = dimensionsFor(id)
       cube ← DatabaseCubeData.load(name, classOf[String])
-    } yield DataFact(name, dims, cube)
-  }
-
-  private def dimensionsFor(factId: Long)(implicit c: Connection) = {
-    SQL("""select d.* from fact_dimension fd
-           left outer join dimension d on d.id = fd.dimension
-           where fd.fact = {id}""").on("id" -> factId).as(Dimension.dimension *).toSet
+    } yield DataFact(name, cube)
   }
 
   def create(name: String, dims: Set[Dimension]): Fact = DB.withConnection { implicit c ⇒
     val cube = DatabaseCubeData.create(name, dims, classOf[String])
-    val fact = DataFact(name, dims, cube)
-    save(fact)
+    val fact = DataFact(name, cube)
+    SQL("insert into fact(name) values({name})").on("name" -> name).executeInsert().get
     fact
-  }
-  def save(fact: Fact) = DB.withConnection { implicit c ⇒
-    val id = SQL("select id from fact where name={name}").on("name" -> fact.name).as(scalar[Long].singleOpt) match {
-      case Some(id) ⇒
-        SQL("update fact set name={name} where id={id}").on("name" -> fact.name, "id" -> id).executeUpdate
-        SQL("delete from fact_dimension where fact={fact}").on("fact" -> id).executeUpdate
-        id
-      case None ⇒
-        SQL("insert into fact(name) values({name})").on("name" -> fact.name).executeInsert().get
-    }
-    fact.dimensions.foreach { d ⇒
-      SQL("insert into fact_dimension(fact, dimension) values({fact},{dim})").on("fact" -> id, "dim" -> Dimension.idOf(d)).executeUpdate
-    }
   }
 }

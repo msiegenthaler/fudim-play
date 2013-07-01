@@ -17,7 +17,6 @@ object Facts extends Controller {
       errors ⇒ BadRequest(views.html.facts(Fact.all, errors)),
       name ⇒ {
         val fact = Fact.create(name, Set.empty)
-        Fact.save(fact)
         Redirect(routes.Facts.view(name))
       })
   }

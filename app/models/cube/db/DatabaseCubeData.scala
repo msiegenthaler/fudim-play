@@ -9,36 +9,35 @@ import models.cube._
 import CubeData._
 import java.sql.Connection
 
+trait DatabaseCubeData[T] extends EditableCubeData[T] {
+  def id: Long
+}
 object DatabaseCubeData {
-  private case class CubeDefinition(id: Long, name: String, tpe: String) {
+  private case class CubeDefinition(id: Long, tpe: String) {
     def tableName = s"databaseCube_data_$id"
     def dimensionName(d: Dimension) = "dim_" + Dimension.idOf(d)
   }
   private val cubeDefinition = {
-    get[Long]("id") ~
-      get[String]("name") ~ get[String]("type") map {
-        case id ~ name ~ tpe ⇒ CubeDefinition(id, name, tpe)
-      }
+    get[Long]("id") ~ get[String]("type") map {
+      case id ~ tpe ⇒ CubeDefinition(id, tpe)
+    }
   }
 
-  def load[T](name: String, tpe: Class[T]): Option[EditableCubeData[T]] = DB.withConnection { implicit c ⇒
-    SQL("select * from databaseCube where name={name}").on("name" -> name).as(cubeDefinition.singleOpt).map { definition ⇒
+  def load[T](id: Long, tpe: Class[T]): Option[DatabaseCubeData[T]] = DB.withConnection { implicit c ⇒
+    SQL("select * from databaseCube where id={id}").on("id" -> id).as(cubeDefinition.singleOpt).map { definition ⇒
       val (cube, cubeType) = loadFromDefinition(definition)
       val cubeTypeExpect = typeMapping.get(tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube type: ${tpe.getName}"))
       if (cubeType != cubeTypeExpect)
-        throw new IllegalArgumentException(s"type of cube $name does not match: expected $cubeType but is $cubeTypeExpect")
+        throw new IllegalArgumentException(s"type of cube $id does not match: expected $cubeType but is $cubeTypeExpect")
       cube.asInstanceOf[DCDBase[T]]
     }
   }
 
-  def create[T](name: String, dims: Set[Dimension], tpe: Class[T]): EditableCubeData[T] = DB.withConnection { implicit c ⇒
-    if (SQL("select count(*) from databaseCube where name={name}").on("name" -> name).as(scalar[Long].single) > 0)
-      throw new IllegalArgumentException(s"Cube $name already exists")
-
+  def create[T](dims: Set[Dimension], tpe: Class[T]): DatabaseCubeData[T] = DB.withConnection { implicit c ⇒
     val cubeType = typeMapping.get(tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube type: ${tpe.getName}"))
-    val id = SQL("insert into databaseCube(name, type) values({name}, {type})").on("name" -> name, "type" -> cubeType.tpeName).executeInsert().
-      getOrElse(throw new RuntimeException(s"Could not create the cube in the database ($name)"))
-    val definition = CubeDefinition(id, name, cubeType.tpeName)
+    val id = SQL("insert into databaseCube(type) values({type})").on("type" -> cubeType.tpeName).executeInsert().
+      getOrElse(throw new RuntimeException(s"Could not create the cube in the database"))
+    val definition = CubeDefinition(id, cubeType.tpeName)
 
     val cdims = dims.map { dim ⇒
       SQL("insert into databaseCube_dimension(cube, dimension) values ({cube}, {dimension})").
@@ -46,13 +45,13 @@ object DatabaseCubeData {
       (dim, definition.dimensionName(dim))
     }.toMap
 
-    val cube = cubeType(definition.tableName, cdims)
+    val cube = cubeType(id, definition.tableName, cdims)
     cube.create
     cube.asInstanceOf[DCDBase[T]]
   }
 
-  def delete(name: String) = DB.withConnection { implicit c ⇒
-    SQL("select * from databaseCube where name={name}").on("name" -> name).as(cubeDefinition.singleOpt).foreach { definition ⇒
+  def delete(cube: DatabaseCubeData[_]) = DB.withConnection { implicit c ⇒
+    SQL("select * from databaseCube where id={id}").on("id" -> cube.id).as(cubeDefinition.singleOpt).foreach { definition ⇒
       val (cube, cubeType) = loadFromDefinition(definition)
       cube.drop
       SQL("delete from databaseCube_dimension where cube={id}").on("id" -> definition.id).executeUpdate
@@ -66,7 +65,7 @@ object DatabaseCubeData {
         case id ~ name ⇒ (Dimension.get(name).get, s"dim_$id")
       }.toMap
     val cubeType = typeMapping.values.find(_.tpeName == definition.tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube db-type: ${definition.tpe}"))
-    val cube = cubeType(definition.tableName, dims)
+    val cube = cubeType(definition.id, definition.tableName, dims)
     (cube, cubeType)
   }
 

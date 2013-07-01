@@ -9,7 +9,7 @@ import models.cube._
 /**
  * Base class for a database cube.
  */
-private trait DCDBase[D] extends EditableCubeData[D] with AbstractCubeData[D] {
+private trait DCDBase[D] extends DatabaseCubeData[D] with AbstractCubeData[D] {
   type self = DCDBase[D]
   def table: String
   def dims: Map[Dimension, String]

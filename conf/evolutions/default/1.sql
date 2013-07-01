@@ -17,13 +17,13 @@ CREATE TABLE dimension_value (
 CREATE SEQUENCE fact_id_seq;
 CREATE TABLE fact (
   id integer not null default nextval('fact_id_seq'),
-  name varchar(1024) not null
+  name varchar(1024) not null,
+  cube integer not null
 );
 
 CREATE SEQUENCE databaseCube_id_seq;
 CREATE TABLE databaseCube (
   id integer not null default nextval('databaseCube_id_seq'),
-  name varchar(1024) not null,
   type varchar(255) not null
 );
 

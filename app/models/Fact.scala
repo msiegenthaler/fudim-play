@@ -37,22 +37,22 @@ private case class DataFact(name: String, cube: EditableCubeData[String]) extend
 object Fact {
   def get(name: String): Option[Fact] = DB.withConnection { implicit c ⇒
     for {
-      id ← SQL("select id from fact where name={name}").on("name" -> name).as(scalar[Long].singleOpt)
-      cube ← DatabaseCubeData.load(name, classOf[String])
+      id ~ name ~ cubeId ← SQL("select * from fact where name={name}").on("name" -> name).as(long("id") ~ str("name") ~ long("cube") singleOpt)
+      cube ← DatabaseCubeData.load(cubeId, classOf[String])
     } yield (DataFact(name, cube))
   }
   def all: Iterable[Fact] = DB.withConnection { implicit c ⇒
     for {
-      value ← SQL("select id, name from fact").as(long("id") ~ str("name") *)
-      id ~ name = value
-      cube ← DatabaseCubeData.load(name, classOf[String])
+      value ← SQL("select * from fact").as(long("id") ~ str("name") ~ long("cube") *)
+      id ~ name ~ cubeId = value
+      cube ← DatabaseCubeData.load(cubeId, classOf[String])
     } yield DataFact(name, cube)
   }
 
   def create(name: String, dims: Set[Dimension]): Fact = DB.withConnection { implicit c ⇒
-    val cube = DatabaseCubeData.create(name, dims, classOf[String])
+    val cube = DatabaseCubeData.create(dims, classOf[String])
     val fact = DataFact(name, cube)
-    SQL("insert into fact(name) values({name})").on("name" -> name).executeInsert().get
+    SQL("insert into fact(name, cube) values({name}, {cube})").on("name" -> name, "cube" -> cube.id).executeInsert().get
     fact
   }
 }

@@ -21,7 +21,7 @@ private trait DCDBase[D] extends EditableCubeData[D] with AbstractCubeData[D] {
 
   def create(implicit c: Connection): Unit = {
     val fields = dims.values.map { d ⇒ s"$d varchar(1024) not null" }
-    SQL(s"CREATE TABLE $table (${fields.mkString(",")}, content as $sqlType)").execute
+    SQL(s"CREATE TABLE $table (${fields.mkString(",")}, content $sqlType)").execute
   }
   def drop(implicit c: Connection): Unit = SQL(s"DROP TABLE $table").execute
 
@@ -44,7 +44,7 @@ private trait DCDBase[D] extends EditableCubeData[D] with AbstractCubeData[D] {
     val fields = p.on.map(dims.apply)
     val values = fields.map(f ⇒ s"{$f}")
     val ons = p.values.map(e ⇒ (dims(e._1), coordToDb(e._2))).toSeq :+ ("content" -> toDb(value))
-    SQL(s"INSERT INTO $table(content,${fields.mkString(",")} VALUES ({content},${values.mkString(",")})").
+    SQL(s"INSERT INTO $table(content,${fields.mkString(",")}) VALUES ({content},${values.mkString(",")})").
       on(ons: _*).execute
   }
   private def update(at: Point, value: D)(implicit c: Connection): Boolean = {

@@ -32,16 +32,16 @@ object DatabaseCubeData {
   }
 
   def create[T](name: String, dims: Set[Dimension], tpe: Class[T]): EditableCubeData[T] = DB.withConnection { implicit c ⇒
-    if (SQL("select count(*) from databaseCube where name=>{name}").on("name" -> name).as(scalar[Long].single) > 0)
+    if (SQL("select count(*) from databaseCube where name={name}").on("name" -> name).as(scalar[Long].single) > 0)
       throw new IllegalArgumentException(s"Cube $name already exists")
 
     val cubeType = typeMapping.get(tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube type: ${tpe.getName}"))
-    val id = SQL("insert into databaseCube(name, type) value({name}, {type}").on("name" -> name, "type" -> cubeType.tpeName).executeInsert().
+    val id = SQL("insert into databaseCube(name, type) values({name}, {type})").on("name" -> name, "type" -> cubeType.tpeName).executeInsert().
       getOrElse(throw new RuntimeException(s"Could not create the cube in the database ($name)"))
     val definition = CubeDefinition(id, name, cubeType.tpeName)
 
     val cdims = dims.map { dim ⇒
-      SQL("insert into databaseCube_dimension(cube, dimension) values {cube}, dimension}").
+      SQL("insert into databaseCube_dimension(cube, dimension) values ({cube}, {dimension})").
         on("cube" -> id, "dimension" -> Dimension.idOf(dim)).executeInsert()
       (dim, definition.dimensionName(dim))
     }.toMap

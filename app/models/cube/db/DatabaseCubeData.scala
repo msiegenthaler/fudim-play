@@ -46,7 +46,7 @@ object DatabaseCubeData {
       (dim, definition.dimensionName(dim))
     }.toMap
 
-    val cube = cubeType(name, cdims)
+    val cube = cubeType(definition.tableName, cdims)
     cube.create
     cube.asInstanceOf[DCDBase[T]]
   }

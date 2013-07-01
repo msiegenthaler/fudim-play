@@ -5,6 +5,7 @@ import anorm.SqlParser._
 import play.api.db._
 import play.api.Play.current
 import java.sql.Connection
+import models.cube.ValueCannotBeSetException
 
 /** A fact has values for each coordinate in dimensions. */
 sealed trait Fact {

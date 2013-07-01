@@ -1,4 +1,8 @@
-package models
+package models.cube
+
+import models.Dimension
+import models.Point
+import scala.Option.option2Iterable
 
 /** Data in a multi-dimensional space. */
 trait CubeData[D] extends PartialFunction[Point, D] {

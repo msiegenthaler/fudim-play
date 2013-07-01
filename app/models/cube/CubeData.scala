@@ -26,7 +26,7 @@ trait CubeData[D] extends PartialFunction[Point, D] {
   /** Fix the dimensions of the point. The point must be fully defined, so use slice + (d, value) if you want to add the d=value condition. */
   def slice(to: Point): CubeData[D]
   /** The 'free' dimensions. Dimensions that are not 'locked down' (sliced). Filtered (diced) dimensions are included. */
-  def dimensions: Set[Dimension] = raw.dimensions -- slice.on
+  def dimensions: Set[Dimension]
 
   /** Restrict the values within a dimension. If the dimension is already filtered then the both filters are combined with AND. */
   def dice(dimension: Dimension, filter: String ⇒ Boolean): CubeData[D]
@@ -58,7 +58,9 @@ trait AbstractCubeData[D] extends CubeData[D] {
 
   val slice: Point
   protected[this] val filters: DimensionFilter
+  protected def allDimensions: Set[Dimension]
 
+  override def dimensions = allDimensions -- slice.on
   def raw = derive(Point.empty, Map.empty)
   def slice(to: Point) = derive(slice = to)
   def dice(dimension: Dimension, filter: String ⇒ Boolean) = {

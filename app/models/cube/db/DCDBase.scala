@@ -13,6 +13,7 @@ private trait DCDBase[D] extends EditableCubeData[D] with AbstractCubeData[D] {
   type self = DCDBase[D]
   def table: String
   def dims: Map[Dimension, String]
+  protected override def allDimensions = dims.keys.toSet
 
   protected def sqlType: String
   protected def fromDb(name: String): RowParser[D]

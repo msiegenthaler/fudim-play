@@ -29,11 +29,8 @@ object InitialData {
     kostenart.add("Material")
     kostenart.add("Gemeinkosten")
 
-    val umsatz = DataFact("Umsatz", Set(monat, project))
-    Fact.save(umsatz)
-
-    val kosten = DataFact("Kosten", Set(monat, project, kostenart))
-    Fact.save(kosten)
+    val umsatz = Fact.create("Umsatz", Set(monat, project))
+    val kosten = Fact.create("Kosten", Set(monat, project, kostenart))
 
     val rnd = new Random(1)
     for (m ← monat.values) {
@@ -47,6 +44,5 @@ object InitialData {
         kosten.set(at + (kostenart -> "Gemeinkosten"), (k * 0.25).round.toString)
       }
     }
-
   }
 }

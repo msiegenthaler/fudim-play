@@ -16,7 +16,7 @@ object Facts extends Controller {
     addForm.bindFromRequest.fold(
       errors ⇒ BadRequest(views.html.facts(Fact.all, errors)),
       name ⇒ {
-        val fact = DataFact(name, Set.empty)
+        val fact = Fact.create(name, Set.empty)
         Fact.save(fact)
         Redirect(routes.Facts.view(name))
       })
@@ -32,10 +32,11 @@ object Facts extends Controller {
     val dimension = Dimension.get(dimensionName).getOrElse(throw new IllegalArgumentException(s"Dimension dimensionName does not exist"))
     Fact.get(factName).map {
       _ match {
-        case fact: DataFact ⇒
-          val f2 = fact.copy(dimensions = fact.dimensions + dimension)
-          Fact.save(f2)
-          Redirect(routes.Facts.view(factName))
+        case fact: Fact ⇒
+          //val f2 = fact.copy(dimensions = fact.dimensions + dimension)
+          //Fact.save(f2)
+          //Redirect(routes.Facts.view(factName))
+          ???
         case _ ⇒ throw new IllegalArgumentException
       }
     }.getOrElse(NotFound)
@@ -44,10 +45,11 @@ object Facts extends Controller {
     val dimension = Dimension.get(dimensionName).getOrElse(throw new IllegalArgumentException(s"Dimension dimensionName does not exist"))
     Fact.get(factName).map {
       _ match {
-        case fact: DataFact ⇒
-          val f2 = fact.copy(dimensions = fact.dimensions - dimension)
-          Fact.save(f2)
-          Redirect(routes.Facts.view(factName))
+        case fact: Fact ⇒
+          //val f2 = fact.copy(dimensions = fact.dimensions - dimension)
+          //Fact.save(f2)
+          //Redirect(routes.Facts.view(factName))
+          ???
         case _ ⇒ throw new IllegalArgumentException
       }
     }.getOrElse(NotFound)

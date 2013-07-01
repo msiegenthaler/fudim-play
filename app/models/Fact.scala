@@ -5,7 +5,8 @@ import anorm.SqlParser._
 import play.api.db._
 import play.api.Play.current
 import java.sql.Connection
-import models.cube.ValueCannotBeSetException
+import models.cube._
+import models.cube.db.DatabaseCubeData
 
 /** A fact has values for each coordinate in dimensions. */
 sealed trait Fact {
@@ -24,28 +25,29 @@ sealed trait Fact {
 
 /** Fact that is backed by a database store for all fully defined points. */
 sealed trait DatabaseBackedFact extends Fact {
-  override def get(at: Point) = {
-    Some(at).filter(_.definesExactly(dimensions)).flatMap(FactDatabaseStore.get(this, _))
-  }
-  override def set(at: Point, value: Option[String]) = {
-    if (!canSet(at)) throw ValueCannotBeSetException(at)
-    else FactDatabaseStore.set(this, at, value)
-  }
-  override def canSet(at: Point) = at.definesExactly(dimensions)
+  val cube: EditableCubeData[String]
+  override def get(at: Point) = cube.get(at)
+  override def set(at: Point, value: Option[String]) = cube.set(at, value)
+  override def canSet(at: Point) = cube.isSettable(at)
 }
 
-case class DataFact(name: String, dimensions: Set[Dimension]) extends DatabaseBackedFact
+private case class DataFact(name: String, dimensions: Set[Dimension], cube: EditableCubeData[String]) extends DatabaseBackedFact
 
 object Fact {
   def get(name: String): Option[Fact] = DB.withConnection { implicit c ⇒
-    SQL("select id from fact where name={name}").on("name" -> name).as(scalar[Long].singleOpt).map { id ⇒
-      DataFact(name, dimensionsFor(id))
-    }
+    for {
+      id ← SQL("select id from fact where name={name}").on("name" -> name).as(scalar[Long].singleOpt)
+      cube ← DatabaseCubeData.load(name, classOf[String])
+      dims = dimensionsFor(id)
+    } yield (DataFact(name, dims, cube))
   }
   def all: Iterable[Fact] = DB.withConnection { implicit c ⇒
-    SQL("select id, name from fact").as(long("id") ~ str("name") *).map(_ match {
-      case id ~ name ⇒ DataFact(name, dimensionsFor(id))
-    })
+    for {
+      value ← SQL("select id, name from fact").as(long("id") ~ str("name") *)
+      id ~ name = value
+      dims = dimensionsFor(id)
+      cube ← DatabaseCubeData.load(name, classOf[String])
+    } yield DataFact(name, dims, cube)
   }
 
   private def dimensionsFor(factId: Long)(implicit c: Connection) = {
@@ -54,6 +56,12 @@ object Fact {
            where fd.fact = {id}""").on("id" -> factId).as(Dimension.dimension *).toSet
   }
 
+  def create(name: String, dims: Set[Dimension]): Fact = DB.withConnection { implicit c ⇒
+    val cube = DatabaseCubeData.create(name, dims, classOf[String])
+    val fact = DataFact(name, dims, cube)
+    save(fact)
+    fact
+  }
   def save(fact: Fact) = DB.withConnection { implicit c ⇒
     val id = SQL("select id from fact where name={name}").on("name" -> fact.name).as(scalar[Long].singleOpt) match {
       case Some(id) ⇒

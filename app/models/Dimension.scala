@@ -34,10 +34,10 @@ trait Dimension {
   /** Values of this dimensions (ordered). */
   def all: Seq[Coordinate]
 
-  def values: Seq[(Coordinate, String)]
-
   /** String value of the coordinate. */
   def render(c: Coordinate): String
+  /** all coordinates along with their rendered value. */
+  def values: Seq[(Coordinate, String)]
 
   /** Add a value to the dimension (at last index). */
   def add(value: String): Coordinate

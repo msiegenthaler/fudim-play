@@ -8,7 +8,9 @@ CREATE TABLE dimension (
   name varchar(1024) not null
 );
 
+CREATE SEQUENCE dimension_value_seq;
 CREATE TABLE dimension_value (
+  id integer not null default nextval('dimension_value_seq'),
   dimension integer not null,
   nr integer not null,
   content varchar(1024) not null
@@ -45,6 +47,7 @@ DROP TABLE databaseCube;
 DROP SEQUENCE fact_id_seq;
 DROP TABLE fact;
 
+DROP SEQUENCE dimension_value_seq;
 DROP TABLE dimension_value;
 
 DROP SEQUENCE dimension_id_seq;

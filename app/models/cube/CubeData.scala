@@ -1,7 +1,6 @@
 package models.cube
 
-import models.Dimension
-import models.Point
+import models._
 import scala.Option.option2Iterable
 
 /** Data in a multi-dimensional space. */
@@ -29,10 +28,10 @@ trait CubeData[D] extends PartialFunction[Point, D] {
   def dimensions: Set[Dimension]
 
   /** Restrict the values within a dimension. If the dimension is already filtered then the both filters are combined with AND. */
-  def dice(dimension: Dimension, filter: String ⇒ Boolean): CubeData[D]
+  def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean): CubeData[D]
 }
 object CubeData {
-  type DimensionFilter = Map[Dimension, String ⇒ Boolean]
+  type DimensionFilter = Map[Dimension, Coordinate ⇒ Boolean]
 }
 
 /** Editable date in a multi-dimensional space. */
@@ -63,8 +62,8 @@ trait AbstractCubeData[D] extends CubeData[D] {
   override def dimensions = allDimensions -- slice.on
   def raw = derive(Point.empty, Map.empty)
   def slice(to: Point) = derive(slice = to)
-  def dice(dimension: Dimension, filter: String ⇒ Boolean) = {
-    val combFilter = filters.get(dimension).map(f ⇒ ((v: String) ⇒ f(v) && filter(v))).getOrElse(filter)
+  def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = {
+    val combFilter = filters.get(dimension).map(f ⇒ ((c: Coordinate) ⇒ f(c) && filter(c))).getOrElse(filter)
     derive(filters = filters + (dimension -> combFilter))
   }
   protected def derive(slice: Point = slice, filters: DimensionFilter = filters): self
@@ -78,8 +77,8 @@ trait AbstractCubeData[D] extends CubeData[D] {
   protected def allPoints: Traversable[Point] = {
     dimensions.foldLeft(Seq(slice)) { (ps, d) ⇒
       val coords = filters.get(d) match {
-        case Some(f) ⇒ d.values.filter(f)
-        case None ⇒ d.values
+        case Some(f) ⇒ d.all.filter(f)
+        case None ⇒ d.all
       }
       ps.flatMap(p ⇒ coords.map(c ⇒ p + (d -> c)))
     }

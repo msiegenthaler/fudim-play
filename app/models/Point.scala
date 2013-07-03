@@ -1,7 +1,7 @@
 package models
 
 /** Point in a set of dimensions. Defines the coordinate in all this dimensions. */
-class Point private (val values: Map[Dimension, String]) {
+class Point private (val values: Map[Dimension, Coordinate]) {
   /** Dimensions defined by this point. */
   def on = values.keys.toSet
 
@@ -12,20 +12,26 @@ class Point private (val values: Map[Dimension, String]) {
 
   def coordinate(d: Dimension) = values.get(d)
 
-  def +(v: (Dimension, String)): Point = {
+  def +(v: (Dimension, Coordinate)): Point = {
     if (on.contains(v._1)) throw new IllegalArgumentException("Dimension " + v._1 + " already contained in " + this)
     new Point(values + v)
+  }
+  def ++(p: Point): Point = {
+    val duplicates = on.filter(p.on.contains)
+    if (!duplicates.isEmpty)
+      throw new IllegalArgumentException(s"Both points contain dimension ${duplicates.mkString(",")}")
+    new Point(values ++ p.values)
   }
   def -(v: Dimension): Point = new Point(values - v)
   def --(v: Traversable[Dimension]): Point = new Point(values -- v)
 
-  def mod(d: Dimension, newValue: String): Point = {
+  def mod(d: Dimension, newValue: Coordinate): Point = {
     if (!on.contains(d)) throw new IllegalArgumentException(this.toString + " does not contain dimension " + d)
     new Point(values + (d -> newValue))
   }
 
   /** True if the other point has the same coordinate for every dimension defined by this point. */
-  def contains(other: Point) = values.forall(e ⇒ other.coordinate(e._1) == e._2)
+  def contains(other: Point) = values.forall(e ⇒ other.coordinate(e._1) == Some(e._2))
 
   override def equals(o: Any) = o match {
     case p: Point ⇒ values == p.values
@@ -43,5 +49,6 @@ object Point {
   def empty = singluarity
 
   /** One dimensional point. */
-  def apply(d: Dimension, value: String) = new Point(Map(d -> value))
+  def apply(d: Dimension, value: Coordinate) = new Point(Map(d -> value))
+  def apply(vs: (Dimension, Coordinate)*) = new Point(vs.toMap)
 }

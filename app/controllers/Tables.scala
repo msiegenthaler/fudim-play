@@ -16,9 +16,9 @@ object Tables extends Controller {
     } yield {
       val filterDims = fact.dimensions - d1 - d2
       val filter = DimensionsFilter(filterDims.map { d ⇒
-        fixed.coordinate(d).map(DimensionSelection(d, _)).getOrElse(DimensionUnrestricted(d))
+        fixed.coordinate(d).map(c ⇒ DimensionSelection(d, (c, d.render(c)))).getOrElse(DimensionUnrestricted(d))
       }.toList)
-      def valueAt(v1: String, v2: String): Option[String] = {
+      def valueAt(v1: Coordinate, v2: Coordinate): Option[String] = {
         val at = filter.point + (d1 -> v1) + (d2 -> v2)
         val v = fact.get(at)
         v
@@ -34,9 +34,9 @@ sealed trait DimensionRestriction {
   def matches(value: String): Boolean
   def label: String
 }
-case class DimensionSelection(dimension: Dimension, value: String) extends DimensionRestriction {
+case class DimensionSelection(dimension: Dimension, value: (Coordinate, String)) extends DimensionRestriction {
   override def matches(v: String) = v == value
-  override def label = value
+  override def label = value._2
 }
 case class DimensionUnrestricted(dimension: Dimension) extends DimensionRestriction {
   override def matches(v: String) = true
@@ -60,7 +60,7 @@ case class DimensionsFilter(restrictions: List[DimensionRestriction]) {
   def point: Point = {
     restrictions.foldLeft(Point.empty) { (p, r) ⇒
       r match {
-        case DimensionSelection(d, v) ⇒ p + (d, v)
+        case DimensionSelection(d, v) ⇒ p + (d, v._1)
         case DimensionUnrestricted(_) ⇒ p
       }
     }

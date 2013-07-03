@@ -21,14 +21,14 @@ private trait DCDBase[D] extends DatabaseCubeData[D] with AbstractCubeData[D] {
   protected def withConnection[A](f: Connection ⇒ A): A
 
   def create(implicit c: Connection): Unit = {
-    val fields = dims.values.map { d ⇒ s"$d varchar(1024) not null" }
+    val fields = dims.values.map { d ⇒ s"$d integer not null" }
     SQL(s"CREATE TABLE $table (${fields.mkString(",")}, content $sqlType)").execute
   }
   def drop(implicit c: Connection): Unit = SQL(s"DROP TABLE $table").execute
 
   private def fromDb: RowParser[D] = fromDb("content")
-  private def coordToDb(v: String): ParameterValue[String] = v
-  private def coordFromDb(nameFromDims: String): RowParser[String] = str(nameFromDims)
+  private def coordToDb(v: Coordinate): ParameterValue[Long] = v.id
+  private def coordFromDb(nameFromDims: String): RowParser[Coordinate] = long(nameFromDims).map(Coordinate(_))
   private def mkWhere(p: Point): (String, Seq[(Any, ParameterValue[_])]) = {
     val vs = p.values.map(e ⇒ (dims(e._1), e._2))
     val sql = vs.map(_._1).map(l ⇒ s"$l = {$l}").mkString(" AND ")

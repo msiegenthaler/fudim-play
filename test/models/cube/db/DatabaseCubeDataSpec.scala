@@ -9,11 +9,11 @@ import models.cube.db._
 
 class DatabaseCubeDataSpec extends Specification {
   def monat = Dimension.get("Monat").get
+  def jan = monat.points(0)
+  def feb = monat.points(1)
+  def mar = monat.points(2)
 
   def oneDimensional = DatabaseCubeData.create(Set(monat), classOf[String])
-  def jan = Point(monat, "Jan")
-  def feb = Point(monat, "Feb")
-  def mar = Point(monat, "Mar")
 
   "DatabaseCubeData with one dimension" should {
     "be droppable" in {
@@ -48,7 +48,7 @@ class DatabaseCubeDataSpec extends Specification {
         val cube = oneDimensional
         cube.setAll(Some("X"))
         cube.dense.foreach(v ⇒ v._2 must beSome("X"))
-        monat.values.foreach(m ⇒ cube.get(Point(monat, m)) must beSome("X"))
+        monat.points.foreach(p ⇒ cube.get(p) must beSome("X"))
       }
     }
     "have sparse values only for set fields" in {

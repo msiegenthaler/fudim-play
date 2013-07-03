@@ -1,4 +1,4 @@
-@(dimension: Dimension, values: Traversable[String], addForm: Form[String])
+@(dimension: Dimension, values: Traversable[(Coordinate, String)], addForm: Form[String])
 
 @import helper._
 @implicitField = @{ FieldConstructor(inlineElementConstructor.f) }
@@ -7,7 +7,7 @@
 	<ul>
 	  @values.map { v =>
       <li>
-      	@v
+        @v._2
       </li>
     }
 	</ul>

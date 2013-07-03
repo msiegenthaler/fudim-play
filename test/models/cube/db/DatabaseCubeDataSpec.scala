@@ -6,12 +6,13 @@ import play.api.test.Helpers._
 import models._
 import models.cube._
 import models.cube.db._
+import Point._
 
 class DatabaseCubeDataSpec extends Specification {
   def monat = Dimension.get("Monat").get
-  def jan = monat.points(0)
-  def feb = monat.points(1)
-  def mar = monat.points(2)
+  def jan = monat.all(0)
+  def feb = monat.all(1)
+  def mar = monat.all(2)
 
   def oneDimensional = DatabaseCubeData.create(Set(monat), classOf[String])
 
@@ -48,7 +49,7 @@ class DatabaseCubeDataSpec extends Specification {
         val cube = oneDimensional
         cube.setAll(Some("X"))
         cube.dense.foreach(v ⇒ v._2 must beSome("X"))
-        monat.points.foreach(p ⇒ cube.get(p) must beSome("X"))
+        monat.all.foreach(p ⇒ cube.get(p) must beSome("X"))
       }
     }
     "have sparse values only for set fields" in {
@@ -57,7 +58,8 @@ class DatabaseCubeDataSpec extends Specification {
         cube.set(jan, Some("X"))
         cube.set(mar, Some("Y"))
         cube.values.toSet must equalTo(Set("X", "Y"))
-        cube.sparse.toSet must equalTo(Set((jan, "X"), (mar, "Y")))
+        val exp: Set[(Point, String)] = Set((jan, "X"), (mar, "Y"))
+        cube.sparse.toSet must equalTo(exp)
       }
     }
     "be the same when loaded" in {

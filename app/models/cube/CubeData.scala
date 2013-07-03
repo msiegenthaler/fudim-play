@@ -71,7 +71,7 @@ trait AbstractCubeData[D] extends CubeData[D] {
   /** If this point is inside this cube. */
   protected def matches(p: Point): Boolean = {
     slice.contains(p) &&
-      (p -- slice.on).values.forall(e ⇒ filters.get(e._1).map(f ⇒ f(e._2)).getOrElse(true))
+      (p -- slice.on).coordinates.forall(e ⇒ filters.get(e.dimension).map(f ⇒ f(e)).getOrElse(true))
   }
   /** All points in this cube. */
   protected def allPoints: Traversable[Point] = {
@@ -80,7 +80,7 @@ trait AbstractCubeData[D] extends CubeData[D] {
         case Some(f) ⇒ d.all.filter(f)
         case None ⇒ d.all
       }
-      ps.flatMap(p ⇒ coords.map(c ⇒ p + (d -> c)))
+      ps.flatMap(p ⇒ coords.map(c ⇒ p + c))
     }
   }
 }

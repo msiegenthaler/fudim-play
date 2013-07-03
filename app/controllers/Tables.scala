@@ -19,7 +19,7 @@ object Tables extends Controller {
         fixed.coordinate(d).map(c ⇒ DimensionSelection(d, (c, d.render(c)))).getOrElse(DimensionUnrestricted(d))
       }.toList)
       def valueAt(v1: Coordinate, v2: Coordinate): Option[String] = {
-        val at = filter.point + (d1 -> v1) + (d2 -> v2)
+        val at = filter.point + v1 + v2
         val v = fact.get(at)
         v
       }
@@ -60,7 +60,7 @@ case class DimensionsFilter(restrictions: List[DimensionRestriction]) {
   def point: Point = {
     restrictions.foldLeft(Point.empty) { (p, r) ⇒
       r match {
-        case DimensionSelection(d, v) ⇒ p + (d, v._1)
+        case DimensionSelection(d, v) ⇒ p + v._1
         case DimensionUnrestricted(_) ⇒ p
       }
     }

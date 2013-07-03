@@ -1,6 +1,7 @@
 import play.api._
 import models._
 import scala.util.Random
+import Point._
 
 object Global extends GlobalSettings {
   override def onStart(app: Application) {
@@ -33,16 +34,16 @@ object InitialData {
     val kosten = Fact.create("Kosten", Set(monat, project, kostenart))
 
     val rnd = new Random(1)
-    for (m ← monat.points) {
-      for (p ← project.points) {
-        val at = m ++ p
+    for (m ← monat.all) {
+      for (p ← project.all) {
+        val at = m + p
         umsatz.set(at, (rnd.nextInt(1000) + 9500).toString)
 
         val k = rnd.nextInt(1000) + 8500
-        kosten.set(at + (kostenart -> ka_ma), (k * 0.7).round.toString)
-        kosten.set(at + (kostenart -> ka_ext), (k * 0.05).round.toString)
-        kosten.set(at + (kostenart -> ka_mat), "0")
-        kosten.set(at + (kostenart -> ka_gk), (k * 0.25).round.toString)
+        kosten.set(at + ka_ma, (k * 0.7).round.toString)
+        kosten.set(at + ka_ext, (k * 0.05).round.toString)
+        kosten.set(at + ka_mat, "0")
+        kosten.set(at + ka_gk, (k * 0.25).round.toString)
       }
     }
   }

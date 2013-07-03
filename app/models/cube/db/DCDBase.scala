@@ -28,23 +28,23 @@ private trait DCDBase[D] extends DatabaseCubeData[D] with AbstractCubeData[D] {
 
   private def fromDb: RowParser[D] = fromDb("content")
   private def coordToDb(v: Coordinate): ParameterValue[Long] = v.id
-  private def coordFromDb(nameFromDims: String): RowParser[Coordinate] = long(nameFromDims).map(Coordinate(_))
+  private def coordFromDb(d: Dimension, nameFromDims: String): RowParser[Coordinate] = long(nameFromDims).map(new Coordinate(d, _))
   private def mkWhere(p: Point): (String, Seq[(Any, ParameterValue[_])]) = {
-    val vs = p.values.map(e ⇒ (dims(e._1), e._2))
+    val vs = p.coordinates.map(e ⇒ (dims(e.dimension), e))
     val sql = vs.map(_._1).map(l ⇒ s"$l = {$l}").mkString(" AND ")
     val ons = vs.map(e ⇒ (e._1, coordToDb(e._2))).toSeq
     (sql, ons)
   }
   private def pointFromDb: RowParser[Point] = {
     dims.foldLeft(RowParser(_ ⇒ Success(Point.empty))) { (pp, d) ⇒
-      pp >> (p ⇒ coordFromDb(d._2).map(p + (d._1, _)))
+      pp >> (p ⇒ coordFromDb(d._1, d._2).map(p + _))
     }
   }
 
   private def insert(p: Point, value: D)(implicit c: Connection): Unit = {
     val fields = p.on.map(dims.apply)
     val values = fields.map(f ⇒ s"{$f}")
-    val ons = p.values.map(e ⇒ (dims(e._1), coordToDb(e._2))).toSeq :+ ("content" -> toDb(value))
+    val ons = p.coordinates.map(e ⇒ (dims(e.dimension), coordToDb(e))).toSeq :+ ("content" -> toDb(value))
     SQL(s"INSERT INTO $table(content,${fields.mkString(",")}) VALUES ({content},${values.mkString(",")})").
       on(ons: _*).execute
   }

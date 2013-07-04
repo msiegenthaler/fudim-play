@@ -10,6 +10,7 @@ import Cube._
 import java.sql.Connection
 
 trait DatabaseCube[T] extends EditableCube[T] {
+  protected override type Self <: DatabaseCube[T]
   def id: Long
 
   private[db] def create(implicit c: Connection): Unit

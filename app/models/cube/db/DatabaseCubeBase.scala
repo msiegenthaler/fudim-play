@@ -10,7 +10,7 @@ import models.cube._
  * Base class for a database cube.
  */
 private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] {
-  type self = DatabaseCubeBase[D]
+  protected override type Self <: DatabaseCubeBase[D]
   def table: String
   def dims: Map[Dimension, String]
   protected override def allDimensions = dims.keys.toSet

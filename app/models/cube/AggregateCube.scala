@@ -4,7 +4,6 @@ import models._
 
 /** Wrapper for a cube that calculates aggregated values for get that request points but lines (or even higher dimensional object). */
 trait AggregateCube[D] extends DelegateCube[D] {
-  protected val underlying: Cube[D]
   protected val aggregator: Aggregator[D]
 
   override def get(at: Point) = {
@@ -25,6 +24,8 @@ object AggregateCube {
   def apply[D](c: Cube[D], a: Aggregator[D]): AggregateCube[D] = NonEditableAggregateCube(c, a)
 
   private case class NonEditableAggregateCube[D](underlying: Cube[D], aggregator: Aggregator[D]) extends AggregateCube[D] {
+    override protected type Underlying = Cube[D]
+    override protected type Self = NonEditableAggregateCube[D]
     override def wrap(c: Cube[D]) = copy(underlying = c)
   }
 }

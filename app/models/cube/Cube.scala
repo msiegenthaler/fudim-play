@@ -5,6 +5,8 @@ import scala.Option.option2Iterable
 
 /** Data in a multi-dimensional space. */
 trait Cube[D] extends PartialFunction[Point, D] {
+  protected type Self <: Cube[D]
+
   /** Value at the point. The point does not have to be fully defined, the cube might support aggregation of values (else None is returned). */
   def get(at: Point): Option[D]
   def apply(at: Point) = get(at).get
@@ -18,17 +20,17 @@ trait Cube[D] extends PartialFunction[Point, D] {
   def values: Traversable[D] = sparse.map(_._2)
 
   /** This cube without any slicing and dicing applied. */
-  def raw: Cube[D]
+  def raw: Self
 
   /** The fixed dimension values, in other words the slice. */
   def slice: Point
   /** Fix the dimensions as defined by the point. The point is absolute, so use slice + (d, value) if you want to add the d=value condition. */
-  def slice(to: Point): Cube[D]
+  def slice(to: Point): Self
   /** The 'free' dimensions. Dimensions that are not 'locked down' (sliced). */
   def dimensions: Set[Dimension]
 
   /** Restrict the values within a dimension. If the dimension is already filtered then the both filters are combined with AND. */
-  def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean): Cube[D]
+  def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean): Self
 }
 object Cube {
   type DimensionFilter = Map[Dimension, Coordinate ⇒ Boolean]
@@ -36,6 +38,8 @@ object Cube {
 
 /** Editable date in a multi-dimensional space. */
 trait EditableCube[D] extends Cube[D] {
+  protected type Self <: EditableCube[D]
+
   /** Whether the value at this point can be set. */
   def isSettable(at: Point): Boolean
   /** Set the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
@@ -53,7 +57,7 @@ case class ValueCannotBeSetException(at: Point) extends RuntimeException(s"Canno
 /** Implements the slicing/dicing. */
 trait AbstractCube[D] extends Cube[D] {
   import Cube._
-  protected type self <: Cube[D]
+  protected type Self <: AbstractCube[D]
 
   val slice: Point
   protected[this] val filters: DimensionFilter
@@ -66,7 +70,7 @@ trait AbstractCube[D] extends Cube[D] {
     val combFilter = filters.get(dimension).map(f ⇒ ((c: Coordinate) ⇒ f(c) && filter(c))).getOrElse(filter)
     derive(filters = filters + (dimension -> combFilter))
   }
-  protected def derive(slice: Point = slice, filters: DimensionFilter = filters): self
+  protected def derive(slice: Point = slice, filters: DimensionFilter = filters): Self
 
   /** If this point is inside this cube. */
   protected def matches(p: Point): Boolean = {
@@ -86,8 +90,10 @@ trait AbstractCube[D] extends Cube[D] {
 }
 
 trait DelegateCube[D] extends Cube[D] {
-  protected val underlying: Cube[D]
-  protected def wrap(c: Cube[D]): DelegateCube[D]
+  protected type Self <: DelegateCube[D]
+  protected type Underlying <: Cube[D]
+  protected val underlying: Underlying
+  protected def wrap(c: Cube[D]): Self
 
   override def get(at: Point) = underlying.get(at)
   override def dense = underlying.dense

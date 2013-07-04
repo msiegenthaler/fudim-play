@@ -22,11 +22,17 @@ trait AggregateCube[D] extends DelegateCube[D] {
 }
 object AggregateCube {
   def apply[D](c: Cube[D], a: Aggregator[D]): AggregateCube[D] = NonEditableAggregateCube(c, a)
+  def apply[D](c: EditableCube[D], a: Aggregator[D]): EditableCube[D] with AggregateCube[D] = EditableAggregateCube(c, a)
 
   private case class NonEditableAggregateCube[D](underlying: Cube[D], aggregator: Aggregator[D]) extends AggregateCube[D] {
     override protected type Underlying = Cube[D]
     override protected type Self = NonEditableAggregateCube[D]
-    override def wrap(c: Cube[D]) = copy(underlying = c)
+    override def wrap(c: underlying.Self) = copy(underlying = c)
+  }
+  private case class EditableAggregateCube[D](underlying: EditableCube[D], aggregator: Aggregator[D]) extends AggregateCube[D] with DelegateEditableCube[D] {
+    override protected type Underlying = EditableCube[D]
+    override protected type Self = EditableAggregateCube[D]
+    override def wrap(c: underlying.Self) = copy(underlying = c)
   }
 }
 

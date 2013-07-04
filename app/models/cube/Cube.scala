@@ -93,7 +93,7 @@ trait DelegateCube[D] extends Cube[D] {
   protected type Self <: DelegateCube[D]
   protected type Underlying <: Cube[D]
   protected val underlying: Underlying
-  protected def wrap(c: Cube[D]): Self
+  protected def wrap(c: underlying.Self): Self
 
   override def get(at: Point) = underlying.get(at)
   override def dense = underlying.dense
@@ -105,4 +105,11 @@ trait DelegateCube[D] extends Cube[D] {
   override def raw = wrap(underlying.raw)
   override def slice(to: Point) = wrap(underlying.slice(to))
   override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = wrap(underlying.dice(dimension, filter))
+}
+trait DelegateEditableCube[D] extends DelegateCube[D] with EditableCube[D] {
+  protected type Self <: DelegateEditableCube[D]
+  protected type Underlying <: EditableCube[D]
+  override def isSettable(at: Point) = underlying.isSettable(at)
+  override def set(at: Point, value: Option[D]) = underlying.set(at, value)
+  override def setAll(value: Option[D]) = underlying.setAll(value)
 }

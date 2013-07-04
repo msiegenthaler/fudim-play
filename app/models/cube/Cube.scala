@@ -6,7 +6,7 @@ import scala.Option.option2Iterable
 /** Data in a multi-dimensional space. */
 trait Cube[D] extends PartialFunction[Point, D] {
   /** Value at the fully defined point. Restricted to the slice and dice. */
-  def get(at: Point): Option[D] = slice(at).dense.headOption.flatMap(_._2)
+  def get(at: Point): Option[D]
   def apply(at: Point) = get(at).get
   def isDefinedAt(at: Point) = get(at).isDefined
 

@@ -5,26 +5,26 @@ import scala.Option.option2Iterable
 
 /** Data in a multi-dimensional space. */
 trait Cube[D] extends PartialFunction[Point, D] {
-  /** Value at the fully defined point. Restricted to the slice and dice. */
+  /** Value at the point. The point does not have to be fully defined, the cube might support aggregation of values (else None is returned). */
   def get(at: Point): Option[D]
   def apply(at: Point) = get(at).get
   def isDefinedAt(at: Point) = get(at).isDefined
 
-  /** All values in this cube. This is a sparse view, points without values are not in the traversable. */
-  def values: Traversable[D] = sparse.map(_._2)
-  /** All points with a value in this cube. Only the points with a value in it are returned. */
-  def sparse: Traversable[(Point, D)] = dense.flatMap(e ⇒ e._2.map((e._1, _)))
-  /** All possible values as defined by the dimensions (within slice/dice). */
+  /** All points (along with their value) defined by the dimensions (within slice/dice). */
   def dense: Traversable[(Point, Option[D])]
+  /** All points defined by the dimensions (within slice/dice), that have a value associated with them. */
+  def sparse: Traversable[(Point, D)] = dense.flatMap(e ⇒ e._2.map((e._1, _)))
+  /** All defined values at points within this cube (sliced/diced). */
+  def values: Traversable[D] = sparse.map(_._2)
 
-  /** This cube without any slicing and dicing applied. 'this' if the data is not sliced/diced. */
+  /** This cube without any slicing and dicing applied. */
   def raw: Cube[D]
 
-  /** The fully fixed dimension values, in other words the slice. */
+  /** The fixed dimension values, in other words the slice. */
   def slice: Point
-  /** Fix the dimensions of the point. The point must be fully defined, so use slice + (d, value) if you want to add the d=value condition. */
+  /** Fix the dimensions as defined by the point. The point is absolute, so use slice + (d, value) if you want to add the d=value condition. */
   def slice(to: Point): Cube[D]
-  /** The 'free' dimensions. Dimensions that are not 'locked down' (sliced). Filtered (diced) dimensions are included. */
+  /** The 'free' dimensions. Dimensions that are not 'locked down' (sliced). */
   def dimensions: Set[Dimension]
 
   /** Restrict the values within a dimension. If the dimension is already filtered then the both filters are combined with AND. */

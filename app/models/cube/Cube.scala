@@ -84,3 +84,19 @@ trait AbstractCube[D] extends Cube[D] {
     }
   }
 }
+
+trait DelegateCube[D] extends Cube[D] {
+  protected val underlying: Cube[D]
+  protected def wrap(c: Cube[D]): DelegateCube[D]
+
+  override def get(at: Point) = underlying.get(at)
+  override def dense = underlying.dense
+  override def sparse = underlying.sparse
+  override def values = underlying.values
+  override def slice = underlying.slice
+  override def dimensions = underlying.dimensions
+
+  override def raw = wrap(underlying.raw)
+  override def slice(to: Point) = wrap(underlying.slice(to))
+  override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = wrap(underlying.dice(dimension, filter))
+}

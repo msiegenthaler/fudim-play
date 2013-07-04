@@ -5,7 +5,7 @@ class Point private (val coordinates: Set[Coordinate]) {
   /** Dimensions defined by this point. */
   val on = coordinates.map(_.dimension).toSet
 
-  /** True if the point at least this dimensions. */
+  /** True if the point defines at least this dimensions. */
   def defines(ds: Traversable[Dimension]) = ds.filterNot(on.contains).isEmpty
   /** True if the point defines exactly this dimensions. */
   def definesExactly(ds: Traversable[Dimension]) = ds == on

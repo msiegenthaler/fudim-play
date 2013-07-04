@@ -8,19 +8,19 @@ import models.cube._
 import models.cube.db._
 import Point._
 
-class DatabaseCubeDataSpec extends Specification {
+class DatabaseCubeSpec extends Specification {
   def monat = Dimension.get("Monat").get
   def jan = monat.all(0)
   def feb = monat.all(1)
   def mar = monat.all(2)
 
-  def oneDimensional = DatabaseCubeData.create(Set(monat), classOf[String])
+  def oneDimensional = DatabaseCube.create(Set(monat), classOf[String])
 
-  "DatabaseCubeData with one dimension" should {
+  "DatabaseCube with one dimension" should {
     "be droppable" in {
       running(FakeApplication()) {
         val cube = oneDimensional
-        DatabaseCubeData.delete(cube)
+        DatabaseCube.delete(cube)
       }
     }
     "be droppable if it has values" in {
@@ -28,7 +28,7 @@ class DatabaseCubeDataSpec extends Specification {
         val cube = oneDimensional
         cube.set(jan, Some("1"))
         cube.set(feb, Some("2"))
-        DatabaseCubeData.delete(cube)
+        DatabaseCube.delete(cube)
       }
     }
     "be initialized with all None" in {
@@ -66,7 +66,7 @@ class DatabaseCubeDataSpec extends Specification {
       running(FakeApplication()) {
         val cube = oneDimensional
         cube.set(jan, Some("X"))
-        val cube2 = DatabaseCubeData.load(cube.id, classOf[String]).get
+        val cube2 = DatabaseCube.load(cube.id, classOf[String]).get
         cube2.values.toSet must equalTo(Set("X"))
         cube2.get(jan) must beSome("X")
       }

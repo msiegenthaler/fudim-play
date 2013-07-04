@@ -9,8 +9,8 @@ import models.cube._
 /**
  * Base class for a database cube.
  */
-private trait DCDBase[D] extends DatabaseCubeData[D] with AbstractCubeData[D] {
-  type self = DCDBase[D]
+private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] {
+  type self = DatabaseCubeBase[D]
   def table: String
   def dims: Map[Dimension, String]
   protected override def allDimensions = dims.keys.toSet

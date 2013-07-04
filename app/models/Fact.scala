@@ -6,7 +6,7 @@ import play.api.db._
 import play.api.Play.current
 import java.sql.Connection
 import models.cube._
-import models.cube.db.DatabaseCubeData
+import models.cube.db.DatabaseCube
 
 /** A fact has values for each coordinate in dimensions. */
 sealed trait Fact {
@@ -25,33 +25,33 @@ sealed trait Fact {
 
 /** Fact that is backed by a database store for all fully defined points. */
 sealed trait DatabaseBackedFact extends Fact {
-  val cube: EditableCubeData[String]
+  val cube: DatabaseCube[String]
   override def dimensions = cube.dimensions
   override def get(at: Point) = cube.get(at)
   override def set(at: Point, value: Option[String]) = cube.set(at, value)
   override def canSet(at: Point) = cube.isSettable(at)
 }
 
-private case class DataFact(name: String, cube: EditableCubeData[String]) extends DatabaseBackedFact
+private case class DatabaseFact(name: String, cube: DatabaseCube[String]) extends DatabaseBackedFact
 
 object Fact {
   def get(name: String): Option[Fact] = DB.withConnection { implicit c ⇒
     for {
       id ~ name ~ cubeId ← SQL("select * from fact where name={name}").on("name" -> name).as(long("id") ~ str("name") ~ long("cube") singleOpt)
-      cube ← DatabaseCubeData.load(cubeId, classOf[String])
-    } yield (DataFact(name, cube))
+      cube ← DatabaseCube.load(cubeId, classOf[String])
+    } yield (DatabaseFact(name, cube))
   }
   def all: Iterable[Fact] = DB.withConnection { implicit c ⇒
     for {
       value ← SQL("select * from fact").as(long("id") ~ str("name") ~ long("cube") *)
       id ~ name ~ cubeId = value
-      cube ← DatabaseCubeData.load(cubeId, classOf[String])
-    } yield DataFact(name, cube)
+      cube ← DatabaseCube.load(cubeId, classOf[String])
+    } yield DatabaseFact(name, cube)
   }
 
   def create(name: String, dims: Set[Dimension]): Fact = DB.withConnection { implicit c ⇒
-    val cube = DatabaseCubeData.create(dims, classOf[String])
-    val fact = DataFact(name, cube)
+    val cube = DatabaseCube.create(dims, classOf[String])
+    val fact = DatabaseFact(name, cube)
     SQL("insert into fact(name, cube) values({name}, {cube})").on("name" -> name, "cube" -> cube.id).executeInsert().get
     fact
   }

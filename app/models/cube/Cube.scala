@@ -4,7 +4,7 @@ import models._
 import scala.Option.option2Iterable
 
 /** Data in a multi-dimensional space. */
-trait CubeData[D] extends PartialFunction[Point, D] {
+trait Cube[D] extends PartialFunction[Point, D] {
   /** Value at the fully defined point. Restricted to the slice and dice. */
   def get(at: Point): Option[D] = slice(at).dense.headOption.flatMap(_._2)
   def apply(at: Point) = get(at).get
@@ -18,24 +18,24 @@ trait CubeData[D] extends PartialFunction[Point, D] {
   def dense: Traversable[(Point, Option[D])]
 
   /** This cube without any slicing and dicing applied. 'this' if the data is not sliced/diced. */
-  def raw: CubeData[D]
+  def raw: Cube[D]
 
   /** The fully fixed dimension values, in other words the slice. */
   def slice: Point
   /** Fix the dimensions of the point. The point must be fully defined, so use slice + (d, value) if you want to add the d=value condition. */
-  def slice(to: Point): CubeData[D]
+  def slice(to: Point): Cube[D]
   /** The 'free' dimensions. Dimensions that are not 'locked down' (sliced). Filtered (diced) dimensions are included. */
   def dimensions: Set[Dimension]
 
   /** Restrict the values within a dimension. If the dimension is already filtered then the both filters are combined with AND. */
-  def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean): CubeData[D]
+  def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean): Cube[D]
 }
-object CubeData {
+object Cube {
   type DimensionFilter = Map[Dimension, Coordinate ⇒ Boolean]
 }
 
 /** Editable date in a multi-dimensional space. */
-trait EditableCubeData[D] extends CubeData[D] {
+trait EditableCube[D] extends Cube[D] {
   /** Whether the value at this point can be set. */
   def isSettable(at: Point): Boolean
   /** Set the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
@@ -51,9 +51,9 @@ trait EditableCubeData[D] extends CubeData[D] {
 case class ValueCannotBeSetException(at: Point) extends RuntimeException(s"Cannot set value at $at")
 
 /** Implements the slicing/dicing. */
-trait AbstractCubeData[D] extends CubeData[D] {
-  import CubeData._
-  protected type self <: CubeData[D]
+trait AbstractCube[D] extends Cube[D] {
+  import Cube._
+  protected type self <: Cube[D]
 
   val slice: Point
   protected[this] val filters: DimensionFilter

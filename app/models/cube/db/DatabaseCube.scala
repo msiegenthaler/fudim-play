@@ -6,13 +6,16 @@ import play.api.db._
 import play.api.Play.current
 import models._
 import models.cube._
-import CubeData._
+import Cube._
 import java.sql.Connection
 
-trait DatabaseCubeData[T] extends EditableCubeData[T] {
+trait DatabaseCube[T] extends EditableCube[T] {
   def id: Long
+
+  private[db] def create(implicit c: Connection): Unit
+  private[db] def drop(implicit c: Connection): Unit
 }
-object DatabaseCubeData {
+object DatabaseCube {
   private case class CubeDefinition(id: Long, tpe: String) {
     def tableName = s"databaseCube_data_$id"
     def dimensionName(d: Dimension) = "dim_" + Dimension.idOf(d)
@@ -23,17 +26,17 @@ object DatabaseCubeData {
     }
   }
 
-  def load[T](id: Long, tpe: Class[T]): Option[DatabaseCubeData[T]] = DB.withConnection { implicit c ⇒
+  def load[T](id: Long, tpe: Class[T]): Option[DatabaseCube[T]] = DB.withConnection { implicit c ⇒
     SQL("select * from databaseCube where id={id}").on("id" -> id).as(cubeDefinition.singleOpt).map { definition ⇒
       val (cube, cubeType) = loadFromDefinition(definition)
       val cubeTypeExpect = typeMapping.get(tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube type: ${tpe.getName}"))
       if (cubeType != cubeTypeExpect)
         throw new IllegalArgumentException(s"type of cube $id does not match: expected $cubeType but is $cubeTypeExpect")
-      cube.asInstanceOf[DCDBase[T]]
+      cube.asInstanceOf[DatabaseCube[T]]
     }
   }
 
-  def create[T](dims: Set[Dimension], tpe: Class[T]): DatabaseCubeData[T] = DB.withConnection { implicit c ⇒
+  def create[T](dims: Set[Dimension], tpe: Class[T]): DatabaseCube[T] = DB.withConnection { implicit c ⇒
     val cubeType = typeMapping.get(tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube type: ${tpe.getName}"))
     val id = SQL("insert into databaseCube(type) values({type})").on("type" -> cubeType.tpeName).executeInsert().
       getOrElse(throw new RuntimeException(s"Could not create the cube in the database"))
@@ -47,10 +50,10 @@ object DatabaseCubeData {
 
     val cube = cubeType(id, definition.tableName, cdims)
     cube.create
-    cube.asInstanceOf[DCDBase[T]]
+    cube.asInstanceOf[DatabaseCube[T]]
   }
 
-  def delete(cube: DatabaseCubeData[_]) = DB.withConnection { implicit c ⇒
+  def delete(cube: DatabaseCube[_]) = DB.withConnection { implicit c ⇒
     SQL("select * from databaseCube where id={id}").on("id" -> cube.id).as(cubeDefinition.singleOpt).foreach { definition ⇒
       val (cube, cubeType) = loadFromDefinition(definition)
       cube.drop
@@ -70,7 +73,7 @@ object DatabaseCubeData {
   }
 
   private val typeMapping: Map[Class[_], CubeType] = {
-    val list = DCDString :: Nil
+    val list = DatabaseCubeString :: Nil
     list.map(e ⇒ (e.tpeClass, e)).toMap
   }
 }

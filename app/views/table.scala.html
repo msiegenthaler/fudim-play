@@ -44,7 +44,7 @@
     <tbody>
     @d2.values.zipWithIndex.map { y =>
       <tr>
-        <th id="y-@y._2" point="@serializePoint(y._1._1)">@y._2</th>
+        <th id="y-@y._2" point="@serializePoint(y._1._1)">@y._1._2</th>
       @d1.values.zipWithIndex.map { x =>
         <td id="c-@x._2-@y._2">@valueAt(x._1._1, y._1._1).getOrElse("")</td>
       }

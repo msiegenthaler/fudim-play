@@ -24,9 +24,9 @@ sealed trait Fact {
   def canSet(at: Point): Boolean = false
 
   /** Add a dimension and assign all existing values to the defined coordinate. The dimension to add is defined by the coordinate. */
-  def addDimension(moveTo: Coordinate): Unit
+  def addDimension(moveTo: Coordinate): Fact
   /** Remove a dimension, only the values at the given coordinate are preserved. */
-  def removeDimension(keepAt: Coordinate): Unit
+  def removeDimension(keepAt: Coordinate): Fact
 }
 
 /** Fact that is backed by a database store for all fully defined points. */
@@ -39,9 +39,19 @@ sealed trait DatabaseBackedFact extends Fact {
 }
 
 private case class DatabaseFact(name: String, dbCube: DatabaseCube[String], aggr: Aggregator[String]) extends DatabaseBackedFact {
-	override val cube: EditableCube[String] = AggregateCube(dbCube, aggr)
-  override def addDimension(moveTo: Coordinate) = dbCube.addDimension(moveTo)
-  override def removeDimension(keepAt: Coordinate) = dbCube.removeDimension(keepAt)
+  override val cube: EditableCube[String] = AggregateCube(dbCube, aggr)
+  override def addDimension(moveTo: Coordinate) = {
+    val c2 = dbCube.copyAndAddDimension(moveTo)
+    //TODO save new cube id
+    //TODO drop old cube
+    copy(dbCube = c2)
+  }
+  override def removeDimension(keepAt: Coordinate) = {
+    val c2 = dbCube.copyAndRemoveDimension(keepAt)
+    //TODO save new cube id
+    //TODO drop old cube
+    copy(dbCube = c2)
+  }
 }
 
 object Fact {
@@ -67,7 +77,7 @@ object Fact {
   }
 
   //TODO replace with something efficient, this is just for a demo
-  private def aggregator= Aggregators.fold(Some("0"))(sumIfNumber)
+  private def aggregator = Aggregators.fold(Some("0"))(sumIfNumber)
   private def sumIfNumber(oa: Option[String], b: String): Option[String] = {
     for {
       a ← oa

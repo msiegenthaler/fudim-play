@@ -16,8 +16,16 @@ trait DatabaseCube[T] extends EditableCube[T] {
   private[db] def create: Unit
   private[db] def drop: Unit
 
-  def addDimension(moveTo: Coordinate) = ???
-  def removeDimension(keepAt: Coordinate) = ???
+  /**
+   * Creates a copy of this cube with identical data but an additional dimension.
+   * Existing data will be assigned the specified coordinate in the new dimension.
+   */
+  def copyAndAddDimension(moveTo: Coordinate): Self = ???
+  /**
+   * Creates a copy of this cube with identical data but a removed dimension.
+   *  Only the data at specified coordinate will be kept.
+   */
+  def copyAndRemoveDimension(keepAt: Coordinate): Self = ???
 }
 object DatabaseCube {
   private case class CubeDefinition(id: Long, tpe: String) {

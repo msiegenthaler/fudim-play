@@ -20,11 +20,13 @@ private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] {
   protected def toDb(value: D): ParameterValue[_] = value
   protected def withConnection[A](f: Connection ⇒ A): A
 
-  def create(implicit c: Connection): Unit = {
+  def create: Unit = withConnection { implicit c ⇒
     val fields = dims.values.map { d ⇒ s"$d integer not null" }
     SQL(s"CREATE TABLE $table (${fields.mkString(",")}, content $sqlType)").execute
   }
-  def drop(implicit c: Connection): Unit = SQL(s"DROP TABLE $table").execute
+  def drop: Unit = withConnection { implicit c ⇒
+    SQL(s"DROP TABLE $table").execute
+  }
 
   private def fromDb: RowParser[D] = fromDb("content")
   private def coordToDb(v: Coordinate): ParameterValue[Long] = v.id

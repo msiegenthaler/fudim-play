@@ -13,8 +13,8 @@ trait DatabaseCube[T] extends EditableCube[T] {
   protected override type Self <: DatabaseCube[T]
   def id: Long
 
-  private[db] def create(implicit c: Connection): Unit
-  private[db] def drop(implicit c: Connection): Unit
+  private[db] def create: Unit
+  private[db] def drop: Unit
 
   def addDimension(moveTo: Coordinate) = ???
   def removeDimension(keepAt: Coordinate) = ???

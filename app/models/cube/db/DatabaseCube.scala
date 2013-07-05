@@ -15,6 +15,9 @@ trait DatabaseCube[T] extends EditableCube[T] {
 
   private[db] def create(implicit c: Connection): Unit
   private[db] def drop(implicit c: Connection): Unit
+
+  def addDimension(moveTo: Coordinate) = ???
+  def removeDimension(keepAt: Coordinate) = ???
 }
 object DatabaseCube {
   private case class CubeDefinition(id: Long, tpe: String) {

@@ -36,37 +36,38 @@ sealed trait DatabaseBackedFact extends Fact {
   override def get(at: Point) = cube.get(at)
   override def set(at: Point, value: Option[String]) = cube.set(at, value)
   override def canSet(at: Point) = cube.isSettable(at)
-
-  def addDimension(moveTo: Coordinate) = ???
-  def removeDimension(keepAt: Coordinate) = ???
 }
 
-private case class DatabaseFact(name: String, cube: EditableCube[String]) extends DatabaseBackedFact
+private case class DatabaseFact(name: String, dbCube: DatabaseCube[String], aggr: Aggregator[String]) extends DatabaseBackedFact {
+	override val cube: EditableCube[String] = AggregateCube(dbCube, aggr)
+  override def addDimension(moveTo: Coordinate) = dbCube.addDimension(moveTo)
+  override def removeDimension(keepAt: Coordinate) = dbCube.removeDimension(keepAt)
+}
 
 object Fact {
   def get(name: String): Option[Fact] = DB.withConnection { implicit c ⇒
     for {
       id ~ name ~ cubeId ← SQL("select * from fact where name={name}").on("name" -> name).as(long("id") ~ str("name") ~ long("cube") singleOpt)
       cube ← DatabaseCube.load(cubeId, classOf[String])
-    } yield (DatabaseFact(name, aggregatable(cube)))
+    } yield (DatabaseFact(name, cube, aggregator))
   }
   def all: Iterable[Fact] = DB.withConnection { implicit c ⇒
     for {
       value ← SQL("select * from fact").as(long("id") ~ str("name") ~ long("cube") *)
       id ~ name ~ cubeId = value
       cube ← DatabaseCube.load(cubeId, classOf[String])
-    } yield DatabaseFact(name, aggregatable(cube))
+    } yield DatabaseFact(name, cube, aggregator)
   }
 
   def create(name: String, dims: Set[Dimension]): Fact = DB.withConnection { implicit c ⇒
     val cube = DatabaseCube.create(dims, classOf[String])
-    val fact = DatabaseFact(name, cube)
+    val fact = DatabaseFact(name, cube, aggregator)
     SQL("insert into fact(name, cube) values({name}, {cube})").on("name" -> name, "cube" -> cube.id).executeInsert().get
     fact
   }
 
   //TODO replace with something efficient, this is just for a demo
-  def aggregatable(cube: DatabaseCube[String]) = AggregateCube(cube, Aggregators.fold(Some("0"))(sumIfNumber))
+  private def aggregator= Aggregators.fold(Some("0"))(sumIfNumber)
   private def sumIfNumber(oa: Option[String], b: String): Option[String] = {
     for {
       a ← oa

@@ -12,6 +12,7 @@ import Cube._
 /** Cube of value type string. */
 private case class DatabaseCubeString(id: Long, table: String, dims: Map[Dimension, String], slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends DatabaseCubeBase[String] {
   protected override type Self = DatabaseCubeString
+  override def cubeType = DatabaseCubeString
   override def sqlType = "varchar(1024)"
   override def fromDb(name: String) = str(name)
   override def derive(slice: Point = slice, filters: DimensionFilter = filters) = copy(slice = slice, filters = filters)

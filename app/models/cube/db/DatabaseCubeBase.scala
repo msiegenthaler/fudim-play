@@ -13,7 +13,8 @@ private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] {
   protected override type Self <: DatabaseCubeBase[D]
   def table: String
   def dims: Map[Dimension, String]
-  protected override def allDimensions = dims.keys.toSet
+  override def allDimensions = dims.keys.toSet
+  def cubeType: CubeType
 
   protected def sqlType: String
   protected def fromDb(name: String): RowParser[D]
@@ -27,6 +28,21 @@ private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] {
   def drop: Unit = withConnection { implicit c ⇒
     SQL(s"DROP TABLE $table").execute
   }
+
+  override def copyAndAddDimension(moveTo: Coordinate) = withConnection { implicit c ⇒
+    val newDimension = moveTo.dimension
+    if (dimensions.contains(newDimension)) throw new IllegalArgumentException(s"$this already contains dimension $newDimension")
+    val newCube = cloneWithoutData(dimensions + newDimension)
+    val newDim = newCube.dims(newDimension)
+    val olds = dims.map(_._2).mkString(",")
+    SQL(s"INSERT INTO ${newCube.table} ($olds, $newDim, content) SELECT $olds, {d}, content FROM $table").
+      on("d" -> moveTo.id).executeUpdate
+    newCube
+  }
+  override def copyAndRemoveDimension(keepAt: Coordinate) = {
+    ???
+  }
+  protected def cloneWithoutData(dims: Set[Dimension]) = DatabaseCube.create(dims, cubeType.tpeClass).asInstanceOf[Self]
 
   private def fromDb: RowParser[D] = fromDb("content")
   private def coordToDb(v: Coordinate): ParameterValue[Long] = v.id

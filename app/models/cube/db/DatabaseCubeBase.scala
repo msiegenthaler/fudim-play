@@ -39,8 +39,15 @@ private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] {
       on("d" -> moveTo.id).executeUpdate
     newCube
   }
-  override def copyAndRemoveDimension(keepAt: Coordinate) = {
-    ???
+  override def copyAndRemoveDimension(keepAt: Coordinate) = withConnection { implicit c ⇒
+    val droppedDimension = keepAt.dimension
+    if (!dimensions.contains(droppedDimension)) throw new IllegalArgumentException(s"$this does not contains dimension $droppedDimension")
+    val newCube = cloneWithoutData(dimensions - droppedDimension)
+    val droppedDim = dims(droppedDimension)
+    val news = newCube.dims.map(_._2).mkString(",")
+    SQL(s"INSERT INTO ${newCube.table} ($news, content) SELECT $news, content FROM $table WHERE $droppedDim = {d}").
+      on("d" -> keepAt.id).executeUpdate
+    newCube
   }
   protected def cloneWithoutData(dims: Set[Dimension]) = DatabaseCube.create(dims, cubeType.tpeClass).asInstanceOf[Self]
 

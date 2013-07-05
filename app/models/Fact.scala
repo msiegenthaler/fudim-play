@@ -41,16 +41,15 @@ sealed trait DatabaseBackedFact extends Fact {
 private case class DatabaseFact(name: String, dbCube: DatabaseCube[String], aggr: Aggregator[String]) extends DatabaseBackedFact {
   override val cube: EditableCube[String] = AggregateCube(dbCube, aggr)
   override def addDimension(moveTo: Coordinate) = {
-    val c2 = dbCube.copyAndAddDimension(moveTo)
-    //TODO save new cube id
-    //TODO drop old cube
-    copy(dbCube = c2)
+    changeCube(dbCube.copyAndAddDimension(moveTo))
   }
   override def removeDimension(keepAt: Coordinate) = {
-    val c2 = dbCube.copyAndRemoveDimension(keepAt)
-    //TODO save new cube id
-    //TODO drop old cube
-    copy(dbCube = c2)
+    changeCube(dbCube.copyAndRemoveDimension(keepAt))
+  }
+  private def changeCube(newCube: DatabaseCube[String]) = {
+    Fact.assignCube(name, newCube)
+    DatabaseCube.delete(dbCube)
+    copy(dbCube = newCube)
   }
 }
 
@@ -74,6 +73,10 @@ object Fact {
     val fact = DatabaseFact(name, cube, aggregator)
     SQL("insert into fact(name, cube) values({name}, {cube})").on("name" -> name, "cube" -> cube.id).executeInsert().get
     fact
+  }
+
+  private[models] def assignCube(name: String, cube: DatabaseCube[_]) = DB.withConnection { implicit c ⇒
+    SQL("update fact set cube={cube} where name={name}").on("cube" -> cube.id, "name" -> name).executeUpdate == 1
   }
 
   //TODO replace with something efficient, this is just for a demo

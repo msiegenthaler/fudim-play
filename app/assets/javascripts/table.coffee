@@ -12,7 +12,7 @@ flashFailed = (cell) ->
   cell.effect("highlight", { color: "#ff8888" })
   
 
-$("table#factvalue-table td").editable(
+$("table#factvalue-table td.editable").editable(
   (value, s) ->
     cell = $(this)
     oldValue = this.revert

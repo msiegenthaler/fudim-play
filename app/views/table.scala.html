@@ -1,8 +1,9 @@
-@(fact: Fact, d1: Dimension, d2: Dimension, filter: DimensionsFilter, valueAt: (String, String) => Option[String])
+@(fact: Fact, d1: Dimension, d2: Dimension, filter: DimensionsFilter)
 
 @import helper._
 @import helper.twitterBootstrap._
 @import support.JsHelper._
+@import Point._
 
 @main("Fact "+fact.name+" ("+d1.name+" / "+d2.name+")") {
 
@@ -36,16 +37,18 @@
       <tr>
         <th></th>
       @d1.values.zipWithIndex.map { x =>
-        <th id="x-@x._2" point="@serializePoint(Point(d1, x._1))">@x._1</th>
+        <th id="x-@x._2" point="@serializePoint(x._1._1)">@x._1._2</th>
       }
       </tr>
     </thead>
     <tbody>
     @d2.values.zipWithIndex.map { y =>
       <tr>
-        <th id="y-@y._2" point="@serializePoint(Point(d2, y._1))">@y._1</th>
+        <th id="y-@y._2" point="@serializePoint(y._1._1)">@y._1._2</th>
       @d1.values.zipWithIndex.map { x =>
-        <td id="c-@x._2-@y._2">@valueAt(x._1, y._1).getOrElse("")</td>
+        @defining(filter.point + x._1._1 + y._1._1) { p =>
+        <td id="c-@x._2-@y._2" class="@if(fact.canSet(p)) { editable }">@fact.get(p).getOrElse("")</td>
+       }
       }
       </tr>
     }

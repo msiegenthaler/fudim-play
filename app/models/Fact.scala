@@ -1,10 +1,13 @@
 package models
 
+import util.control.Exception._
 import anorm._
 import anorm.SqlParser._
 import play.api.db._
 import play.api.Play.current
 import java.sql.Connection
+import models.cube._
+import models.cube.db.DatabaseCube
 
 /** A fact has values for each coordinate in dimensions. */
 sealed trait Fact {
@@ -15,7 +18,7 @@ sealed trait Fact {
 
   def get(at: Point): Option[String]
   /** Set the value at the point to value. Throws an ValueCannotBeSetException if not settable. */
-  def set(at: Point, value: Option[String]): Unit = throw ValueCannotBeSetException(this, at)
+  def set(at: Point, value: Option[String]): Unit = throw ValueCannotBeSetException(at)
   final def set(at: Point, value: String): Unit = set(at, Some(value))
   /** Whether the value at the point can be set. */
   def canSet(at: Point): Boolean = false
@@ -23,49 +26,44 @@ sealed trait Fact {
 
 /** Fact that is backed by a database store for all fully defined points. */
 sealed trait DatabaseBackedFact extends Fact {
-  override def get(at: Point) = {
-    Some(at).filter(_.definesExactly(dimensions)).flatMap(FactDatabaseStore.get(this, _))
-  }
-  override def set(at: Point, value: Option[String]) = {
-    if (!canSet(at)) throw ValueCannotBeSetException(this, at)
-    else FactDatabaseStore.set(this, at, value)
-  }
-  override def canSet(at: Point) = at.definesExactly(dimensions)
+  val cube: EditableCube[String]
+  override def dimensions = cube.dimensions
+  override def get(at: Point) = cube.get(at)
+  override def set(at: Point, value: Option[String]) = cube.set(at, value)
+  override def canSet(at: Point) = cube.isSettable(at)
 }
 
-case class DataFact(name: String, dimensions: Set[Dimension]) extends DatabaseBackedFact
-
-case class ValueCannotBeSetException(fact: Fact, at: Point) extends RuntimeException(s"Cannot set value of $fact.name at $at")
+private case class DatabaseFact(name: String, cube: EditableCube[String]) extends DatabaseBackedFact
 
 object Fact {
   def get(name: String): Option[Fact] = DB.withConnection { implicit c ⇒
-    SQL("select id from fact where name={name}").on("name" -> name).as(scalar[Long].singleOpt).map { id ⇒
-      DataFact(name, dimensionsFor(id))
-    }
+    for {
+      id ~ name ~ cubeId ← SQL("select * from fact where name={name}").on("name" -> name).as(long("id") ~ str("name") ~ long("cube") singleOpt)
+      cube ← DatabaseCube.load(cubeId, classOf[String])
+    } yield (DatabaseFact(name, aggregatable(cube)))
   }
   def all: Iterable[Fact] = DB.withConnection { implicit c ⇒
-    SQL("select id, name from fact").as(long("id") ~ str("name") *).map(_ match {
-      case id ~ name ⇒ DataFact(name, dimensionsFor(id))
-    })
+    for {
+      value ← SQL("select * from fact").as(long("id") ~ str("name") ~ long("cube") *)
+      id ~ name ~ cubeId = value
+      cube ← DatabaseCube.load(cubeId, classOf[String])
+    } yield DatabaseFact(name, aggregatable(cube))
   }
 
-  private def dimensionsFor(factId: Long)(implicit c: Connection) = {
-    SQL("""select d.* from fact_dimension fd
-           left outer join dimension d on d.id = fd.dimension
-           where fd.fact = {id}""").on("id" -> factId).as(Dimension.dimension *).toSet
+  def create(name: String, dims: Set[Dimension]): Fact = DB.withConnection { implicit c ⇒
+    val cube = DatabaseCube.create(dims, classOf[String])
+    val fact = DatabaseFact(name, cube)
+    SQL("insert into fact(name, cube) values({name}, {cube})").on("name" -> name, "cube" -> cube.id).executeInsert().get
+    fact
   }
 
-  def save(fact: Fact) = DB.withConnection { implicit c ⇒
-    val id = SQL("select id from fact where name={name}").on("name" -> fact.name).as(scalar[Long].singleOpt) match {
-      case Some(id) ⇒
-        SQL("update fact set name={name} where id={id}").on("name" -> fact.name, "id" -> id).executeUpdate
-        SQL("delete from fact_dimension where fact={fact}").on("fact" -> id).executeUpdate
-        id
-      case None ⇒
-        SQL("insert into fact(name) values({name})").on("name" -> fact.name).executeInsert().get
-    }
-    fact.dimensions.foreach { d ⇒
-      SQL("insert into fact_dimension(fact, dimension) values({fact},{dim})").on("fact" -> id, "dim" -> Dimension.idOf(d)).executeUpdate
-    }
+  //TODO replace with something efficient, this is just for a demo
+  def aggregatable(cube: DatabaseCube[String]) = AggregateCube(cube, Aggregators.fold(Some("0"))(sumIfNumber))
+  private def sumIfNumber(oa: Option[String], b: String): Option[String] = {
+    for {
+      a ← oa
+      na ← catching(classOf[NumberFormatException]).opt(a.toLong)
+      nb ← catching(classOf[NumberFormatException]).opt(b.toLong)
+    } yield (na + nb).toString
   }
 }

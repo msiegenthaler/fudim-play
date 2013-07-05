@@ -1,4 +1,4 @@
-@(fact: Fact, d1: Dimension, d2: Dimension, filter: DimensionsFilter, valueAt: (Coordinate, Coordinate) => Option[String])
+@(fact: Fact, d1: Dimension, d2: Dimension, filter: DimensionsFilter)
 
 @import helper._
 @import helper.twitterBootstrap._
@@ -46,7 +46,9 @@
       <tr>
         <th id="y-@y._2" point="@serializePoint(y._1._1)">@y._1._2</th>
       @d1.values.zipWithIndex.map { x =>
-        <td id="c-@x._2-@y._2">@valueAt(x._1._1, y._1._1).getOrElse("")</td>
+        @defining(filter.point + x._1._1 + y._1._1) { p =>
+        <td id="c-@x._2-@y._2">@fact.get(p).getOrElse("")</td>
+       }
       }
       </tr>
     }

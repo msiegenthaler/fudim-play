@@ -18,12 +18,7 @@ object Tables extends Controller {
       val filter = DimensionsFilter(filterDims.map { d ⇒
         fixed.coordinate(d).map(c ⇒ DimensionSelection(d, (c, d.render(c)))).getOrElse(DimensionUnrestricted(d))
       }.toList)
-      def valueAt(v1: Coordinate, v2: Coordinate): Option[String] = {
-        val at = filter.point + v1 + v2
-        val v = fact.get(at)
-        v
-      }
-      Ok(views.html.table(fact, d1, d2, filter, valueAt))
+      Ok(views.html.table(fact, d1, d2, filter))
     }
     r.getOrElse(NotFound)
   }

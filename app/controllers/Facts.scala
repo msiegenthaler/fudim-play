@@ -28,30 +28,26 @@ object Facts extends Controller {
     }.getOrElse(NotFound)
   }
   def addDimension(factName: String, dimensionName: String) = Action {
-    val dimension = Dimension.get(dimensionName).getOrElse(throw new IllegalArgumentException(s"Dimension dimensionName does not exist"))
-    Fact.get(factName).map {
-      _ match {
-        case fact: Fact ⇒
-          //val f2 = fact.copy(dimensions = fact.dimensions + dimension)
-          //Fact.save(f2)
-          //Redirect(routes.Facts.view(factName))
-          ???
-        case _ ⇒ throw new IllegalArgumentException
-      }
-    }.getOrElse(NotFound)
+    val r = for {
+      dimension ← Dimension.get(dimensionName)
+      fact ← Fact.get(factName)
+    } yield {
+      //TODO let user chose coordinate to assign
+      fact.addDimension(dimension.all.head)
+      Redirect(routes.Facts.view(factName))
+    }
+    r.getOrElse(NotFound)
   }
   def removeDimension(factName: String, dimensionName: String) = Action {
-    val dimension = Dimension.get(dimensionName).getOrElse(throw new IllegalArgumentException(s"Dimension dimensionName does not exist"))
-    Fact.get(factName).map {
-      _ match {
-        case fact: Fact ⇒
-          //val f2 = fact.copy(dimensions = fact.dimensions - dimension)
-          //Fact.save(f2)
-          //Redirect(routes.Facts.view(factName))
-          ???
-        case _ ⇒ throw new IllegalArgumentException
-      }
-    }.getOrElse(NotFound)
+    val r = for {
+      dimension ← Dimension.get(dimensionName)
+      fact ← Fact.get(factName)
+    } yield {
+      //TODO let user chose coordinate to keep
+      fact.removeDimension(dimension.all.head)
+      Redirect(routes.Facts.view(factName))
+    }
+    r.getOrElse(NotFound)
   }
 
   def get(factName: String, at: Point) = Action {

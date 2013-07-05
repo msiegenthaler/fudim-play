@@ -40,3 +40,11 @@ $("table#factvalue-table td.editable").editable(
   , 
   {
   })
+
+$("table#factvalue-table:has(td.editable)").map(() ->
+  e = $(this)
+  e.addClass("test")
+  e.find("thead tr:first-child th:first-child").each(() ->
+    $(this).html('<i class="icon-edit"></i>')
+  )
+)

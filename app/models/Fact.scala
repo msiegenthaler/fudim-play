@@ -22,6 +22,11 @@ sealed trait Fact {
   final def set(at: Point, value: String): Unit = set(at, Some(value))
   /** Whether the value at the point can be set. */
   def canSet(at: Point): Boolean = false
+
+  /** Add a dimension and assign all existing values to the defined coordinate. The dimension to add is defined by the coordinate. */
+  def addDimension(moveTo: Coordinate): Unit
+  /** Remove a dimension, only the values at the given coordinate are preserved. */
+  def removeDimension(keepAt: Coordinate): Unit
 }
 
 /** Fact that is backed by a database store for all fully defined points. */
@@ -31,6 +36,9 @@ sealed trait DatabaseBackedFact extends Fact {
   override def get(at: Point) = cube.get(at)
   override def set(at: Point, value: Option[String]) = cube.set(at, value)
   override def canSet(at: Point) = cube.isSettable(at)
+
+  def addDimension(moveTo: Coordinate) = ???
+  def removeDimension(keepAt: Coordinate) = ???
 }
 
 private case class DatabaseFact(name: String, cube: EditableCube[String]) extends DatabaseBackedFact

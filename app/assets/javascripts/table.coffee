@@ -82,7 +82,7 @@ $("table#factvalue-table").each(() ->
     if (show) then ei.html('<i class="icon-edit"></i>')
     else ei.html("")
   updateEditIndicator = () ->
-    if ($(document.activeElement).hasClass("editable")) then editIndicator(table, true)
+    if ($(document.activeElement).closest("td").hasClass("editable")) then editIndicator(table, true)
     else editIndicator(table, false)
   table.focusin(updateEditIndicator)
   table.focusout(updateEditIndicator)
@@ -91,8 +91,7 @@ $("table#factvalue-table").each(() ->
     cellState(cell, true)
     cell.trigger("edit")
   table.keydown((event) ->
-    cell = $(event.target)
-    if (event.target.tagName != "TD") then cell = cell.parents("td")
+    cell = $(event.target).closest("td")
     editDone = () -> if (cell.hasClass("inEdit")) then cell.find("form").submit()
     switch (event.which)
       when key.right

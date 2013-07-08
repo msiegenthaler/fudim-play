@@ -42,7 +42,8 @@ $("table#factvalue-table td.editable").editable(
   {
     event: "edit",
     select: true,
-    onreset: () -> $(this).parent("td").focus()
+    onreset: () -> $(this).parent("td").focus(),
+    placeholder: ""
   })
 
 

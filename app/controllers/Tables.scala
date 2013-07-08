@@ -18,9 +18,17 @@ object Tables extends Controller {
       val filter = DimensionsFilter(filterDims.map { d ⇒
         fixed.coordinate(d).map(c ⇒ DimensionSelection(d, (c, d.render(c)))).getOrElse(DimensionUnrestricted(d))
       }.toList)
-      Ok(views.html.table(fact, d1, d2, filter))
+      Ok(views.html.table(fact, d1, d2, filter, new TabIndex))
     }
     r.getOrElse(NotFound)
+  }
+
+  class TabIndex extends Function0[Integer] {
+    private var index = 0
+    override def apply() = {
+      index = index + 1
+      index
+    }
   }
 }
 

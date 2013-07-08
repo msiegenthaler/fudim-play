@@ -56,7 +56,7 @@ $("table#factvalue-table td.editable").editable(
 
 cellState = (cell, edit) ->
   if (edit)
-    cell.parent("table").find("td.inEdit").each(() -> cellState($(this), false))
+    cell.parents("table").find("td.inEdit").each(() -> cellState($(this), false))
     cell.css("width", cell.width()+"px")
     cell.css("height", cell.height()+"px")
     cell.addClass("inEdit")

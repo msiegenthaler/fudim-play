@@ -10,7 +10,7 @@ flashSuccessful = (cell) ->
 
 flashFailed = (cell) ->
   cell.effect("highlight", { color: "#ff8888" })
-  
+
 
 $("table#factvalue-table td.editable").editable(
   (value, s) ->
@@ -41,10 +41,16 @@ $("table#factvalue-table td.editable").editable(
   {
   })
 
-$("table#factvalue-table:has(td.editable)").map(() ->
-  e = $(this)
-  e.addClass("test")
-  e.find("thead tr:first-child th:first-child").each(() ->
-    $(this).html('<i class="icon-edit"></i>')
-  )
+
+$("table#factvalue-table").each(() ->
+  $table = $(this)
+  editIndicator = (table, show) ->
+    ei = table.find("thead tr:first-child th:first-child")
+    if (show) then ei.html('<i class="icon-edit"></i>')
+    else ei.html("")
+  updateEditIndicator = () ->
+    if ($(document.activeElement).hasClass("editable")) then editIndicator($table, true)
+    else editIndicator($table, false)
+  $table.focusin(updateEditIndicator)
+  $table.focusout(updateEditIndicator)
 )

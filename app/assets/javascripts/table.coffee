@@ -48,7 +48,7 @@ $("table#factvalue-table td.editable").editable(
       cell = $(this).parent("td")
       cellState(cell, false)
       cell.focus()
-    onblur: "cancel",
+    onblur: "ignore",
     height: "100%",
     width: "100%",
     placeholder: ""
@@ -88,6 +88,12 @@ $("table#factvalue-table").each(() ->
     else editIndicator(table, false)
   table.focusin(updateEditIndicator)
   table.focusout(updateEditIndicator)
+  table.focusout((event) ->
+    target = $(event.target)
+    if (target.closest("input").length)
+      target.parents("form").submit()
+      $(event.relatedTarget).focus()
+  )
 
   edit = (cell) ->
     cellState(cell, true)

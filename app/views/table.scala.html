@@ -47,7 +47,7 @@
         <th id="y-@y._2" point="@serializePoint(y._1._1)">@y._1._2</th>
       @d1.values.zipWithIndex.map { x =>
         @defining(filter.point + x._1._1 + y._1._1) { p =>
-        <td id="c-@x._2-@y._2" class="@if(fact.canSet(p)) { editable }" tabindex="@tabIndex()">@fact.get(p).getOrElse("")</td>
+        <td id="c-@x._2-@y._2" @if(fact.canSet(p)) { class="editable" tabindex="@tabIndex()"}>@fact.get(p).getOrElse("")</td>
        }
       }
       </tr>

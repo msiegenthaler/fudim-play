@@ -66,7 +66,7 @@ cellState = (cell, edit) ->
 
 key = {
   left: 37, up: 38, right: 39, down: 40,
-  enter: 13,
+  enter: 13, tab: 9,
   isDisplayable: (k) ->
     48 <= k <= 90 or # numbers and digits
     96 <= k <= 111 or # numpad
@@ -92,19 +92,27 @@ $("table#factvalue-table").each(() ->
     cell.trigger("edit")
   table.keydown((event) ->
     cell = $(event.target)
+    if (event.target.tagName != "TD") then cell = cell.parents("td")
+    editDone = () -> if (cell.hasClass("inEdit")) then cell.find("form").submit()
     switch (event.which)
       when key.right
+        editDone()
         cell.next("td.editable").focus()
         event.preventDefault()
       when key.left
+        editDone()
         cell.prev("td.editable").focus()
         event.preventDefault()
       when key.up
+        editDone()
         cell.parent().prev("tr").children().eq(cell.index()).filter("td.editable").focus()
         event.preventDefault()
       when key.down
+        editDone()
         cell.parent().next("tr").children().eq(cell.index()).filter("td.editable").focus()
         event.preventDefault()
+      when key.tab
+        editDone()
       else
         if (key.isDisplayable(event.which))
           if (!cell.hasClass("inEdit")) then edit(cell)

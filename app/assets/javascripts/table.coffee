@@ -42,15 +42,34 @@ $("table#factvalue-table td.editable").editable(
   })
 
 
+arrow = {left: 37, up: 38, right: 39, down: 40 }
+
 $("table#factvalue-table").each(() ->
-  $table = $(this)
+  table = $(this)
   editIndicator = (table, show) ->
     ei = table.find("thead tr:first-child th:first-child")
     if (show) then ei.html('<i class="icon-edit"></i>')
     else ei.html("")
   updateEditIndicator = () ->
-    if ($(document.activeElement).hasClass("editable")) then editIndicator($table, true)
-    else editIndicator($table, false)
-  $table.focusin(updateEditIndicator)
-  $table.focusout(updateEditIndicator)
+    if ($(document.activeElement).hasClass("editable")) then editIndicator(table, true)
+    else editIndicator(table, false)
+  table.focusin(updateEditIndicator)
+  table.focusout(updateEditIndicator)
+
+  table.keydown((event) ->
+    cell = $(event.target)
+    switch (event.which)
+      when arrow.right
+        cell.next("td.editable").focus()
+        event.preventDefault()
+      when arrow.left
+        cell.prev("td.editable").focus()
+        event.preventDefault()
+      when arrow.up
+        cell.parent().prev("tr").children().eq(cell.index()).filter("td.editable").focus()
+        event.preventDefault()
+      when arrow.down
+        cell.parent().next("tr").children().eq(cell.index()).filter("td.editable").focus()
+        event.preventDefault()
+  )
 )

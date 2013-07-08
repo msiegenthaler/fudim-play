@@ -36,10 +36,13 @@ $("table#factvalue-table td.editable").editable(
       cell.text(oldValue)
       flashFailed(cell)
     )
+    cell.focus()
     "Saving.."
   , 
   {
-    event: "edit"
+    event: "edit",
+    select: true,
+    onreset: () -> $(this).parent("td").focus()
   })
 
 

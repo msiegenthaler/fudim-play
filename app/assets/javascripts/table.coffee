@@ -42,9 +42,26 @@ $("table#factvalue-table td.editable").editable(
   {
     event: "edit",
     select: true,
-    onreset: () -> $(this).parent("td").focus(),
+    onsubmit: () -> cellState($(this).parent("td"), false),
+    onerror: () -> cellState($(this).parent("td"), false),
+    onreset: () ->
+      cell = $(this).parent("td")
+      cellState(cell, false)
+      cell.focus()
+    onblur: "cancel",
     placeholder: ""
   })
+
+cellState = (cell, edit) ->
+  if (edit)
+    cell.parent("table").find("td.inEdit").each(() -> cellState($(this), false))
+    cell.css("width", cell.width()+"px")
+    cell.css("height", cell.height()+"px")
+    cell.addClass("inEdit")
+  else
+    cell.css("width", "")
+    cell.css("height", "")
+    cell.removeClass("inEdit")
 
 
 key = {
@@ -70,6 +87,9 @@ $("table#factvalue-table").each(() ->
   table.focusin(updateEditIndicator)
   table.focusout(updateEditIndicator)
 
+  edit = (cell) ->
+    cellState(cell, true)
+    cell.trigger("edit")
   table.keydown((event) ->
     cell = $(event.target)
     switch (event.which)
@@ -86,6 +106,7 @@ $("table#factvalue-table").each(() ->
         cell.parent().next("tr").children().eq(cell.index()).filter("td.editable").focus()
         event.preventDefault()
       else
-        if (key.isDisplayable(event.which)) then cell.trigger("edit")
+        if (key.isDisplayable(event.which))
+          if (!cell.hasClass("inEdit")) then edit(cell)
   )
 )

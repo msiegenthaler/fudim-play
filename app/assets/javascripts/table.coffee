@@ -39,10 +39,20 @@ $("table#factvalue-table td.editable").editable(
     "Saving.."
   , 
   {
+    event: "edit"
   })
 
 
-arrow = {left: 37, up: 38, right: 39, down: 40 }
+key = {
+  left: 37, up: 38, right: 39, down: 40,
+  enter: 13,
+  isDisplayable: (k) ->
+    48 <= k <= 90 or # numbers and digits
+    96 <= k <= 111 or # numpad
+    186 <= k <= 192 or
+    186 <= k <= 192 or
+    219 <= k <= 222
+}
 
 $("table#factvalue-table").each(() ->
   table = $(this)
@@ -59,17 +69,19 @@ $("table#factvalue-table").each(() ->
   table.keydown((event) ->
     cell = $(event.target)
     switch (event.which)
-      when arrow.right
+      when key.right
         cell.next("td.editable").focus()
         event.preventDefault()
-      when arrow.left
+      when key.left
         cell.prev("td.editable").focus()
         event.preventDefault()
-      when arrow.up
+      when key.up
         cell.parent().prev("tr").children().eq(cell.index()).filter("td.editable").focus()
         event.preventDefault()
-      when arrow.down
+      when key.down
         cell.parent().next("tr").children().eq(cell.index()).filter("td.editable").focus()
         event.preventDefault()
+      else
+        if (key.isDisplayable(event.which)) then cell.trigger("edit")
   )
 )

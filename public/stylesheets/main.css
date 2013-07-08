@@ -5,3 +5,16 @@ body {
 table#factvalue-table td.inEdit form {
   display: inline;
 }
+
+table#factvalue-table td.inEdit {
+  padding-right: 3px;
+  padding-left: 8px;
+  padding-top: 2px;
+  padding-bottom: 0px;
+}
+table#factvalue-table td:not(.inEdit) {
+  padding-left: 5px;
+  padding-right: 5px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}

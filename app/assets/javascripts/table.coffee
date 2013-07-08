@@ -49,6 +49,8 @@ $("table#factvalue-table td.editable").editable(
       cellState(cell, false)
       cell.focus()
     onblur: "cancel",
+    height: "100%",
+    width: "100%",
     placeholder: ""
   })
 

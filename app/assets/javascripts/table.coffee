@@ -58,7 +58,11 @@ $("table#factvalue-table").each(() ->
   editStart = (cell) ->
     cell.addClass("in-edit")
     cell.attr("value-before", cell.text())
-    setTimeout((() -> selectAllContent(cell)), 10)
+    selAll = () ->
+      selected = $(document.activeElement).closest("td")
+      if (selected.length and selected.get(0) == cell.get(0))
+        selectAllContent(cell)
+    setTimeout(selAll, 10)
 
   editDone = (cell) ->
     if (cell.hasClass("in-edit"))

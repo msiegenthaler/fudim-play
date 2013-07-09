@@ -18,3 +18,9 @@ table#factvalue-table td:not(.inEdit) {
   padding-top: 4px;
   padding-bottom: 4px;
 }
+table#factvalue-table .edit-indicator {
+  visibility: hidden;
+}
+table#factvalue-table.can-edit-cell .edit-indicator {
+  visibility: inherit;
+}

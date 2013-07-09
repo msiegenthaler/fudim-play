@@ -17,13 +17,13 @@ selectAllContent = (ofElement) -> ofElement.each(() ->
   selection.addRange(range)
 )
 
-editIndicator = (table, show) ->
-  ei = table.find("thead tr:first-child th:first-child")
-  if (show) then ei.html('<i class="icon-edit"></i>')
-  else ei.html("")
-
 $("table#factvalue-table").each(() ->
   table = $(this)
+
+  table.find("thead tr:first-child th:first-child").html('<i class="icon-edit edit-indicator"></i>')
+  editIndicator = (show) ->
+    if (show) then table.addClass("can-edit-cell")
+    else table.removeClass("can-edit-cell")
 
   editStart = (cell) ->
     setTimeout((() -> selectAllContent(cell)), 10)
@@ -35,13 +35,13 @@ $("table#factvalue-table").each(() ->
   table.focusin((event) ->
     cell = $(event.target).closest("td[contentEditable]")
     editStart(cell)
-    editIndicator(table, cell.length)
+    editIndicator(cell.length)
   )
   table.focusout((event) ->
     old = $(event.target).closest("td[contentEditable]")
     if (old.length) then editDone(old)
-    editIndicator(table, $(event.relatedTarget).closest("td[contentEditable]").length and
-                         $.contains(table.get(0), event.relatedTarget))
+    editIndicator($(event.relatedTarget).closest("td[contentEditable]").length and
+                  $.contains(table.get(0), event.relatedTarget))
   )
 
   table.keydown((event) ->

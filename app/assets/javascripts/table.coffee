@@ -26,11 +26,19 @@ $("table#factvalue-table").each(() ->
     else table.removeClass("can-edit-cell")
 
   editStart = (cell) ->
+    cell.addClass("in-edit")
+    cell.attr("value-before", cell.text())
     setTimeout((() -> selectAllContent(cell)), 10)
 
   editDone = (cell) ->
-    console.log("Changed value of "+cell.attr("id")+" to "+cell.text())
-    window.getSelection().removeAllRanges()
+    if (cell.hasClass("in-edit"))
+      newValue = cell.text()
+      oldValue = cell.attr("value-before") || ""
+      if (oldValue != newValue)
+        console.log("Changed value of #{cell.attr("id")} from #{oldValue} to #{newValue}")
+      cell.removeClass("in-edit")
+      cell.removeAttr("value-before")
+      window.getSelection().removeAllRanges()
 
   table.focusin((event) ->
     cell = $(event.target).closest("td[contentEditable]")

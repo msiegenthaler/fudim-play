@@ -47,21 +47,22 @@ jQuery.fn.extend({
 
     flashSuccessful = (cell) -> cell.effect("highlight", { color: "#eeffee" })
     flashFailed = (cell) -> cell.effect("highlight", { color: "#ff8888" })
-    editDone = (cell) ->
-      if (cell.hasClass("in-edit"))
-        newValue = cell.text()
-        oldValue = cell.attr("value-before") || ""
-        if (oldValue != newValue)
-          onSuccess = (value) ->
-              cell.text(value)
-              flashSuccessful(cell)
-          onFail = () ->
-              cell.text(oldValue)
-              flashFailed(cell)
-          save(cell, oldValue, newValue, onSuccess, onFail)
-        cell.removeClass("in-edit")
-        cell.removeAttr("value-before")
-        window.getSelection().removeAllRanges()
+    doSave = (cell, resetText = true) -> if (cell.hasClass("in-edit"))
+      newValue = cell.text()
+      oldValue = cell.attr("value-before") || ""
+      if (oldValue != newValue)
+        onSuccess = (value) ->
+            if (resetText) then cell.text(value)
+            flashSuccessful(cell)
+        onFail = () ->
+            if (resetText) then cell.text(oldValue)
+            flashFailed(cell)
+        save(cell, oldValue, newValue, onSuccess, onFail)
+    editDone = (cell) -> if (cell.hasClass("in-edit"))
+      doSave(cell)
+      cell.removeClass("in-edit")
+      cell.removeAttr("value-before")
+      window.getSelection().removeAllRanges()
 
     table.focusin((event) ->
       cell = $(event.target).closest("td[contentEditable]")
@@ -79,6 +80,7 @@ jQuery.fn.extend({
       if (to.length)
         editDone(from)
         to.focus()
+      else doSave(from, false)
     table.keydown((event) ->
       cell = $(event.target).closest("td")
       switch (event.which)

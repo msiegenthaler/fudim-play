@@ -53,7 +53,7 @@ object Facts extends Controller {
   def get(factName: String, at: Point) = Action {
     val r = for {
       fact ← Fact.get(factName)
-      value ← fact.get(at)
+      value ← fact.cube.get(at)
     } yield Ok(value)
     r.getOrElse(NotFound)
   }
@@ -61,7 +61,7 @@ object Facts extends Controller {
     val r = for {
       fact ← Fact.get(factName)
       value = request.body.asText.filterNot(_.isEmpty)
-      _ = fact.set(at, value)
+      _ = fact.cube.set(at, value)
     } yield Ok(value.getOrElse(""))
     r.getOrElse(NotFound)
   }

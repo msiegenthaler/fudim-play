@@ -45,8 +45,9 @@ $("table#factvalue-table").each(() ->
   )
 
   changeSelection = (from, to) ->
-    editDone(from)
-    to.focus()
+    if (to.length)
+      editDone(from)
+      to.focus()
   table.keydown((event) ->
     cell = $(event.target).closest("td")
     switch (event.which)

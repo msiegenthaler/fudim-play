@@ -1,6 +1,6 @@
 key = {
   left: 37, up: 38, right: 39, down: 40,
-  enter: 13, tab: 9,
+  enter: 13, tab: 9, esc: 27,
   isDisplayable: (k) ->
     48 <= k <= 90 or # numbers and digits
     96 <= k <= 111 or # numpad
@@ -53,6 +53,7 @@ jQuery.fn.extend({
       if (oldValue != newValue)
         onSuccess = (value) ->
             if (resetText) then cell.text(value)
+            cell.attr("value-before", value)
             flashSuccessful(cell)
         onFail = () ->
             if (resetText) then cell.text(oldValue)
@@ -63,7 +64,9 @@ jQuery.fn.extend({
       cell.removeClass("in-edit")
       cell.removeAttr("value-before")
       window.getSelection().removeAllRanges()
-
+    editAbort = (cell) -> if (cell.hasClass("in-edit"))
+      cell.text(cell.attr("value-before"))
+      selectAllContent(cell)
     table.focusin((event) ->
       cell = $(event.target).closest("td[contentEditable]")
       editStart(cell)
@@ -98,5 +101,7 @@ jQuery.fn.extend({
           event.preventDefault()
         when key.tab
           editDone(cell)
+        when key.esc
+          editAbort(cell)
     )
 })

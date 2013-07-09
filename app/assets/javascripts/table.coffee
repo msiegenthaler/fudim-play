@@ -124,4 +124,8 @@ $("table#factvalue-table").each(() ->
         if (key.isDisplayable(event.which))
           if (!cell.hasClass("inEdit")) then edit(cell)
   )
+  table.dblclick((event) ->
+    cell = $(event.target).closest("td")
+    if (cell.hasClass("editable") and not cell.hasClass("inEdit")) then edit(cell)
+  )
 )

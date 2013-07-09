@@ -18,8 +18,7 @@ object Tables extends Controller {
       val filter = DimensionsFilter(filterDims.map { d ⇒
         fixed.coordinate(d).map(c ⇒ DimensionSelection(d, (c, d.render(c)))).getOrElse(DimensionUnrestricted(d))
       }.toList)
-      val cube = fact.cube
-      Ok(views.html.table(fact, cube, d1, d2, filter))
+      Ok(views.html.table(fact, fact.cube, d1, d2, filter, sum1, sum2))
     }
     r.getOrElse(NotFound)
   }

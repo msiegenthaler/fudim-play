@@ -44,6 +44,8 @@ trait EditableCube[D] extends Cube[D] {
   def isSettable(at: Point): Boolean
   /** Set the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
   def set(at: Point, value: Option[D]): Unit
+  /** Set the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
+  def set(at: Point, value: D): Unit = set(at, Some(value))
   /** Remove the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
   def remove(at: Point) = set(at, None)
 

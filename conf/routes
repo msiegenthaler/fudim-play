@@ -19,7 +19,7 @@ POST    /fact/:fact/dimension/remove controllers.Facts.removeDimension(fact: Str
 GET     /fact/:fact/value           controllers.Facts.get(fact: String, pos: Point)
 PUT     /fact/:fact/value           controllers.Facts.save(fact: String, pos: Point)
 
-GET     /fact/:fact/table/:d1/:d2   controllers.Tables.show(fact: String, d1: String, d2: String, filter: Point ?= Point.empty)
+GET     /fact/:fact/table/:d1/:d2   controllers.Tables.show(fact: String, d1: String, d2: String, filter: Point ?= Point.empty, sum1: Boolean = false, sum2: Boolean = false)
 
 
 # Map static resources from the /public folder to the /assets URL path

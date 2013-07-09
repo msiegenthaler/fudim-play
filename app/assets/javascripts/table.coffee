@@ -44,24 +44,23 @@ $("table#factvalue-table").each(() ->
                   $.contains(table.get(0), event.relatedTarget))
   )
 
+  changeSelection = (from, to) ->
+    editDone(from)
+    to.focus()
   table.keydown((event) ->
     cell = $(event.target).closest("td")
     switch (event.which)
       when key.right
-        editDone(cell)
-        cell.next("td[contentEditable]").focus()
+        changeSelection(cell, cell.next("td[contentEditable]"))
         event.preventDefault()
       when key.left
-        editDone(cell)
-        cell.prev("td[contentEditable]").focus()
+        changeSelection(cell, cell.prev("td[contentEditable]"))
         event.preventDefault()
       when key.up
-        editDone(cell)
-        cell.parent().prev("tr").children().eq(cell.index()).filter("td[contentEditable]").focus()
+        changeSelection(cell, cell.parent().prev("tr").children().eq(cell.index()).filter("td[contentEditable]"))
         event.preventDefault()
       when key.down, key.enter
-        editDone(cell)
-        cell.parent().next("tr").children().eq(cell.index()).filter("td[contentEditable]").focus()
+        changeSelection(cell, cell.parent().next("tr").children().eq(cell.index()).filter("td[contentEditable]"))
         event.preventDefault()
       when key.tab
         editDone(cell)

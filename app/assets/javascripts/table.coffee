@@ -25,37 +25,45 @@ editIndicator = (table, show) ->
 $("table#factvalue-table").each(() ->
   table = $(this)
 
-  updateEditIndicator = () ->
-    cell = $(document.activeElement).closest("td")
-    editIndicator(table, cell.prop("contentEditable"))
+  editStart = (cell) ->
+    setTimeout((() -> selectAllContent(cell)), 10)
+
+  editDone = (cell) ->
+    console.log("Changed value of "+cell.attr("id")+" to "+cell.text())
+    window.getSelection().removeAllRanges()
+
   table.focusin((event) ->
     cell = $(event.target).closest("td[contentEditable]")
-    setTimeout((() -> selectAllContent(cell)), 10)
-    updateEditIndicator()
+    editStart(cell)
+    editIndicator(table, cell.length)
   )
-  table.focusout(updateEditIndicator)
+  table.focusout((event) ->
+    old = $(event.target).closest("td[contentEditable]")
+    if (old.length) then editDone(old)
+    editIndicator(table, $(event.relatedTarget).closest("td[contentEditable]").length and
+                         $.contains(table.get(0), event.relatedTarget))
+  )
 
   table.keydown((event) ->
     cell = $(event.target).closest("td")
-    editDone = () -> window.getSelection().removeAllRanges()
     switch (event.which)
       when key.right
-        editDone()
+        editDone(cell)
         cell.next("td[contentEditable]").focus()
         event.preventDefault()
       when key.left
-        editDone()
+        editDone(cell)
         cell.prev("td[contentEditable]").focus()
         event.preventDefault()
       when key.up
-        editDone()
+        editDone(cell)
         cell.parent().prev("tr").children().eq(cell.index()).filter("td[contentEditable]").focus()
         event.preventDefault()
       when key.down, key.enter
-        editDone()
+        editDone(cell)
         cell.parent().next("tr").children().eq(cell.index()).filter("td[contentEditable]").focus()
         event.preventDefault()
       when key.tab
-        editDone()
+        editDone(cell)
   )
 )

@@ -19,6 +19,9 @@ selectAllContent = (ofElement) -> ofElement.each(() ->
 
 jQuery.fn.extend({
   ###
+  A table that supports editing its tds that have the attribute 'contentEditable' on it.
+  When the user leaves the cell its content is passed to the save function that i.e. submits
+  it to the server using an ajax request.
   Usage: 
     saveFun = (cell, oldValue, newValue, onSuccess, onFail) ->
       req = #new Ajax request

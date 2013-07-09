@@ -21,3 +21,7 @@ $("table#factvalue-table").editableTable((cell, oldValue, newValue, onSuccess, o
   req.done(onSuccess)
   req.fail(onFail)
 )
+
+$("input.summarize").change((event) ->
+  window.location.href = $(this).attr("href")
+)

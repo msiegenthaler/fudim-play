@@ -21,7 +21,7 @@
                 <ul class="dropdown-menu">
                 @filter.availableRestrictionsFor(r.dimension).map { ar =>
                   <li>
-                    <a href="@routes.Tables.show(fact.name, d1.name, d2.name, filter.change(ar).point)">@ar.label</a>
+                    <a href="@routes.Tables.show(fact.name, d1.name, d2.name, filter.change(ar).point, sumd1, sumd2)">@ar.label</a>
                   </li>
                  }
                 </ul>
@@ -30,6 +30,22 @@
          </div>
       </li>
     }
+    <li>
+      <div class="control-group">
+        <div class="controls">
+          <label class="checkbox">
+            <input type="checkbox" @if(sumd1){checked} href="@routes.Tables.show(fact.name, d1.name, d2.name, filter.point, !sumd1, sumd2)" class="summarize">
+            Summarize @d1.name
+          </label>
+        </div>
+        <div class="controls">
+          <label class="checkbox">
+            <input type="checkbox" @if(sumd2){checked} href="@routes.Tables.show(fact.name, d1.name, d2.name, filter.point, sumd1, !sumd2)" class="summarize">
+            Summarize @d2.name
+          </label>
+        </div>
+      </div>
+    </li>
   </ul>
 
   <table id="factvalue-table" class="table table-striped table-hover table-condensed" point="@serializePoint(filter.point)" fact="@urlEncode(fact.name)">

@@ -17,12 +17,24 @@ selectAllContent = (ofElement) -> ofElement.each(() ->
   selection.addRange(range)
 )
 
+editIndicator = (table, show) ->
+  ei = table.find("thead tr:first-child th:first-child")
+  if (show) then ei.html('<i class="icon-edit"></i>')
+  else ei.html("")
+
 $("table#factvalue-table").each(() ->
   table = $(this)
+
+  updateEditIndicator = () ->
+    cell = $(document.activeElement).closest("td")
+    editIndicator(table, cell.prop("contentEditable"))
   table.focusin((event) ->
     cell = $(event.target).closest("td[contentEditable]")
     setTimeout((() -> selectAllContent(cell)), 10)
+    updateEditIndicator()
   )
+  table.focusout(updateEditIndicator)
+
   table.keydown((event) ->
     cell = $(event.target).closest("td")
     editDone = () -> true

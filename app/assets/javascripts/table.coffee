@@ -25,6 +25,36 @@ $("table#factvalue-table").each(() ->
     if (show) then table.addClass("can-edit-cell")
     else table.removeClass("can-edit-cell")
 
+  flashSuccessful = (cell) -> cell.effect("highlight", { color: "#eeffee" })
+  flashFailed = (cell) -> cell.effect("highlight", { color: "#ff8888" })
+  splitId = (id) ->
+    id = id.substring(2)
+    i = id.indexOf("-")
+    x = id.substring(0, i)
+    y = id.substring(i+1)
+    [x, y]
+  save = (cell, oldValue, value) ->
+    table = cell.parents("table")
+    fact = decodeURIComponent(table.attr("fact"))
+
+    [x,y] = splitId(cell.attr("id"))
+    pfHolders = [$("#x-"+x), $("#y-"+y), table]
+    point = window.fudim.point.parse($.map(pfHolders, (e) -> e.attr("point")))
+
+    req = jsRoutes.controllers.Facts.save(fact, point).ajax({
+      data: value
+      contentType: "text/plain"
+      dataType: "text"
+    })
+    req.done((d) ->
+      cell.text(d)
+      flashSuccessful(cell)
+    )
+    req.fail(->
+      cell.text(oldValue)
+      flashFailed(cell)
+    )
+
   editStart = (cell) ->
     cell.addClass("in-edit")
     cell.attr("value-before", cell.text())
@@ -35,7 +65,7 @@ $("table#factvalue-table").each(() ->
       newValue = cell.text()
       oldValue = cell.attr("value-before") || ""
       if (oldValue != newValue)
-        console.log("Changed value of #{cell.attr("id")} from #{oldValue} to #{newValue}")
+        save(cell, oldValue, newValue)
       cell.removeClass("in-edit")
       cell.removeAttr("value-before")
       window.getSelection().removeAllRanges()

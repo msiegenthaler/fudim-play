@@ -22,8 +22,8 @@ private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] {
   protected def withConnection[A](f: Connection ⇒ A): A
 
   def create: Unit = withConnection { implicit c ⇒
-    val fields = dims.values.map { d ⇒ s"$d integer not null" }
-    SQL(s"CREATE TABLE $table (${fields.mkString(",")}, content $sqlType)").execute
+    val fields = s"content $sqlType" :: dims.values.map { d ⇒ s"$d integer not null" }.toList
+    SQL(s"CREATE TABLE $table (${fields.mkString(",")})").execute
   }
   def drop: Unit = withConnection { implicit c ⇒
     SQL(s"DROP TABLE $table").execute
@@ -34,8 +34,8 @@ private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] {
     if (dimensions.contains(newDimension)) throw new IllegalArgumentException(s"$this already contains dimension $newDimension")
     val newCube = cloneWithoutData(dimensions + newDimension)
     val newDim = newCube.dims(newDimension)
-    val olds = dims.map(_._2).mkString(",")
-    SQL(s"INSERT INTO ${newCube.table} ($olds, $newDim, content) SELECT $olds, {d}, content FROM $table").
+    val fields = ("content" :: dims.map(_._2).toList).mkString(",")
+    SQL(s"INSERT INTO ${newCube.table} ($fields, $newDim) SELECT $fields, {d} FROM $table").
       on("d" -> moveTo.id).executeUpdate
     newCube
   }
@@ -44,8 +44,8 @@ private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] {
     if (!dimensions.contains(droppedDimension)) throw new IllegalArgumentException(s"$this does not contains dimension $droppedDimension")
     val newCube = cloneWithoutData(dimensions - droppedDimension)
     val droppedDim = dims(droppedDimension)
-    val news = newCube.dims.map(_._2).mkString(",")
-    SQL(s"INSERT INTO ${newCube.table} ($news, content) SELECT $news, content FROM $table WHERE $droppedDim = {d}").
+    val fields = ("content" :: newCube.dims.map(_._2).toList).mkString(",")
+    SQL(s"INSERT INTO ${newCube.table} ($fields) SELECT $fields FROM $table WHERE $droppedDim = {d}").
       on("d" -> keepAt.id).executeUpdate
     newCube
   }

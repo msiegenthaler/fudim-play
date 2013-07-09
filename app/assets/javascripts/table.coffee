@@ -37,7 +37,7 @@ $("table#factvalue-table").each(() ->
 
   table.keydown((event) ->
     cell = $(event.target).closest("td")
-    editDone = () -> true
+    editDone = () -> window.getSelection().removeAllRanges()
     switch (event.which)
       when key.right
         editDone()
@@ -57,6 +57,5 @@ $("table#factvalue-table").each(() ->
         event.preventDefault()
       when key.tab
         editDone()
-        event.preventDefault()
   )
 )

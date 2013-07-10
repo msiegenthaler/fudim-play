@@ -1,4 +1,4 @@
-@(fact: Fact, d1: Dimension, d2: Dimension, filter: DimensionsFilter)
+@(fact: Fact, cube: models.cube.EditableCube[String], d1: Dimension, d2: Dimension, filter: DimensionsFilter, sumd1: Boolean, sumd2: Boolean)
 
 @import helper._
 @import helper.twitterBootstrap._
@@ -21,7 +21,7 @@
                 <ul class="dropdown-menu">
                 @filter.availableRestrictionsFor(r.dimension).map { ar =>
                   <li>
-                    <a href="@routes.Tables.show(fact.name, d1.name, d2.name, filter.change(ar).point)">@ar.label</a>
+                    <a href="@routes.Tables.show(fact.name, d1.name, d2.name, filter.change(ar).point, sumd1, sumd2)">@ar.label</a>
                   </li>
                  }
                 </ul>
@@ -30,6 +30,22 @@
          </div>
       </li>
     }
+    <li>
+      <div class="control-group">
+        <div class="controls">
+          <label class="checkbox">
+            <input type="checkbox" @if(sumd1){checked} href="@routes.Tables.show(fact.name, d1.name, d2.name, filter.point, !sumd1, sumd2)" class="summarize">
+            Summarize @d1.name
+          </label>
+        </div>
+        <div class="controls">
+          <label class="checkbox">
+            <input type="checkbox" @if(sumd2){checked} href="@routes.Tables.show(fact.name, d1.name, d2.name, filter.point, sumd1, !sumd2)" class="summarize">
+            Summarize @d2.name
+          </label>
+        </div>
+      </div>
+    </li>
   </ul>
 
   <table id="factvalue-table" class="table table-striped table-hover table-condensed" point="@serializePoint(filter.point)" fact="@urlEncode(fact.name)">
@@ -39,6 +55,9 @@
       @d1.values.zipWithIndex.map { x =>
         <th id="x-@x._2" point="@serializePoint(x._1._1)">@x._1._2</th>
       }
+      @if(sumd2) {
+        <th class="sum"></th>
+      }
       </tr>
     </thead>
     <tbody>
@@ -47,8 +66,22 @@
         <th id="y-@y._2" point="@serializePoint(y._1._1)">@y._1._2</th>
       @d1.values.zipWithIndex.map { x =>
         @defining(filter.point + x._1._1 + y._1._1) { p =>
-        <td id="c-@x._2-@y._2" @if(fact.canSet(p)) {contentEditable}>@fact.get(p).getOrElse("")</td>
+        <td id="c-@x._2-@y._2" @if(cube.isSettable(p)) {contentEditable}>@cube.get(p).getOrElse("")</td>
        }
+      }
+      @if(sumd2) {
+        <td class="sum" point="@serializePoint(y._1._1)">@cube.get(filter.point + y._1._1).getOrElse("")</td>
+      }
+      </tr>
+    }
+    @if(sumd1) {
+      <tr class="sum">
+        <th></th>
+      @d1.values.map { x =>
+         <td class="sum" point="@serializePoint(filter.point + x._1)">@cube.get(filter.point + x._1).getOrElse("")</td>
+      }
+      @if(sumd2) {
+        <td class="sum" point="@serializePoint(filter.point)">@cube.get(filter.point).getOrElse("")</td>
       }
       </tr>
     }

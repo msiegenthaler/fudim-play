@@ -8,3 +8,8 @@ table#factvalue-table .edit-indicator {
 table#factvalue-table.can-edit-cell .edit-indicator {
   visibility: inherit;
 }
+
+table#factvalue-table .sum {
+  color: #999999;
+  font-style: italic;
+}

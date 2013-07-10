@@ -70,7 +70,7 @@
        }
       }
       @if(sumd2) {
-        <td class="sum">@cube.get(filter.point + y._1._1).getOrElse("")</td>
+        <td class="sum" point="@serializePoint(y._1._1)">@cube.get(filter.point + y._1._1).getOrElse("")</td>
       }
       </tr>
     }
@@ -78,10 +78,10 @@
       <tr class="sum">
         <th></th>
       @d1.values.map { x =>
-         <td>@cube.get(filter.point + x._1).getOrElse("")</td>
+         <td class="sum" point="@serializePoint(filter.point + x._1)">@cube.get(filter.point + x._1).getOrElse("")</td>
       }
       @if(sumd2) {
-        <td class="sum">@cube.get(filter.point).getOrElse("")</td>
+        <td class="sum" point="@serializePoint(filter.point)">@cube.get(filter.point).getOrElse("")</td>
       }
       </tr>
     }

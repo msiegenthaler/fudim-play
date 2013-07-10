@@ -1,3 +1,5 @@
+Point = window.fudim.point
+
 splitId = (id) ->
   id = id.substring(2)
   i = id.indexOf("-")
@@ -9,7 +11,19 @@ pointForCell = (cell) ->
   table = cell.parents("table")
   [x,y] = splitId(cell.attr("id"))
   pfHolders = [$("#x-"+x), $("#y-"+y), table]
-  window.fudim.point.parse($.map(pfHolders, (e) -> e.attr("point")))
+  Point.parse($.map(pfHolders, (e) -> e.attr("point")))
+
+updateDependendValues = (cell) ->
+  point = pointForCell(cell)
+  table = cell.parents("table")
+  table.find("td.sum[point]").each(() ->
+    sumCell = $(this)
+    if (Point.contains(Point.parse(sumCell.attr("point")), point))
+      updateCell(sumCell)
+  )
+
+updateCell = (cell) ->
+  console.info("Will update #{cell.text()}") # TODO
 
 $("table#factvalue-table").editableTable((cell, oldValue, newValue, onSuccess, onFail) ->
   table = cell.parents("table")
@@ -21,7 +35,10 @@ $("table#factvalue-table").editableTable((cell, oldValue, newValue, onSuccess, o
     contentType: "text/plain"
     dataType: "text"
   })
-  req.done(onSuccess)
+  req.done((v) ->
+    onSuccess(v)
+    updateDependendValues(cell)
+  )
   req.fail(onFail)
 )
 

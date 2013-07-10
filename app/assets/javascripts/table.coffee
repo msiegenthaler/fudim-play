@@ -8,17 +8,21 @@ splitId = (id) ->
   [x, y]
 
 pointForCell = (cell) ->
-  table = cell.parents("table")
-  [x,y] = splitId(cell.attr("id"))
-  pfHolders = [$("#x-"+x), $("#y-"+y), table]
-  Point.parse($.map(pfHolders, (e) -> e.attr("point")))
+  v = if (cell.is("[point]"))
+    cell.attr("point")
+  else
+    table = cell.parents("table")
+    [x,y] = splitId(cell.attr("id"))
+    pfHolders = [$("#x-"+x), $("#y-"+y), table]
+    $.map(pfHolders, (e) -> e.attr("point"))
+  Point.parse(v)
 
 updateDependendValues = (cell) ->
   point = pointForCell(cell)
   table = cell.parents("table")
   table.find("td.sum[point]").each(() ->
     sumCell = $(this)
-    if (Point.contains(Point.parse(sumCell.attr("point")), point))
+    if (Point.contains(pointForCell(sumCell), point))
       updateCell(sumCell)
   )
 

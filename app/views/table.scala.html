@@ -55,7 +55,7 @@
       @d1.values.zipWithIndex.map { x =>
         <th id="x-@x._2" point="@serializePoint(x._1._1)">@x._1._2</th>
       }
-      @if(sumd1) {
+      @if(sumd2) {
         <th class="sum"></th>
       }
       </tr>
@@ -69,18 +69,18 @@
         <td id="c-@x._2-@y._2" @if(cube.isSettable(p)) {contentEditable}>@cube.get(p).getOrElse("")</td>
        }
       }
-      @if(sumd1) {
+      @if(sumd2) {
         <td class="sum">@cube.get(filter.point + y._1._1).getOrElse("")</td>
       }
       </tr>
     }
-    @if(sumd2) {
+    @if(sumd1) {
       <tr class="sum">
         <th></th>
       @d1.values.map { x =>
          <td>@cube.get(filter.point + x._1).getOrElse("")</td>
       }
-      @if(sumd1) {
+      @if(sumd2) {
         <td class="sum">@cube.get(filter.point).getOrElse("")</td>
       }
       </tr>

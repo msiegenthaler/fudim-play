@@ -27,14 +27,18 @@ updateDependendValues = (cell) ->
   )
 
 updateCell = (cell) ->
-  console.info("Will update #{cell.text()}") # TODO
+  table = cell.parents("table")
+  point = pointForCell(cell)
+  req = jsRoutes.controllers.Facts.get(factFor(table), point).ajax({ dataType: "text" })
+  req.done((v) -> cell.text(v))
+
+factFor = (table) ->
+  decodeURIComponent(table.attr("fact"))
 
 $("table#factvalue-table").editableTable((cell, oldValue, newValue, onSuccess, onFail) ->
   table = cell.parents("table")
-  fact = decodeURIComponent(table.attr("fact"))
-
   point = pointForCell(cell)
-  req = jsRoutes.controllers.Facts.save(fact, point).ajax({
+  req = jsRoutes.controllers.Facts.save(factFor(table), point).ajax({
     data: newValue
     contentType: "text/plain"
     dataType: "text"

@@ -2,14 +2,16 @@ body {
   padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
 }
 
-table#factvalue-table .edit-indicator {
-  visibility: hidden;
-}
-table#factvalue-table.can-edit-cell .edit-indicator {
-  visibility: inherit;
-}
+table#factvalue-table {
+  .edit-indicator {
+    visibility: hidden;
+  }
+  &.can-edit-cell .edit-indicator {
+    visibility: inherit;
+  }
 
-table#factvalue-table .sum {
-  color: #999999;
-  font-style: italic;
+  .sum {
+    color: #999999;
+    font-style: italic;
+  }
 }

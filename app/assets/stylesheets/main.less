@@ -1,0 +1,20 @@
+@import "bootstrap/bootstrap.less";
+@import "jquery/jquery-ui-1.10.3.custom.less";
+
+body {
+  padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+}
+
+table#factvalue-table {
+  .edit-indicator {
+    visibility: hidden;
+  }
+  &.can-edit-cell .edit-indicator {
+    visibility: inherit;
+  }
+
+  .sum {
+    color: #999999;
+    font-style: italic;
+  }
+}

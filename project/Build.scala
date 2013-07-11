@@ -16,6 +16,8 @@ object ApplicationBuild extends Build {
   val main = play.Project(appName, appVersion, appDependencies).settings(
     // Add your own project settings here      
     routesImport += "models._",
-    routesImport += "support.Bindables._")
+    routesImport += "support.Bindables._",
+    lessEntryPoints <<= baseDirectory(customLessEntryPoints))
 
+  def customLessEntryPoints(base: File): PathFinder = (base / "app" / "assets" / "stylesheets" * "*.less")
 }

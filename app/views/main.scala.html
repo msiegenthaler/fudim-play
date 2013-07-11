@@ -3,7 +3,8 @@
 <html>
   <head>
     <title>@title</title>
-    <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+    @min = @{ if (play.Play.isProd()) ".min" else ""}
+    <link rel="stylesheet" media="screen" href="@routes.Assets.at("stylesheets/main"+min+".css")">
     <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
   </head>
   <body>
@@ -33,13 +34,13 @@
         @content
       </p>
     </div>
-    <script src="@routes.Assets.at("javascripts/jquery/jquery.js")" type="text/javascript"></script>
-    <script src="@routes.Assets.at("javascripts/bootstrap/bootstrap.js")" type="text/javascript"></script>
-    <script src="@routes.Assets.at("javascripts/jquery/jquery.jeditable.js")" type="text/javascript"></script>
-    <script src="@routes.Assets.at("javascripts/jquery/jquery-ui.custom.js")" type="text/javascript"></script>
+    <script src="@routes.Assets.at("javascripts/jquery/jquery"+min+".js")" type="text/javascript"></script>
+    <script src="@routes.Assets.at("javascripts/bootstrap/bootstrap"+min+".js")" type="text/javascript"></script>
+    <script src="@routes.Assets.at("javascripts/jquery/jquery.jeditable"+min+".js")" type="text/javascript"></script>
+    <script src="@routes.Assets.at("javascripts/jquery/jquery-ui.custom"+min+".js")" type="text/javascript"></script>
     <script src="@routes.Application.javascriptRoutes()" type="text/javascript" ></script>
-    <script src="@routes.Assets.at("javascripts/point.js")" type="text/javascript" ></script>
-    <script src="@routes.Assets.at("javascripts/editableTable.js")" type="text/javascript" ></script>
+    <script src="@routes.Assets.at("javascripts/point"+min+".js")" type="text/javascript" ></script>
+    <script src="@routes.Assets.at("javascripts/editableTable"+min+".js")" type="text/javascript" ></script>
     @scripts.map { s =>
     <script src="@routes.Assets.at("javascripts/"+s)" type="text/javascript"></script>
     }

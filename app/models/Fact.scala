@@ -13,8 +13,7 @@ import models.cube.db.DatabaseCube
 sealed trait Fact {
   /** Unique name of the fact. */
   def name: String
-  /** Dimensions that fully define the fact. */
-  def dimensions: Set[Dimension]
+  final def dimensions: Set[Dimension] = cube.dimensions
 
   def cube: EditableCube[String]
 
@@ -26,7 +25,6 @@ sealed trait Fact {
 
 /** Fact that is backed by a database store for all fully defined points. */
 sealed trait DatabaseBackedFact extends Fact {
-  override def dimensions = cube.dimensions
 }
 
 private case class DatabaseFact(name: String, dbCube: DatabaseCube[String], aggr: Aggregator[String]) extends DatabaseBackedFact {

@@ -31,8 +31,8 @@ object InitialData {
     val ka_mat = kostenart.add("Material")
     val ka_gk = kostenart.add("Gemeinkosten")
 
-    val umsatz = Fact.create("Umsatz", Set(monat, project))
-    val kosten = Fact.create("Kosten", Set(monat, project, kostenart))
+    val umsatz = Fact.createDatabaseBacked("Umsatz", Set(monat, project))
+    val kosten = Fact.createDatabaseBacked("Kosten", Set(monat, project, kostenart))
 
     val rnd = new Random(1)
     for (m ← monat.all) {

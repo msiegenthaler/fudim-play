@@ -81,6 +81,6 @@ object Fact {
   }
 
   object CubeFactory extends JsonCubeFactory {
-    override val baseFactories = Map("database" -> DatabaseCube)
+    override val baseParsers = DatabaseCube :: Nil
   }
 }

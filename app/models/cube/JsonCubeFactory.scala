@@ -9,16 +9,23 @@ trait JsonCube[T] extends Cube[T] {
   def asJson: JsValue
 }
 
-/** Creates a cube from a json configuration. */
-trait JsonCubeFactory extends JsonCubeParser {
-  protected val baseFactories: Map[String, JsonCubeParser]
+/** Parser of the basic cube. */
+trait JsonCubeParser {
+  def parseJson(json: JsValue): Option[JsonCube[_]]
+  val jsonType: String
+}
 
-  override def apply(config: JsValue) = {
+/** Creates a cube from a json configuration. */
+trait JsonCubeFactory {
+  protected def baseParsers: Traversable[JsonCubeParser]
+  private lazy val baseMap = baseParsers.map(p ⇒ (p.jsonType, p)).toMap
+
+  def apply(config: JsValue): Option[JsonCube[_]] = {
     val baseConfig = config \ "base"
     for {
       tpe ← (baseConfig \ "type").asOpt[String]
-      baseFactory ← baseFactories.get(tpe)
-      base ← baseFactory(baseConfig)
+      baseFactory ← baseMap.get(tpe)
+      base ← baseFactory.parseJson(baseConfig)
       //TODO aggregator
     } yield base
   }

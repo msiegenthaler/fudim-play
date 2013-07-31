@@ -90,7 +90,8 @@ object DatabaseCube extends JsonCubeParser {
     list.map(e ⇒ (e.tpeClass, e)).toMap
   }
 
-  override def apply(config: JsValue) = {
+  override val jsonType = "database"
+  override def parseJson(config: JsValue) = {
     for {
       id ← (config \ "databaseId").asOpt[Long]
       tpeName ← (config \ "valueClass").asOpt[String]

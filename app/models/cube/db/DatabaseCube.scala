@@ -4,7 +4,7 @@ import anorm._
 import anorm.SqlParser._
 import play.api.db._
 import play.api.Play.current
-import play.api.libs.json.JsValue
+import play.api.libs.json._
 import models._
 import models.cube._
 import Cube._
@@ -48,6 +48,10 @@ object DatabaseCube extends JsonCubeParser {
       cube.asInstanceOf[DatabaseCube[T]]
     }
   }
+  def load[T](id: Long): Option[DatabaseCube[_]] = DB.withConnection { implicit c ⇒
+    SQL("select * from databaseCube where id={id}").on("id" -> id).as(cubeDefinition.singleOpt).
+      map(loadFromDefinition).map(_._1)
+  }
 
   def create[T](dims: Set[Dimension], tpe: Class[T]): DatabaseCube[T] = DB.withConnection { implicit c ⇒
     val cubeType = typeMapping.get(tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube type: ${tpe.getName}"))
@@ -90,13 +94,10 @@ object DatabaseCube extends JsonCubeParser {
     list.map(e ⇒ (e.tpeClass, e)).toMap
   }
 
-  override val jsonType = "database"
-  override def parseJson(config: JsValue) = {
+  override def apply(config: JsValue, soFar: Option[JsonCube[_]]) = soFar.orElse {
     for {
-      id ← (config \ "databaseId").asOpt[Long]
-      tpeName ← (config \ "valueClass").asOpt[String]
-      tpe = Class.forName(tpeName)
-      cube ← DatabaseCube.load(id, tpe)
+      desc ← DatabaseCubeJson.parse(config)
+      cube ← DatabaseCube.load(desc.id)
     } yield cube
   }
 }
@@ -106,4 +107,16 @@ private trait CubeType {
   val tpeClass: Class[_]
   def apply(id: Long, table: String, dims: Map[Dimension, String]): DatabaseCube[_]
   override def toString = tpeName
+}
+
+private case class DatabaseCubeJson(id: Long) {
+  def json = {
+    Json.obj("type" -> "database", "databaseId" -> id)
+  }
+}
+private object DatabaseCubeJson {
+  def parse(json: JsValue): Option[DatabaseCubeJson] = for {
+    tpe ← (json \ "type").asOpt[String] if tpe == "database"
+    id ← (json \ "databaseId").asOpt[Long]
+  } yield DatabaseCubeJson(id)
 }

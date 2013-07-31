@@ -117,10 +117,5 @@ private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] {
   }
   override def setAll(to: Option[D]) = allPoints.foreach(set(_, to))
 
-  override def asJson = {
-    Json.obj(
-      "type" -> DatabaseCube.jsonType,
-      "databaseId" -> id,
-      "valueClass" -> cubeType.tpeClass.getName)
-  }
+  override def asJson = DatabaseCubeJson(id).json
 }

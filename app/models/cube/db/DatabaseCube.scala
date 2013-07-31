@@ -10,7 +10,7 @@ import models.cube._
 import Cube._
 import java.sql.Connection
 
-trait DatabaseCube[T] extends EditableCube[T] with JsonCube[T] {
+trait DatabaseCube[T] extends EditableCube[T] with Jsonizable {
   protected override type Self <: DatabaseCube[T]
   def id: Long
 

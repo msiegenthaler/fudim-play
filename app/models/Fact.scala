@@ -79,4 +79,8 @@ object Fact {
       nb ← catching(classOf[NumberFormatException]).opt(b.toLong)
     } yield (na + nb).toString
   }
+
+  object CubeFactory extends JsonCubeFactory {
+    override val baseFactories = Map("database" -> DatabaseCube)
+  }
 }

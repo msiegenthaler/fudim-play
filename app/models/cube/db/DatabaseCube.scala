@@ -4,6 +4,7 @@ import anorm._
 import anorm.SqlParser._
 import play.api.db._
 import play.api.Play.current
+import play.api.libs.json.JsValue
 import models._
 import models.cube._
 import Cube._
@@ -27,7 +28,7 @@ trait DatabaseCube[T] extends EditableCube[T] {
    */
   def copyAndRemoveDimension(keepAt: Coordinate): Self
 }
-object DatabaseCube {
+object DatabaseCube extends JsonCubeParser {
   private case class CubeDefinition(id: Long, tpe: String) {
     def tableName = s"databaseCube_data_$id"
     def dimensionName(d: Dimension) = "dim_" + Dimension.idOf(d)
@@ -87,6 +88,15 @@ object DatabaseCube {
   private val typeMapping: Map[Class[_], CubeType] = {
     val list = DatabaseCubeString :: Nil
     list.map(e ⇒ (e.tpeClass, e)).toMap
+  }
+
+  override def apply(config: JsValue) = {
+    for {
+      id ← (config \ "databaseId").asOpt[Long]
+      tpeName ← (config \ "valueClass").asOpt[String]
+      tpe = Class.forName(tpeName)
+      cube ← DatabaseCube.load(id, tpe)
+    } yield cube
   }
 }
 

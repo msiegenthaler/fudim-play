@@ -2,6 +2,7 @@ import play.api._
 import models._
 import scala.util.Random
 import Point._
+import models.cube._
 
 object Global extends GlobalSettings {
   override def onStart(app: Application) {
@@ -47,4 +48,6 @@ object InitialData {
       }
     }
   }
+
+  private implicit def c2ec[T](cube: Cube[T]): EditableCube[T] = EditableCube.from(cube)
 }

@@ -15,7 +15,7 @@ sealed trait Fact {
   def name: String
   final def dimensions: Set[Dimension] = cube.dimensions
 
-  def cube: EditableCube[String]
+  def cube: Cube[String]
 
   /** Add a dimension and assign all existing values to the defined coordinate. The dimension to add is defined by the coordinate. */
   def addDimension(moveTo: Coordinate): Fact

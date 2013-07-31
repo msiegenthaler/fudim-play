@@ -54,6 +54,23 @@ trait EditableCube[D] extends Cube[D] {
   /** Remove all data in this cube. Slice/dice does apply (non-matching are not deleted). */
   def clear = setAll(None)
 }
+object EditableCube {
+  /** If the cube is editable it is returned casted. If it is not editable it is wrapped with a cube that has isSettable=false for all cells. */
+  def from[D](cube: Cube[D]): EditableCube[D] = cube match {
+    case cube: EditableCube[D] ⇒ cube
+    case cube ⇒ NonEditableCubeWrapper(cube)
+  }
+
+  private case class NonEditableCubeWrapper[D](underlying: Cube[D]) extends EditableCube[D] with DelegateCube[D] {
+    protected override type Self = NonEditableCubeWrapper[D]
+    protected override type Underlying = Cube[D]
+    protected override def wrap(c: underlying.Self) = NonEditableCubeWrapper(c)
+
+    override def isSettable(at: Point) = false
+    override def set(at: Point, value: Option[D]) = throw ValueCannotBeSetException(at)
+    override def setAll(value: Option[D]) = ()
+  }
+}
 case class ValueCannotBeSetException(at: Point) extends RuntimeException(s"Cannot set value at $at")
 
 /** Implements the slicing/dicing. */

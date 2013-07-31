@@ -5,6 +5,7 @@ import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
 import models._
+import models.cube._
 
 object Facts extends Controller {
 
@@ -58,13 +59,22 @@ object Facts extends Controller {
     r.getOrElse(NotFound)
   }
   def save(factName: String, at: Point) = Action { request ⇒
-    val r = for {
-      fact ← Fact.get(factName)
-      value = request.body.asText.filterNot(_.isEmpty)
-      _ = fact.cube.set(at, value)
-    } yield Ok(value.getOrElse(""))
-    r.getOrElse(NotFound)
+    request.body.asText.filterNot(_.isEmpty).map { value ⇒
+      Fact.get(factName).map { fact ⇒
+        fact.cube match {
+          case cube: EditableCube[_] ⇒
+            try {
+              cube.set(at, value)
+              Ok(value)
+            } catch {
+              case ValueCannotBeSetException(_) ⇒ cannotSet
+            }
+          case _ ⇒ cannotSet
+        }
+      }.getOrElse(NotFound)
+    }.getOrElse(NotAcceptable)
   }
+  private def cannotSet = MethodNotAllowed.withHeaders("Allow" -> "GET")
 
   val addForm = Form("name" -> nonEmptyText)
 }

@@ -25,19 +25,23 @@ object EditableCubeDecorator {
   }
 }
 
+trait CubeDecoratorCube[D] extends DecoratedCube[D] {
+  val decorator: CubeDecorator[D]
+}
+
 object CubeDecorator {
-  def apply[D](cube: Cube[D], decorator: CubeDecorator[D]): DecoratedCube[D] = cube match {
+  def apply[D](cube: Cube[D], decorator: CubeDecorator[D]): CubeDecoratorCube[D] = cube match {
     case cube: EditableCube[D] ⇒ new EditableCubeWithDecorator(cube, EditableCubeDecorator.from(decorator))
     case cube ⇒ new CubeWithDecorator(cube, decorator)
   }
-  def apply[D](cube: EditableCube[D], decorator: CubeDecorator[D]): DecoratedCube[D] with EditableCube[D] = {
+  def apply[D](cube: EditableCube[D], decorator: CubeDecorator[D]): CubeDecoratorCube[D] with EditableCube[D] = {
     new EditableCubeWithDecorator(cube, EditableCubeDecorator.from(decorator))
   }
 
   /** Decorator that does not change any behaviour. */
   case class Noop[D]() extends EditableCubeDecorator[D]
 
-  private class CubeWithDecorator[D](val underlying: Cube[D], decorator: CubeDecorator[D]) extends DecoratedCube[D] {
+  private class CubeWithDecorator[D](val underlying: Cube[D], val decorator: CubeDecorator[D]) extends CubeDecoratorCube[D] {
     override protected type Self = CubeWithDecorator[D]
     override type Underlying = Cube[D]
     private def wrap(c: Cube[D]) = new CubeWithDecorator(c, decorator)
@@ -51,7 +55,7 @@ object CubeDecorator {
     override def slice(to: Point) = wrap(underlying.slice(to))
     override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = wrap(underlying.dice(dimension, filter))
   }
-  private class EditableCubeWithDecorator[D](override val underlying: EditableCube[D], decorator: EditableCubeDecorator[D]) extends EditableCube[D] with DecoratedCube[D] {
+  private class EditableCubeWithDecorator[D](val underlying: EditableCube[D], val decorator: EditableCubeDecorator[D]) extends CubeDecoratorCube[D] with EditableCube[D] {
     override protected type Self = EditableCubeWithDecorator[D]
     override type Underlying = EditableCube[D]
     private def wrap(c: EditableCube[D]) = new EditableCubeWithDecorator(c, decorator)

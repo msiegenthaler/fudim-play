@@ -9,7 +9,6 @@ import play.api.Play.current
 import java.sql.Connection
 import models.cube._
 import models.cube.db.DatabaseCube
-import models.cube.JsonCube
 
 /** A fact has values for each coordinate in dimensions. */
 sealed trait Fact {
@@ -43,13 +42,16 @@ object Fact {
     FactImpl(name, cube)
   }
 
-  def assignCube(fact: String, cube: JsonCube[String]): Fact = DB.withConnection { implicit c ⇒
+  def assignCube[C <: Cube[String]](fact: String, cube: C)(implicit jsonizable: Jsonizable[C]): Fact = DB.withConnection { implicit c ⇒
     val updated = SQL("update fact set config={config} where name={name}").on("config" -> cubeConfig(cube), "name" -> fact).executeUpdate
     if (updated != 1) throw new IllegalArgumentException(s"no fact named $fact")
     FactImpl(fact, cube)
   }
 
-  private def cubeConfig(c: JsonCube[_]) = Json.stringify(c.asJson)
+  private def cubeConfig[C <: Cube[String]](cube: C)(implicit jsonizable: Jsonizable[C]) = {
+    val json = jsonizable.serialize(cube)
+    Json.stringify(json)
+  }
 
   //TODO replace with something efficient, this is just for a demo
   private def aggregator = Aggregators.fold(Some("0"))(sumIfNumber)
@@ -62,6 +64,6 @@ object Fact {
   }
 
   object CubeFactory extends JsonCubeFactory {
-    override val baseParsers = DatabaseCube :: Nil
+    override val baseParsers = DatabaseCube.json :: Nil
   }
 }

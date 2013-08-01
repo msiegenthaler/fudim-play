@@ -10,7 +10,7 @@ import models.cube._
 import Cube._
 import java.sql.Connection
 
-trait DatabaseCube[T] extends EditableCube[T] with Jsonizable {
+trait DatabaseCube[T] extends EditableCube[T] {
   protected override type Self <: DatabaseCube[T]
   def id: Long
 
@@ -28,7 +28,7 @@ trait DatabaseCube[T] extends EditableCube[T] with Jsonizable {
    */
   def copyAndRemoveDimension(keepAt: Coordinate): Self
 }
-object DatabaseCube extends JsonCubeParser {
+object DatabaseCube {
   private case class CubeDefinition(id: Long, tpe: String) {
     def tableName = s"databaseCube_data_$id"
     def dimensionName(d: Dimension) = "dim_" + Dimension.idOf(d)
@@ -94,11 +94,17 @@ object DatabaseCube extends JsonCubeParser {
     list.map(e ⇒ (e.tpeClass, e)).toMap
   }
 
-  override def apply(config: JsValue, soFar: Option[JsonCube[_]]) = soFar.orElse {
-    for {
-      desc ← DatabaseCubeJson.parse(config)
-      cube ← DatabaseCube.load(desc.id)
-    } yield cube
+  implicit def json = new Jsonizable[DatabaseCube[_]] {
+    override def parse(json: JsValue, soFar: Option[Cube[_]]) = soFar.orElse {
+      for {
+        tpe ← (json \ "type").asOpt[String] if tpe == "database"
+        id ← (json \ "databaseId").asOpt[Long]
+        cube ← DatabaseCube.load(id)
+      } yield cube
+    }
+    override def serialize(cube: DatabaseCube[_]) = {
+      Json.obj("type" -> "database", "databaseId" -> cube.id)
+    }
   }
 }
 
@@ -107,16 +113,4 @@ private trait CubeType {
   val tpeClass: Class[_]
   def apply(id: Long, table: String, dims: Map[Dimension, String]): DatabaseCube[_]
   override def toString = tpeName
-}
-
-private case class DatabaseCubeJson(id: Long) {
-  def json = {
-    Json.obj("type" -> "database", "databaseId" -> id)
-  }
-}
-private object DatabaseCubeJson {
-  def parse(json: JsValue): Option[DatabaseCubeJson] = for {
-    tpe ← (json \ "type").asOpt[String] if tpe == "database"
-    id ← (json \ "databaseId").asOpt[Long]
-  } yield DatabaseCubeJson(id)
 }

@@ -1,13 +1,12 @@
 package models
 
 import play.api.libs.json._
+import scala.annotation.implicitNotFound
 
 package object cube {
-  /** Cube that supports serialization of its state to json. */
-  trait Jsonizable { def asJson: JsValue }
-
-  type JsonCube[T] = Cube[T] with Jsonizable
-
-  /** Creates or extends a cube from json. */
-  type JsonCubeParser = (JsValue, Option[JsonCube[_]]) ⇒ Option[JsonCube[_]]
+  @implicitNotFound("Cube cannot be serialized to json")
+  trait Jsonizable[-C <: Cube[_]] {
+    def serialize(cube: C): JsValue
+    def parse(json: JsValue, soFar: Option[Cube[_]]): Option[Cube[_]]
+  }
 }

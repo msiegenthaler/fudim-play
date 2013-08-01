@@ -10,7 +10,7 @@ trait DecoratedCube[D] extends Cube[D] {
 }
 
 /** Decorator for a cube, for use with DecoratedCube.apply(). */
-sealed trait CubeDecorator[D] {
+trait CubeDecorator[D] {
   def get(decoratee: Cube[D])(at: Point) = decoratee.get(at)
   def dense(decoratee: Cube[D]) = decoratee.dense
   def sparse(decoratee: Cube[D]) = decoratee.sparse

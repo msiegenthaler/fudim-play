@@ -9,8 +9,8 @@ trait Cube[D] extends PartialFunction[Point, D] {
 
   /** Value at the point. The point does not have to be fully defined, the cube might support aggregation of values (else None is returned). */
   def get(at: Point): Option[D]
-  def apply(at: Point) = get(at).get
-  def isDefinedAt(at: Point) = get(at).isDefined
+  override def apply(at: Point) = get(at).get
+  override def isDefinedAt(at: Point) = get(at).isDefined
 
   /** All points (along with their value) defined by the dimensions (within slice/dice). */
   def dense: Traversable[(Point, Option[D])]
@@ -58,14 +58,22 @@ object EditableCube {
   /** If the cube is editable it is returned casted. If it is not editable it is wrapped with a cube that has isSettable=false for all cells. */
   def from[D](cube: Cube[D]): EditableCube[D] = cube match {
     case cube: EditableCube[D] ⇒ cube
-    case cube ⇒ NonEditableCubeWrapper(cube)
+    case cube ⇒ new PseudoEditableCube(cube)
   }
 
-  private case class NonEditableCubeWrapper[D](underlying: Cube[D]) extends EditableCube[D] with DelegateCube[D] {
-    protected override type Self = NonEditableCubeWrapper[D]
-    protected override type Underlying = Cube[D]
-    protected override def wrap(c: underlying.Self) = NonEditableCubeWrapper(c)
+  private class PseudoEditableCube[D](val underlying: Cube[D]) extends EditableCube[D] with DecoratedCube[D] {
+    override protected type Self = PseudoEditableCube[D]
+    override type Underlying = Cube[D]
+    private def wrap(c: Cube[D]) = new PseudoEditableCube(c)
 
+    override def get(at: Point) = underlying.get(at)
+    override def dense = underlying.dense
+    override def sparse = underlying.sparse
+    override def slice = underlying.slice
+    override def dimensions = underlying.dimensions
+    override def raw = wrap(underlying.raw)
+    override def slice(to: Point) = wrap(underlying.slice(to))
+    override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = wrap(underlying.dice(dimension, filter))
     override def isSettable(at: Point) = false
     override def set(at: Point, value: Option[D]) = throw ValueCannotBeSetException(at)
     override def setAll(value: Option[D]) = ()
@@ -106,29 +114,4 @@ trait AbstractCube[D] extends Cube[D] {
       ps.flatMap(p ⇒ coords.map(c ⇒ p + c))
     }
   }
-}
-
-trait DelegateCube[D] extends Cube[D] {
-  protected type Self <: DelegateCube[D]
-  protected type Underlying <: Cube[D]
-  protected val underlying: Underlying
-  protected def wrap(c: underlying.Self): Self
-
-  override def get(at: Point) = underlying.get(at)
-  override def dense = underlying.dense
-  override def sparse = underlying.sparse
-  override def values = underlying.values
-  override def slice = underlying.slice
-  override def dimensions = underlying.dimensions
-
-  override def raw = wrap(underlying.raw)
-  override def slice(to: Point) = wrap(underlying.slice(to))
-  override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = wrap(underlying.dice(dimension, filter))
-}
-trait DelegateEditableCube[D] extends DelegateCube[D] with EditableCube[D] {
-  protected type Self <: DelegateEditableCube[D]
-  protected type Underlying <: EditableCube[D]
-  override def isSettable(at: Point) = underlying.isSettable(at)
-  override def set(at: Point, value: Option[D]) = underlying.set(at, value)
-  override def setAll(value: Option[D]) = underlying.setAll(value)
 }

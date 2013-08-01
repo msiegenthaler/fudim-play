@@ -8,6 +8,7 @@ import play.api.libs.json._
 import play.api.Play.current
 import java.sql.Connection
 import models.cube._
+import models.cube.AggregateCube._
 import models.cube.db.DatabaseCube
 
 /** A fact has values for each coordinate in dimensions. */
@@ -36,10 +37,12 @@ object Fact {
     }
   }
 
-  def createDatabaseBacked(name: String, dims: Set[Dimension]): Fact = DB.withConnection { implicit c ⇒
-    val cube = DatabaseCube.create(dims, classOf[String])
+  def createDatabaseBacked(name: String, dims: Set[Dimension], aggregator: Option[Aggregator[String]]): Fact = DB.withConnection { implicit c ⇒
+    val rawCube = DatabaseCube.create(dims, classOf[String])
+    //    val cube = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
+    val cube = rawCube
     SQL("insert into fact(name, config) values({name}, {config})").on("name" -> name, "config" -> cubeConfig(cube)).executeInsert().get
-    FactImpl(name, cube)
+    get(name).getOrElse(throw new IllegalStateException(s"creation of fact $name failed"))
   }
 
   def assignCube[C <: Cube[String]](fact: String, cube: C)(implicit jsonizable: Jsonizable[C]): Fact = DB.withConnection { implicit c ⇒
@@ -51,16 +54,6 @@ object Fact {
   private def cubeConfig[C <: Cube[String]](cube: C)(implicit jsonizable: Jsonizable[C]) = {
     val json = jsonizable.serialize(cube)
     Json.stringify(json)
-  }
-
-  //TODO replace with something efficient, this is just for a demo
-  private def aggregator = Aggregators.fold(Some("0"))(sumIfNumber)
-  private def sumIfNumber(oa: Option[String], b: String): Option[String] = {
-    for {
-      a ← oa
-      na ← catching(classOf[NumberFormatException]).opt(a.toLong)
-      nb ← catching(classOf[NumberFormatException]).opt(b.toLong)
-    } yield (na + nb).toString
   }
 
   object CubeFactory extends JsonCubeFactory {

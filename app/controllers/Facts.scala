@@ -18,7 +18,8 @@ object Facts extends Controller {
     addForm.bindFromRequest.fold(
       errors ⇒ BadRequest(views.html.facts(Fact.all, errors)),
       name ⇒ {
-        val fact = Fact.createDatabaseBacked(name, Set.empty)
+        //TODO let the user chose the aggregator
+        val fact = Fact.createDatabaseBacked(name, Set.empty, None)
         Redirect(routes.Facts.view(name))
       })
   }

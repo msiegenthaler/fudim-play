@@ -1,8 +1,9 @@
+import scala.util.control.Exception._
+import scala.util.Random
 import play.api._
 import models._
-import scala.util.Random
-import Point._
 import models.cube._
+import Point._
 
 object Global extends GlobalSettings {
   override def onStart(app: Application) {
@@ -31,8 +32,19 @@ object InitialData {
     val ka_mat = kostenart.add("Material")
     val ka_gk = kostenart.add("Gemeinkosten")
 
-    val umsatz = Fact.createDatabaseBacked("Umsatz", Set(monat, project))
-    val kosten = Fact.createDatabaseBacked("Kosten", Set(monat, project, kostenart))
+    val sumAggregator = {
+      def sumIfNumber(oa: Option[String], b: String): Option[String] = {
+        for {
+          a ← oa
+          na ← catching(classOf[NumberFormatException]).opt(a.toLong)
+          nb ← catching(classOf[NumberFormatException]).opt(b.toLong)
+        } yield (na + nb).toString
+      }
+      Aggregators.fold(Some("0"))(sumIfNumber)
+    }
+
+    val umsatz = Fact.createDatabaseBacked("Umsatz", Set(monat, project), Some(sumAggregator))
+    val kosten = Fact.createDatabaseBacked("Kosten", Set(monat, project, kostenart), Some(sumAggregator))
 
     val rnd = new Random(1)
     for (m ← monat.all) {

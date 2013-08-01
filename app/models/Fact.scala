@@ -45,13 +45,13 @@ object Fact {
     get(name).getOrElse(throw new IllegalStateException(s"creation of fact $name failed"))
   }
 
-  def assignCube[C <: Cube[String]](fact: String, cube: C)(implicit jsonizable: Jsonizable[C]): Fact = DB.withConnection { implicit c ⇒
+  def assignCube[C <: Cube[String]](fact: String, cube: C)(implicit jsonizable: JsonSerializable[C]): Fact = DB.withConnection { implicit c ⇒
     val updated = SQL("update fact set config={config} where name={name}").on("config" -> cubeConfig(cube), "name" -> fact).executeUpdate
     if (updated != 1) throw new IllegalArgumentException(s"no fact named $fact")
     FactImpl(fact, cube)
   }
 
-  private def cubeConfig[C <: Cube[String]](cube: C)(implicit jsonizable: Jsonizable[C]) = {
+  private def cubeConfig[C <: Cube[String]](cube: C)(implicit jsonizable: JsonSerializable[C]) = {
     val json = jsonizable.serialize(cube)
     Json.stringify(json)
   }

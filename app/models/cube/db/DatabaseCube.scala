@@ -94,7 +94,7 @@ object DatabaseCube {
     list.map(e ⇒ (e.tpeClass, e)).toMap
   }
 
-  implicit def json = new Jsonizable[DatabaseCube[_]] {
+  implicit def json = new JsonMapper[DatabaseCube[_]] {
     override def parse(json: JsValue, soFar: Option[Cube[_]]) = soFar.orElse {
       for {
         tpe ← (json \ "type").asOpt[String] if tpe == "database"

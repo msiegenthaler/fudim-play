@@ -2,13 +2,6 @@ package models.cube
 
 import models._
 
-/** Cube that decorates another cube. I.e. to add aggragation of values. */
-trait DecoratedCube[D] extends Cube[D] {
-  protected override type Self <: DecoratedCube[D]
-  type Underlying <: Cube[D]
-  val underlying: Underlying
-}
-
 /** Decorator for a cube, for use with DecoratedCube.apply(). */
 trait CubeDecorator[D] {
   def get(decoratee: Cube[D])(at: Point) = decoratee.get(at)
@@ -31,10 +24,8 @@ object EditableCubeDecorator {
     }
   }
 }
-/** Decorator that does not change any behaviour. */
-case class NoDecorator[D]() extends EditableCubeDecorator[D]
 
-object DecoratedCube {
+object CubeDecorator {
   def apply[D](cube: Cube[D], decorator: CubeDecorator[D]): DecoratedCube[D] = cube match {
     case cube: EditableCube[D] ⇒ new EditableCubeWithDecorator(cube, EditableCubeDecorator.from(decorator))
     case cube ⇒ new CubeWithDecorator(cube, decorator)
@@ -43,11 +34,8 @@ object DecoratedCube {
     new EditableCubeWithDecorator(cube, EditableCubeDecorator.from(decorator))
   }
 
-  /** Removes all decoration from a cube. */
-  def undecorate[D](cube: Cube[D]): Cube[D] = cube match {
-    case c: DecoratedCube[D] ⇒ undecorate(c.underlying)
-    case c ⇒ c
-  }
+  /** Decorator that does not change any behaviour. */
+  case class Noop[D]() extends EditableCubeDecorator[D]
 
   private class CubeWithDecorator[D](val underlying: Cube[D], decorator: CubeDecorator[D]) extends DecoratedCube[D] {
     override protected type Self = CubeWithDecorator[D]

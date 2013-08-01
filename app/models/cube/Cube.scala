@@ -32,8 +32,25 @@ trait Cube[D] extends PartialFunction[Point, D] {
   /** Restrict the values within a dimension. If the dimension is already filtered then the both filters are combined with AND. */
   def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean): Self
 }
+
+/** Cube that decorates another cube. I.e. to add aggragation of values. */
+trait DecoratedCube[D] extends Cube[D] {
+  protected override type Self <: DecoratedCube[D]
+  type Underlying <: Cube[D]
+  val underlying: Underlying
+}
+
 object Cube {
   type DimensionFilter = Map[Dimension, Coordinate ⇒ Boolean]
+
+  /** Removes all decoration from a cube. */
+  def undecorate[D](cube: Cube[D]): Cube[D] = cube match {
+    case c: DecoratedCube[D] ⇒ undecorate(c.underlying)
+    case c ⇒ c
+  }
+
+  /** see EditableCube.from */
+  def editable[D](cube: Cube[D]) = EditableCube.from(cube)
 }
 
 /** Editable date in a multi-dimensional space. */
@@ -55,7 +72,10 @@ trait EditableCube[D] extends Cube[D] {
   def clear = setAll(None)
 }
 object EditableCube {
-  /** If the cube is editable it is returned casted. If it is not editable it is wrapped with a cube that has isSettable=false for all cells. */
+  /**
+   * If the cube is editable it is returned casted.
+   * If it is not editable it is wrapped with a cube that has isSettable=false for all cells. The wrapped thing is a DecoratedCube.
+   */
   def from[D](cube: Cube[D]): EditableCube[D] = cube match {
     case cube: EditableCube[D] ⇒ cube
     case cube ⇒ new PseudoEditableCube(cube)

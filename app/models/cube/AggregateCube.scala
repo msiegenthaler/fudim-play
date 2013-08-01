@@ -2,37 +2,26 @@ package models.cube
 
 import models._
 
-/** Wrapper for a cube that calculates aggregated values for get that request points but lines (or even higher dimensional object). */
-trait AggregateCube[D] extends DelegateCube[D] {
-  protected val aggregator: Aggregator[D]
+object AggregateCube {
+  /** Creates a  CubeDecorator from the aggregator. */
+  implicit def decorator[D](aggregator: Aggregator[D]): CubeDecorator[D] = aggregator match {
+    case a: SparseAggregator[D] ⇒ new SparseAggregationDecorator(a)
+    case a: DenseAggregator[D] ⇒ new DenseAggregationDecorator(a)
+  }
 
-  override def get(at: Point) = {
-    if (!underlying.slice.contains(at)) None // not contained in this cube, so ignore
-    else {
-      if (at.defines(dimensions)) underlying.get(at)
-      else {
-        val cube = underlying.slice(at)
-        aggregator match {
-          case a: SparseAggregator[D] ⇒ a(cube.values)
-          case a: DenseAggregator[D] ⇒ a(cube.dense.map(_._2))
-        }
-      }
+  private case class DenseAggregationDecorator[D](aggregator: DenseAggregator[D]) extends CubeDecorator[D] {
+    override def get(decoratee: Cube[D])(at: Point) = {
+      if (!decoratee.slice.contains(at)) None // not contained in this cube, so ignore
+      else if (at.defines(decoratee.dimensions)) decoratee.get(at)
+      else aggregator(decoratee.slice(at).dense.map(_._2))
     }
   }
-}
-object AggregateCube {
-  def apply[D](c: Cube[D], a: Aggregator[D]): AggregateCube[D] = NonEditableAggregateCube(c, a)
-  def apply[D](c: EditableCube[D], a: Aggregator[D]): EditableCube[D] with AggregateCube[D] = EditableAggregateCube(c, a)
-
-  private case class NonEditableAggregateCube[D](underlying: Cube[D], aggregator: Aggregator[D]) extends AggregateCube[D] {
-    override protected type Underlying = Cube[D]
-    override protected type Self = NonEditableAggregateCube[D]
-    override def wrap(c: underlying.Self) = copy(underlying = c)
-  }
-  private case class EditableAggregateCube[D](underlying: EditableCube[D], aggregator: Aggregator[D]) extends AggregateCube[D] with DelegateEditableCube[D] {
-    override protected type Underlying = EditableCube[D]
-    override protected type Self = EditableAggregateCube[D]
-    override def wrap(c: underlying.Self) = copy(underlying = c)
+  private case class SparseAggregationDecorator[D](aggregator: SparseAggregator[D]) extends CubeDecorator[D] {
+    override def get(decoratee: Cube[D])(at: Point) = {
+      if (!decoratee.slice.contains(at)) None // not contained in this cube, so ignore
+      else if (at.defines(decoratee.dimensions)) decoratee.get(at)
+      else aggregator(decoratee.slice(at).values)
+    }
   }
 }
 

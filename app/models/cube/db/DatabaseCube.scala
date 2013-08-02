@@ -94,16 +94,14 @@ object DatabaseCube {
     list.map(e ⇒ (e.tpeClass, e)).toMap
   }
 
-  implicit def json = new JsonMapper[DatabaseCube[_]] {
-    override def parse(json: JsValue, soFar: Option[Cube[_]]) = soFar.orElse {
-      for {
-        tpe ← (json \ "type").asOpt[String] if tpe == "database"
-        id ← (json \ "databaseId").asOpt[Long]
-        cube ← DatabaseCube.load(id)
-      } yield cube
-    }
-    override def serialize(cube: DatabaseCube[_]) = {
-      Json.obj("type" -> "database", "databaseId" -> cube.id)
+  def json = new JsonCubeMapper {
+    override val id = "databaseCube"
+    override def parser = json ⇒ for {
+      id ← (json \ "id").asOpt[Long]
+      cube ← DatabaseCube.load(id)
+    } yield cube
+    override def serializer = {
+      case cube: DatabaseCube[_] ⇒ Json.obj("id" -> cube.id)
     }
   }
 }

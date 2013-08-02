@@ -7,6 +7,7 @@ import play.api.Play.current
 import play.api.libs.json._
 import models._
 import models.cube._
+import models.json.JsonMapper
 import Cube._
 import java.sql.Connection
 
@@ -101,7 +102,7 @@ object DatabaseCube {
       cube ← DatabaseCube.load(id)
     } yield cube
     override def serializer = {
-      case cube: DatabaseCube[_] ⇒ Json.obj("id" -> cube.id)
+      case cube: DatabaseCube[_] ⇒ Some(Json.obj("id" -> cube.id))
     }
   }
 }

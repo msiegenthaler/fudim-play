@@ -11,7 +11,8 @@ object ApplicationBuild extends Build {
     // Add your project dependencies here,
     jdbc,
     "postgresql" % "postgresql" % "9.1-901-1.jdbc4",
-    anorm)
+    anorm,
+    "org.scalaz" %% "scalaz-core" % "7.0.2")
 
   val main = play.Project(appName, appVersion, appDependencies).settings(
     // Add your own project settings here      

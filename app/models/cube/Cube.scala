@@ -97,6 +97,7 @@ object EditableCube {
     override def isSettable(at: Point) = false
     override def set(at: Point, value: Option[D]) = throw ValueCannotBeSetException(at)
     override def setAll(value: Option[D]) = ()
+    override def toString = underlying.toString
   }
 }
 case class ValueCannotBeSetException(at: Point) extends RuntimeException(s"Cannot set value at $at")

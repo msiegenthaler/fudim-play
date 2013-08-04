@@ -48,6 +48,7 @@ object Aggregator {
       else if (at.defines(decoratee.dimensions)) decoratee.get(at)
       else aggregator(decoratee.slice(at).dense.map(_._2))
     }
+    override def toString = s"DenseAggregator($aggregator)"
   }
   private case class SparseAggregationDecorator[D](aggregator: SparseAggregator[D]) extends CubeDecorator[D] {
     override def get(decoratee: Cube[D])(at: Point) = {
@@ -55,6 +56,7 @@ object Aggregator {
       else if (at.defines(decoratee.dimensions)) decoratee.get(at)
       else aggregator(decoratee.slice(at).values)
     }
+    override def toString = s"SparseAggregator($aggregator)"
   }
 }
 

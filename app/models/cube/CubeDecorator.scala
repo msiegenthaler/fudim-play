@@ -25,6 +25,7 @@ object EditableCubeDecorator {
       override def get(decoratee: Cube[D])(at: Point) = d.get(decoratee)(at)
       override def dense(decoratee: Cube[D]) = d.dense(decoratee)
       override def sparse(decoratee: Cube[D]) = d.sparse(decoratee)
+      override def toString = d.toString
     }
   }
 }
@@ -88,6 +89,7 @@ object CubeDecorator {
     override def raw = wrap(underlying.raw)
     override def slice(to: Point) = wrap(underlying.slice(to))
     override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = wrap(underlying.dice(dimension, filter))
+    override def toString = s"CubeWithDecorator($underlying, $decorator)"
   }
   private class EditableCubeWithDecorator[D](val underlying: EditableCube[D], val decorator: EditableCubeDecorator[D]) extends CubeDecoratorCube[D] with EditableCube[D] {
     override protected type Self = EditableCubeWithDecorator[D]
@@ -105,5 +107,6 @@ object CubeDecorator {
     override def isSettable(at: Point) = decorator.isSettable(underlying)(at)
     override def set(at: Point, value: Option[D]) = decorator.set(underlying)(at, value)
     override def setAll(value: Option[D]) = decorator.setAll(underlying)(value)
+    override def toString = s"EditableCubeWithDecorator($underlying, $decorator)"
   }
 }

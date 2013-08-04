@@ -7,12 +7,13 @@ import play.api.libs.json._
 import models.cube.{ Aggregators ⇒ A, Aggregator }
 import models.json.JsonMapper
 
-trait Aggregation {
-  val name: String
-  val aggregator: Aggregator[String]
+class Aggregation private (val name: String, val aggregator: Option[Aggregator[String]]) {
+  override def toString = name
 }
 
 object Aggregation {
+  val none = new Aggregation("No Aggregation", None)
+
   val sum = {
     def sumIfNumber(oa: Option[String], b: String): Option[String] = {
       for {
@@ -24,7 +25,7 @@ object Aggregation {
     Aggregation("sum", A.fold(Some("0"))(sumIfNumber))
   }
 
-  val all = sum :: Nil
+  val all = none :: sum :: Nil
 
   private def apply(name: String, aggr: Aggregator[String]) = {
     JsonMappers.registerAggregator(new JsonMapper[Aggregator[_]] {
@@ -32,11 +33,6 @@ object Aggregation {
       override def parser = json ⇒ aggr.success
       override def serializer = { case `aggr` ⇒ JsArray().success }
     })
-    val n = name
-    new Aggregation {
-      override val name = n
-      override val aggregator = aggr
-      override def toString = name
-    }
+    new Aggregation(name, Some(aggr))
   }
 }

@@ -6,7 +6,7 @@ import models.json.JsonMapper
 import Point._
 
 object Global extends GlobalSettings {
-  val aggregators = Aggregators.all //so they get registered
+  val aggregation = Aggregation.all //so they get registered
   override def onStart(app: Application) {
     if (!InitialData.hasData) InitialData.insert
   }
@@ -33,8 +33,8 @@ object InitialData {
     val ka_mat = kostenart.add("Material")
     val ka_gk = kostenart.add("Gemeinkosten")
 
-    val umsatz = Fact.createDatabaseBacked("Umsatz", Set(monat, project), Some(Aggregators.sum))
-    val kosten = Fact.createDatabaseBacked("Kosten", Set(monat, project, kostenart), Some(Aggregators.sum))
+    val umsatz = Fact.createDatabaseBacked("Umsatz", Set(monat, project), Some(Aggregation.sum.aggregator))
+    val kosten = Fact.createDatabaseBacked("Kosten", Set(monat, project, kostenart), Some(Aggregation.sum.aggregator))
 
     val rnd = new Random(1)
     for (m ← monat.all) {

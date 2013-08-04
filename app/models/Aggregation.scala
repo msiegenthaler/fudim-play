@@ -7,7 +7,12 @@ import play.api.libs.json._
 import models.cube.{ Aggregators ⇒ A, Aggregator }
 import models.json.JsonMapper
 
-object Aggregators {
+trait Aggregation {
+  val name: String
+  val aggregator: Aggregator[String]
+}
+
+object Aggregation {
   val all = sum :: Nil
 
   val sum = {
@@ -18,16 +23,20 @@ object Aggregators {
         nb ← catching(classOf[NumberFormatException]).opt(b.toLong)
       } yield (na + nb).toString
     }
-    register("sum", A.fold(Some("0"))(sumIfNumber))
+    Aggregation("sum", A.fold(Some("0"))(sumIfNumber))
   }
 
-  private def register[T](name: String, aggr: Aggregator[T]) = {
+  private def apply[T](name: String, aggr: Aggregator[T]) = {
     JsonMappers.registerAggregator(new JsonMapper[Aggregator[_]] {
       override val id = name
       override def parser = json ⇒ aggr.success
       override def serializer = { case `aggr` ⇒ JsArray().success }
     })
-    aggr
+    val n = name
+    new Aggregation {
+      override val name = n
+      override val aggregator = aggr
+      override def toString = name
+    }
   }
-
 }

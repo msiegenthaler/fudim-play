@@ -27,7 +27,8 @@ object Facts extends Controller {
   def view(name: String) = Action {
     Fact.get(name).map { fact ⇒
       val dims = Dimension.all.filterNot(fact.dimensions.contains)
-      Ok(views.html.fact(fact, dims))
+      val aggr = Aggregation.sum //TODO
+      Ok(views.html.fact(fact, dims, Aggregation.all, aggrForm.fill(aggr.name)))
     }.getOrElse(NotFound)
   }
   def addDimension(factName: String, dimensionName: String) = Action {
@@ -55,6 +56,8 @@ object Facts extends Controller {
     case None ⇒ NotFound
   }
 
+  def setAggregation(factName: String) = TODO
+
   def get(factName: String, at: Point) = Action {
     val r = for {
       fact ← Fact.get(factName)
@@ -81,4 +84,5 @@ object Facts extends Controller {
   private def cannotSet = MethodNotAllowed.withHeaders("Allow" -> "GET")
 
   val addForm = Form("name" -> nonEmptyText)
+  val aggrForm = Form("aggregation" -> text)
 }

@@ -1,4 +1,4 @@
-@(fact: Fact, dims: Iterable[Dimension])
+@(fact: Fact, dims: Iterable[Dimension], aggrs: List[Aggregation], aggrForm: Form[String])
 
 @import helper._
 @import helper.twitterBootstrap._
@@ -26,6 +26,12 @@
       </li>
     }
 	</ul>
+	}
+	
+	<h2>Aggregation</h2>
+	@form(routes.Facts.setAggregation(fact.name)) {
+	  @select(aggrForm("aggregation"), options=aggrs.map(a => (a.name, a.name)), '_label -> "Aggregation")
+	  <input type="submit" value="Save">
 	}
 
 	<h2>Tables</h2>

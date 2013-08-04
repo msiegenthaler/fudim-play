@@ -1,8 +1,10 @@
 import scala.util.control.Exception._
 import scala.util.Random
 import play.api._
+import play.api.libs.json._
 import models._
 import models.cube._
+import models.json.JsonMapper
 import Point._
 
 object Global extends GlobalSettings {
@@ -42,6 +44,14 @@ object InitialData {
       }
       Aggregators.fold(Some("0"))(sumIfNumber)
     }
+    JsonMappers.registerAggregator(new JsonMapper[Aggregator[_]] {
+      override val id = "sum"
+      override def parser = json ⇒ Some(sumAggregator)
+      override def serializer = {
+        case `sumAggregator` ⇒ Some(JsArray())
+        case _ => println("OO"); None
+      }
+    })
 
     val umsatz = Fact.createDatabaseBacked("Umsatz", Set(monat, project), Some(sumAggregator))
     val kosten = Fact.createDatabaseBacked("Kosten", Set(monat, project, kostenart), Some(sumAggregator))

@@ -10,7 +10,6 @@ import java.sql.Connection
 import models.cube._
 import models.cube.Aggregator._
 import models.cube.db.DatabaseCube
-import JsonMappers._
 
 /** A fact has values for each coordinate in dimensions. */
 sealed trait Fact {
@@ -34,14 +33,13 @@ object Fact {
     long("id") ~ str("name") ~ str("config") map {
       case id ~ name ~ config ⇒
         val json = Json.parse(config)
-        CubeMapper.parse(json).map(cube ⇒ FactImpl(name, cube.asInstanceOf[Cube[String]]))
+        JsonMappers.cube.parse(json).map(cube ⇒ FactImpl(name, cube.asInstanceOf[Cube[String]]))
     }
   }
 
   def createDatabaseBacked(name: String, dims: Set[Dimension], aggregator: Option[Aggregator[String]]): Fact = DB.withConnection { implicit c ⇒
     val rawCube = DatabaseCube.create(dims, classOf[String])
-    //    val cube = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
-    val cube = rawCube
+    val cube = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
     SQL("insert into fact(name, config) values({name}, {config})").on("name" -> name, "config" -> cubeConfig(cube)).executeInsert().get
     get(name).getOrElse(throw new IllegalStateException(s"creation of fact $name failed"))
   }
@@ -53,7 +51,7 @@ object Fact {
   }
 
   private def cubeConfig[C <: Cube[String]](cube: C) = {
-    val json = CubeMapper.serialize(cube).getOrElse(throw new IllegalArgumentException(s"Cube $cube is not serializable"))
+    val json = JsonMappers.cube.serialize(cube).getOrElse(throw new IllegalArgumentException(s"Cube $cube is not serializable"))
     Json.stringify(json)
   }
 }

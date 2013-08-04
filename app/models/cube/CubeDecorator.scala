@@ -1,6 +1,9 @@
 package models.cube
 
+import play.api.libs.json._
 import models._
+import models.json.JsonMapper
+import models.json.JsonMapperRepository
 
 /** Decorator for a cube, for use with DecoratedCube.apply(). */
 trait CubeDecorator[D] {
@@ -17,12 +20,17 @@ trait EditableCubeDecorator[D] extends CubeDecorator[D] {
 object EditableCubeDecorator {
   def from[D](d: CubeDecorator[D]): EditableCubeDecorator[D] = d match {
     case d: EditableCubeDecorator[D] ⇒ d
-    case d ⇒ new EditableCubeDecorator[D] {
+    case d ⇒ new EditableCubeDecorator[D] with WrappedCubeDecorator[D] {
+      override protected[cube] def unwrap = d
       override def get(decoratee: Cube[D])(at: Point) = d.get(decoratee)(at)
       override def dense(decoratee: Cube[D]) = d.dense(decoratee)
       override def sparse(decoratee: Cube[D]) = d.sparse(decoratee)
     }
   }
+}
+
+trait WrappedCubeDecorator[D] extends CubeDecorator[D] {
+  protected[cube] def unwrap: CubeDecorator[D]
 }
 
 trait CubeDecoratorCube[D] extends DecoratedCube[D] {
@@ -40,6 +48,32 @@ object CubeDecorator {
 
   /** Decorator that does not change any behaviour. */
   case class Noop[D]() extends EditableCubeDecorator[D]
+
+  /** Unwraps cube decorators. */
+  def unwrap[D](d: CubeDecorator[D]): CubeDecorator[D] = d match {
+    case d: WrappedCubeDecorator[D] ⇒ unwrap(d.unwrap)
+    case d ⇒ d
+  }
+
+  type JsonCubeDecoratorMapper = JsonMapper[CubeDecorator[_]]
+  type JsonCubeDecoratorMapperRepository = JsonMapperRepository[CubeDecorator[_]]
+
+  def json(decoratorRepo: JsonCubeDecoratorMapperRepository, cubeRepo: JsonCubeMapperRepository): JsonCubeMapper = new JsonCubeMapper {
+    override val id = "cubeDecorator"
+    override def parser = json ⇒ {
+      for {
+        deco ← decoratorRepo.parse(json \ "decorator")
+        cube ← cubeRepo.parse(json \ "cube")
+      } yield CubeDecorator(cube.asInstanceOf[Cube[Any]], deco.asInstanceOf[CubeDecorator[Any]])
+    }
+    override def serializer = {
+      case cube: CubeDecoratorCube[_] ⇒
+        for {
+          dec ← decoratorRepo.serialize(unwrap(cube.decorator))
+          und ← cubeRepo.serialize(cube.underlying)
+        } yield Json.obj("decorator" -> dec, "cube" -> und)
+    }
+  }
 
   private class CubeWithDecorator[D](val underlying: Cube[D], val decorator: CubeDecorator[D]) extends CubeDecoratorCube[D] {
     override protected type Self = CubeWithDecorator[D]

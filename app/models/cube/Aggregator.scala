@@ -1,6 +1,8 @@
 package models.cube
 
 import models._
+import models.json.JsonMapper
+import models.json.JsonMapperRepository
 
 /** Aggregates values. */
 sealed trait Aggregator[D]
@@ -25,6 +27,19 @@ object Aggregator {
   }
   implicit def dense[D](f: Traversable[Option[D]] ⇒ Option[D]) = new DenseAggregator[D] {
     override def apply(v: Traversable[Option[D]]) = f(v)
+  }
+
+  def json(aggrRepo: JsonMapperRepository[Aggregator[_]]) = new JsonMapper[CubeDecorator[_]] {
+    val id = "aggregator"
+    override def parser = json ⇒ {
+      aggrRepo.parse(json).map(decorator(_))
+    }
+    override def serializer = {
+      case DenseAggregationDecorator(aggregator) ⇒
+        aggrRepo.serialize(aggregator)
+      case SparseAggregationDecorator(aggregator) ⇒
+        aggrRepo.serialize(aggregator)
+    }
   }
 
   private case class DenseAggregationDecorator[D](aggregator: DenseAggregator[D]) extends CubeDecorator[D] {

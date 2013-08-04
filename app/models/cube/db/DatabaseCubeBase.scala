@@ -1,6 +1,7 @@
 package models.cube.db
 
 import java.sql.Connection
+import play.api.libs.json._
 import anorm._
 import anorm.SqlParser._
 import models._
@@ -115,4 +116,6 @@ private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] {
     } else throw new ValueCannotBeSetException(at)
   }
   override def setAll(to: Option[D]) = allPoints.foreach(set(_, to))
+
+  override def toString = s"DatabaseCube($id)"
 }

@@ -5,6 +5,8 @@ import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
 import models._
+import models.cube._
+import models.cube.db.DatabaseCube
 
 object Facts extends Controller {
 
@@ -16,7 +18,8 @@ object Facts extends Controller {
     addForm.bindFromRequest.fold(
       errors ⇒ BadRequest(views.html.facts(Fact.all, errors)),
       name ⇒ {
-        val fact = Fact.create(name, Set.empty)
+        //TODO let the user chose the aggregator
+        val fact = Fact.createDatabaseBacked(name, Set.empty, None)
         Redirect(routes.Facts.view(name))
       })
   }
@@ -28,26 +31,28 @@ object Facts extends Controller {
     }.getOrElse(NotFound)
   }
   def addDimension(factName: String, dimensionName: String) = Action {
-    val r = for {
-      dimension ← Dimension.get(dimensionName)
-      fact ← Fact.get(factName)
-    } yield {
-      //TODO let user chose coordinate to assign
-      fact.addDimension(dimension.all.head)
-      Redirect(routes.Facts.view(factName))
-    }
-    r.getOrElse(NotFound)
+    Dimension.get(dimensionName).map { dimension ⇒
+      //TODO let user chose coordinate to keep
+      modifyDbCube(factName, _.copyAndAddDimension(dimension.all.head))
+    }.getOrElse(NotFound)
   }
   def removeDimension(factName: String, dimensionName: String) = Action {
-    val r = for {
-      dimension ← Dimension.get(dimensionName)
-      fact ← Fact.get(factName)
-    } yield {
+    Dimension.get(dimensionName).map { dimension ⇒
       //TODO let user chose coordinate to keep
-      fact.removeDimension(dimension.all.head)
-      Redirect(routes.Facts.view(factName))
-    }
-    r.getOrElse(NotFound)
+      modifyDbCube(factName, _.copyAndRemoveDimension(dimension.all.head))
+    }.getOrElse(NotFound)
+  }
+  private def modifyDbCube(factName: String, f: DatabaseCube[String] ⇒ DatabaseCube[String]) = Fact.get(factName) match {
+    case Some(fact) ⇒
+      fact.cube match {
+        case cube: DatabaseCube[String] ⇒
+          val newCube = f(cube)
+          Fact.assignCube(factName, newCube)
+          DatabaseCube.delete(cube)
+          Redirect(routes.Facts.view(factName))
+        case _ ⇒ MethodNotAllowed
+      }
+    case None ⇒ NotFound
   }
 
   def get(factName: String, at: Point) = Action {
@@ -58,13 +63,22 @@ object Facts extends Controller {
     r.getOrElse(NotFound)
   }
   def save(factName: String, at: Point) = Action { request ⇒
-    val r = for {
-      fact ← Fact.get(factName)
-      value = request.body.asText.filterNot(_.isEmpty)
-      _ = fact.cube.set(at, value)
-    } yield Ok(value.getOrElse(""))
-    r.getOrElse(NotFound)
+    request.body.asText.filterNot(_.isEmpty).map { value ⇒
+      Fact.get(factName).map { fact ⇒
+        fact.cube match {
+          case cube: EditableCube[_] ⇒
+            try {
+              cube.set(at, value)
+              Ok(value)
+            } catch {
+              case ValueCannotBeSetException(_) ⇒ cannotSet
+            }
+          case _ ⇒ cannotSet
+        }
+      }.getOrElse(NotFound)
+    }.getOrElse(NotAcceptable)
   }
+  private def cannotSet = MethodNotAllowed.withHeaders("Allow" -> "GET")
 
   val addForm = Form("name" -> nonEmptyText)
 }

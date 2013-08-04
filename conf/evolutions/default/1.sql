@@ -20,7 +20,7 @@ CREATE SEQUENCE fact_id_seq;
 CREATE TABLE fact (
   id integer not null default nextval('fact_id_seq'),
   name varchar(1024) not null,
-  cube integer not null
+  config text not null
 );
 
 CREATE SEQUENCE databaseCube_id_seq;

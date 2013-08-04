@@ -5,6 +5,7 @@ import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
 import models._
+import models.cube.Cube
 import views.html.defaultpages.notFound
 
 object Tables extends Controller {
@@ -18,7 +19,8 @@ object Tables extends Controller {
       val filter = DimensionsFilter(filterDims.map { d ⇒
         fixed.coordinate(d).map(c ⇒ DimensionSelection(d, (c, d.render(c)))).getOrElse(DimensionUnrestricted(d))
       }.toList)
-      Ok(views.html.table(fact, fact.cube, d1, d2, filter, sum1, sum2))
+      val cube = Cube.editable(fact.cube)
+      Ok(views.html.table(fact, cube, d1, d2, filter, sum1, sum2))
     }
     r.getOrElse(NotFound)
   }

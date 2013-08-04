@@ -4,8 +4,10 @@ import anorm._
 import anorm.SqlParser._
 import play.api.db._
 import play.api.Play.current
+import play.api.libs.json._
 import models._
 import models.cube._
+import models.json.JsonMapper
 import Cube._
 import java.sql.Connection
 
@@ -47,6 +49,10 @@ object DatabaseCube {
       cube.asInstanceOf[DatabaseCube[T]]
     }
   }
+  def load[T](id: Long): Option[DatabaseCube[_]] = DB.withConnection { implicit c ⇒
+    SQL("select * from databaseCube where id={id}").on("id" -> id).as(cubeDefinition.singleOpt).
+      map(loadFromDefinition).map(_._1)
+  }
 
   def create[T](dims: Set[Dimension], tpe: Class[T]): DatabaseCube[T] = DB.withConnection { implicit c ⇒
     val cubeType = typeMapping.get(tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube type: ${tpe.getName}"))
@@ -87,6 +93,19 @@ object DatabaseCube {
   private val typeMapping: Map[Class[_], CubeType] = {
     val list = DatabaseCubeString :: Nil
     list.map(e ⇒ (e.tpeClass, e)).toMap
+  }
+
+  def json = new JsonCubeMapper {
+    import scalaz._
+    import Scalaz._
+    override val id = "databaseCube"
+    override def parser = json ⇒ for {
+      id ← (json \ "id").asOpt[Long].toSuccess("Missing value 'id'")
+      cube ← DatabaseCube.load(id).toSuccess(s"Could not find cube with id $id in database")
+    } yield cube
+    override def serializer = {
+      case cube: DatabaseCube[_] ⇒ Json.obj("id" -> cube.id).success
+    }
   }
 }
 

@@ -96,13 +96,15 @@ object DatabaseCube {
   }
 
   def json = new JsonCubeMapper {
+    import scalaz._
+    import Scalaz._
     override val id = "databaseCube"
     override def parser = json ⇒ for {
-      id ← (json \ "id").asOpt[Long]
-      cube ← DatabaseCube.load(id)
+      id ← (json \ "id").asOpt[Long].toSuccess("Missing value 'id'")
+      cube ← DatabaseCube.load(id).toSuccess(s"Could not find cube with id $id in database")
     } yield cube
     override def serializer = {
-      case cube: DatabaseCube[_] ⇒ Some(Json.obj("id" -> cube.id))
+      case cube: DatabaseCube[_] ⇒ Json.obj("id" -> cube.id).success
     }
   }
 }

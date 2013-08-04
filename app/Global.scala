@@ -1,5 +1,7 @@
 import scala.util.control.Exception._
 import scala.util.Random
+import scalaz._
+import Scalaz._
 import play.api._
 import play.api.libs.json._
 import models._
@@ -46,10 +48,9 @@ object InitialData {
     }
     JsonMappers.registerAggregator(new JsonMapper[Aggregator[_]] {
       override val id = "sum"
-      override def parser = json ⇒ Some(sumAggregator)
+      override def parser = json ⇒ sumAggregator.success
       override def serializer = {
-        case `sumAggregator` ⇒ Some(JsArray())
-        case _ => println("OO"); None
+        case `sumAggregator` ⇒ JsArray().success
       }
     })
 

@@ -3,6 +3,7 @@ package models
 import util.control.Exception._
 import anorm._
 import anorm.SqlParser._
+import play.api.Logger
 import play.api.db._
 import play.api.libs.json._
 import play.api.Play.current
@@ -33,7 +34,9 @@ object Fact {
     long("id") ~ str("name") ~ str("config") map {
       case id ~ name ~ config ⇒
         val json = Json.parse(config)
-        JsonMappers.cube.parse(json).map(cube ⇒ FactImpl(name, cube.asInstanceOf[Cube[String]]))
+        val cube = JsonMappers.cube.parse(json).map(cube ⇒ FactImpl(name, cube.asInstanceOf[Cube[String]]))
+        cube.leftMap(msg ⇒ Logger.info(s"Could not load cube for fact $name: $msg"))
+        cube.toOption
     }
   }
 
@@ -41,7 +44,7 @@ object Fact {
     val rawCube = DatabaseCube.create(dims, classOf[String])
     val cube = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
     SQL("insert into fact(name, config) values({name}, {config})").on("name" -> name, "config" -> cubeConfig(cube)).executeInsert().get
-    get(name).getOrElse(throw new IllegalStateException(s"creation of fact $name failed"))
+    get(name).getOrElse(throw new IllegalStateException(s"creation of fact $name failed, see log"))
   }
 
   def assignCube[C <: Cube[String]](fact: String, cube: C): Fact = DB.withConnection { implicit c ⇒
@@ -51,7 +54,9 @@ object Fact {
   }
 
   private def cubeConfig[C <: Cube[String]](cube: C) = {
-    val json = JsonMappers.cube.serialize(cube).getOrElse(throw new IllegalArgumentException(s"Cube $cube is not serializable"))
+    val json = JsonMappers.cube.serialize(cube).
+      leftMap(msg ⇒ Logger.info(s"Could not serialize cube $cube: $msg")).
+      getOrElse(throw new IllegalArgumentException(s"Cube $cube is not serializable"))
     Json.stringify(json)
   }
 }

@@ -13,8 +13,6 @@ trait Aggregation {
 }
 
 object Aggregation {
-  val all = sum :: Nil
-
   val sum = {
     def sumIfNumber(oa: Option[String], b: String): Option[String] = {
       for {
@@ -26,7 +24,9 @@ object Aggregation {
     Aggregation("sum", A.fold(Some("0"))(sumIfNumber))
   }
 
-  private def apply[T](name: String, aggr: Aggregator[T]) = {
+  val all = sum :: Nil
+
+  private def apply(name: String, aggr: Aggregator[String]) = {
     JsonMappers.registerAggregator(new JsonMapper[Aggregator[_]] {
       override val id = name
       override def parser = json ⇒ aggr.success

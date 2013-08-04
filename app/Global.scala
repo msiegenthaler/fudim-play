@@ -1,15 +1,12 @@
-import scala.util.control.Exception._
 import scala.util.Random
-import scalaz._
-import Scalaz._
 import play.api._
-import play.api.libs.json._
 import models._
-import models.cube._
+import models.cube.{ Cube, EditableCube }
 import models.json.JsonMapper
 import Point._
 
 object Global extends GlobalSettings {
+  val aggregators = Aggregators.all //so they get registered
   override def onStart(app: Application) {
     if (!InitialData.hasData) InitialData.insert
   }
@@ -36,26 +33,8 @@ object InitialData {
     val ka_mat = kostenart.add("Material")
     val ka_gk = kostenart.add("Gemeinkosten")
 
-    val sumAggregator = {
-      def sumIfNumber(oa: Option[String], b: String): Option[String] = {
-        for {
-          a ← oa
-          na ← catching(classOf[NumberFormatException]).opt(a.toLong)
-          nb ← catching(classOf[NumberFormatException]).opt(b.toLong)
-        } yield (na + nb).toString
-      }
-      Aggregators.fold(Some("0"))(sumIfNumber)
-    }
-    JsonMappers.registerAggregator(new JsonMapper[Aggregator[_]] {
-      override val id = "sum"
-      override def parser = json ⇒ sumAggregator.success
-      override def serializer = {
-        case `sumAggregator` ⇒ JsArray().success
-      }
-    })
-
-    val umsatz = Fact.createDatabaseBacked("Umsatz", Set(monat, project), Some(sumAggregator))
-    val kosten = Fact.createDatabaseBacked("Kosten", Set(monat, project, kostenart), Some(sumAggregator))
+    val umsatz = Fact.createDatabaseBacked("Umsatz", Set(monat, project), Some(Aggregators.sum))
+    val kosten = Fact.createDatabaseBacked("Kosten", Set(monat, project, kostenart), Some(Aggregators.sum))
 
     val rnd = new Random(1)
     for (m ← monat.all) {

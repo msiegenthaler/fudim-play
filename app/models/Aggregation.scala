@@ -4,7 +4,7 @@ import scala.util.control.Exception._
 import scalaz._
 import Scalaz._
 import play.api.libs.json._
-import models.cube.{ Aggregators ⇒ A, Aggregator }
+import models.cube._
 import models.json.JsonMapper
 
 class Aggregation private (val name: String, val aggregator: Option[Aggregator[String]]) {
@@ -22,10 +22,15 @@ object Aggregation {
         nb ← catching(classOf[NumberFormatException]).opt(b.toLong)
       } yield (na + nb).toString
     }
-    Aggregation("sum", A.fold(Some("0"))(sumIfNumber))
+    Aggregation("sum", Aggregators.fold(Some("0"))(sumIfNumber))
   }
 
   val all = none :: sum :: Nil
+
+  def unapply(cube: Cube[String]): Option[Aggregation] = cube match {
+    case CubeDecorator(Aggregator(aggr)) ⇒ all.find(_.aggregator.filter(_ == aggr).isDefined)
+    case _ ⇒ None
+  }
 
   private def apply(name: String, aggr: Aggregator[String]) = {
     JsonMappers.registerAggregator(new JsonMapper[Aggregator[_]] {

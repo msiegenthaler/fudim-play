@@ -27,7 +27,7 @@ object Facts extends Controller {
   def view(name: String) = Action {
     Fact.get(name).map { fact ⇒
       val dims = Dimension.all.filterNot(fact.dimensions.contains)
-      val aggr = Aggregation.sum //TODO
+      val aggr = Aggregation.unapply(fact.cube).getOrElse(Aggregation.none)
       Ok(views.html.fact(fact, dims, Aggregation.all, aggrForm.fill(aggr.name)))
     }.getOrElse(NotFound)
   }

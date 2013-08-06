@@ -46,6 +46,10 @@ object CubeDecorator {
   def apply[D](cube: EditableCube[D], decorator: CubeDecorator[D]): CubeDecoratorCube[D] with EditableCube[D] = {
     new EditableCubeWithDecorator(cube, EditableCubeDecorator.from(decorator))
   }
+  def unapply[D](cube: Cube[D]): Option[CubeDecorator[D]] = cube match {
+    case c: CubeDecoratorCube[D] ⇒ Some(unwrap(c.decorator))
+    case _ ⇒ None
+  }
 
   /** Decorator that does not change any behaviour. */
   case class Noop[D]() extends EditableCubeDecorator[D]

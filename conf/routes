@@ -15,6 +15,7 @@ POST    /fact                       controllers.Facts.add
 GET     /fact/:fact                 controllers.Facts.view(fact: String)
 POST    /fact/:fact/dimension/add    controllers.Facts.addDimension(fact: String, name: String)
 POST    /fact/:fact/dimension/remove controllers.Facts.removeDimension(fact: String, name: String)
+POST    /fact/:fact/aggregation     controllers.Facts.setAggregation(fact: String)
 
 GET     /fact/:fact/value           controllers.Facts.get(fact: String, pos: Point)
 PUT     /fact/:fact/value           controllers.Facts.save(fact: String, pos: Point)

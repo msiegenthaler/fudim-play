@@ -18,7 +18,6 @@ object Facts extends Controller {
     addForm.bindFromRequest.fold(
       errors ⇒ BadRequest(views.html.facts(Fact.all, errors)),
       name ⇒ {
-        //TODO let the user chose the aggregator
         val fact = Fact.createDatabaseBacked(name, Set.empty, None)
         Redirect(routes.Facts.view(name))
       })
@@ -27,7 +26,8 @@ object Facts extends Controller {
   def view(name: String) = Action {
     Fact.get(name).map { fact ⇒
       val dims = Dimension.all.filterNot(fact.dimensions.contains)
-      Ok(views.html.fact(fact, dims))
+      val aggr = Aggregation.unapply(fact.cube).getOrElse(Aggregation.none)
+      Ok(views.html.fact(fact, dims, Aggregation.all, aggrForm.fill(aggr.name)))
     }.getOrElse(NotFound)
   }
   def addDimension(factName: String, dimensionName: String) = Action {
@@ -53,6 +53,21 @@ object Facts extends Controller {
         case _ ⇒ MethodNotAllowed
       }
     case None ⇒ NotFound
+  }
+
+  def setAggregation(factName: String) = Action { implicit request ⇒
+    aggrForm.bindFromRequest.fold(
+      errors ⇒
+        NotImplemented,
+      aggrName ⇒ {
+        Fact.get(factName).map { fact ⇒
+          val aggr = Aggregation.all.find(_.name == aggrName).getOrElse(Aggregation.none)
+          val newCube = aggr.onCube(fact.cube)
+          Fact.assignCube(factName, newCube)
+          // TODO DatabaseCube.delete(cube)
+          Redirect(routes.Facts.view(factName))
+        }.getOrElse(NotFound)
+      })
   }
 
   def get(factName: String, at: Point) = Action {
@@ -81,4 +96,5 @@ object Facts extends Controller {
   private def cannotSet = MethodNotAllowed.withHeaders("Allow" -> "GET")
 
   val addForm = Form("name" -> nonEmptyText)
+  val aggrForm = Form("aggregation" -> text)
 }

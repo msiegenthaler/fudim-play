@@ -29,7 +29,22 @@ object Aggregation {
     Aggregation("sum", Aggregators.fold(Some("0"))(sumIfNumber))
   }
 
-  val all = none :: sum :: Nil
+  val product = {
+    def productIfNumber(oa: Option[String], b: String): Option[String] = {
+      for {
+        a ← oa
+        na ← catching(classOf[NumberFormatException]).opt(a.toLong)
+        nb ← catching(classOf[NumberFormatException]).opt(b.toLong)
+      } yield (na * nb).toString
+    }
+    Aggregation("product", Aggregators.fold(Some("1"))(productIfNumber))
+  }
+
+  def concat = {
+    Aggregation("concat", Aggregators.fold("")(_ + _))
+  }
+
+  val all = none :: sum :: product :: concat :: Nil
 
   def unapply(cube: Cube[String]): Option[Aggregation] = cube match {
     case CubeDecorator(Aggregator(aggr)) ⇒ all.find(_.aggregator.filter(_ == aggr).isDefined)

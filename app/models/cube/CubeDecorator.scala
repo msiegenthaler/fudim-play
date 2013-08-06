@@ -51,6 +51,29 @@ object CubeDecorator {
     case _ ⇒ None
   }
 
+  /** Removes the outermost decorator from the cube. */
+  def undecorate[D](cube: Cube[D]): Cube[D] = cube match {
+    case c: CubeWithDecorator[D] ⇒ c.underlying
+    case c: EditableCubeWithDecorator[D] ⇒ c.underlying
+    case c ⇒ c
+  }
+  /** Removes the outermost decorator from the cube. */
+  def undecorate[D](cube: EditableCube[D]): EditableCube[D] = cube match {
+    case c: EditableCubeWithDecorator[D] ⇒ c.underlying
+    case c ⇒ c
+  }
+  /** Removes all decorators from the cube. */
+  def undecorateComplete[D](cube: Cube[D]): Cube[D] = cube match {
+    case c: CubeWithDecorator[D] ⇒ undecorateComplete(c.underlying)
+    case c: EditableCubeWithDecorator[D] ⇒ undecorateComplete(c.underlying)
+    case c ⇒ c
+  }
+  /** Removes all decorators from the cube. */
+  def undecorateComplete[D](cube: EditableCube[D]): EditableCube[D] = cube match {
+    case c: EditableCubeWithDecorator[D] ⇒ undecorateComplete(c.underlying)
+    case c ⇒ c
+  }
+
   /** Decorator that does not change any behaviour. */
   case class Noop[D]() extends EditableCubeDecorator[D]
 

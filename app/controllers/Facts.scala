@@ -18,7 +18,6 @@ object Facts extends Controller {
     addForm.bindFromRequest.fold(
       errors ⇒ BadRequest(views.html.facts(Fact.all, errors)),
       name ⇒ {
-        //TODO let the user chose the aggregator
         val fact = Fact.createDatabaseBacked(name, Set.empty, None)
         Redirect(routes.Facts.view(name))
       })
@@ -56,7 +55,20 @@ object Facts extends Controller {
     case None ⇒ NotFound
   }
 
-  def setAggregation(factName: String) = TODO
+  def setAggregation(factName: String) = Action { implicit request ⇒
+    aggrForm.bindFromRequest.fold(
+      errors ⇒
+        NotImplemented,
+      aggrName ⇒ {
+        Fact.get(factName).map { fact ⇒
+          val aggr = Aggregation.all.find(_.name == aggrName).getOrElse(Aggregation.none)
+          val newCube = aggr.onCube(fact.cube)
+          Fact.assignCube(factName, newCube)
+          // TODO DatabaseCube.delete(cube)
+          Redirect(routes.Facts.view(factName))
+        }.getOrElse(NotFound)
+      })
+  }
 
   def get(factName: String, at: Point) = Action {
     val r = for {

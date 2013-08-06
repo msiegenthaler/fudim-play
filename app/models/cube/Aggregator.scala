@@ -21,6 +21,12 @@ object Aggregator {
     case a: SparseAggregator[D] ⇒ new SparseAggregationDecorator(a)
     case a: DenseAggregator[D] ⇒ new DenseAggregationDecorator(a)
   }
+  def apply[D](aggregator: Aggregator[D]) = decorator(aggregator)
+  def unapply[D](dec: CubeDecorator[D]): Option[Aggregator[D]] = dec match {
+    case SparseAggregationDecorator(aggr) ⇒ Some(aggr)
+    case DenseAggregationDecorator(aggr) ⇒ Some(aggr)
+    case _ ⇒ None
+  }
 
   implicit def sparse[D](f: Traversable[D] ⇒ Option[D]) = new SparseAggregator[D] {
     override def apply(v: Traversable[D]) = f(v)

@@ -1,4 +1,4 @@
-package models
+package cube
 
 /** Point in a set of dimensions. Defines the coordinate in all this dimensions. */
 class Point private (val coordinates: Set[Coordinate]) {

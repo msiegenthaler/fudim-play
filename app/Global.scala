@@ -1,7 +1,7 @@
 import scala.util.Random
 import play.api._
 import models._
-import cube.{ Cube, EditableCube }
+import cube.{ Cube, EditableCube, Point }
 import support.JsonMapper
 import Point._
 

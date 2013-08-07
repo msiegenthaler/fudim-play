@@ -5,49 +5,9 @@ import anorm.SqlParser._
 import play.api.db._
 import play.api.Play.current
 import util.control.Exception._
+import cube._
 
-class Coordinate private[models] (val dimension: Dimension, private[models] val id: Long) {
-  override def equals(o: Any) = o match {
-    case other: Coordinate ⇒ other.dimension == dimension && other.id == id
-    case _ ⇒ false
-  }
-  override def hashCode = dimension.hashCode ^ id.hashCode
-  override def toString = s"$dimension=$id"
-}
-object Coordinate {
-  def serialize(c: Coordinate): (String, String) = (c.dimension.name, c.id.toString)
-  def parse(v: (String, String)) = {
-    def long(s: String) = catching(classOf[NumberFormatException]).opt(s.toLong)
-    for {
-      dim ← Dimension.get(v._1)
-      cid ← long(v._2)
-      coord = new Coordinate(dim, cid)
-      _ ← catching(classOf[Exception]).opt(dim.render(coord)) // must exist
-    } yield coord
-  }
-}
-
-trait Dimension {
-  /** Unique name of the dimension. */
-  def name: String
-
-  /** Values of this dimensions (ordered). */
-  def all: Seq[Coordinate]
-
-  /** String value of the coordinate. */
-  def render(c: Coordinate): String
-  /** all coordinates along with their rendered value. */
-  def values: Seq[(Coordinate, String)]
-
-  /** Add a value to the dimension (at last index). */
-  def add(value: String): Coordinate
-  /** Adds a value to the dimension directly after another value (use None to insert as first). */
-  def add(value: String, after: Option[Coordinate]): Coordinate
-
-  override def toString = name
-}
-
-object Dimension {
+object Dimension extends CoordinateFactory {
   def get(name: String): Option[Dimension] = DB.withConnection { implicit c ⇒
     SQL("select * from dimension where name={name}").on("name" -> name).as(dimension.singleOpt)
   }
@@ -67,13 +27,24 @@ object Dimension {
     }
   }
 
+  def serializeCoordinate(c: Coordinate): (String, String) = (c.dimension.name, c.id.toString)
+  def parseCoordinate(v: (String, String)) = {
+    def long(s: String) = catching(classOf[NumberFormatException]).opt(s.toLong)
+    for {
+      dim ← Dimension.get(v._1)
+      cid ← long(v._2)
+      coord = coordinate(dim, cid)
+      _ ← catching(classOf[Exception]).opt(dim.render(coord)) // must exist
+    } yield coord
+  }
+
   private def coordinates(of: DatabaseDimension): List[Coordinate] = DB.withConnection { implicit c ⇒
     SQL("select id from dimension_value where dimension = {dim} order by nr").on("dim" -> of.id).
-      as(long("id").map(e ⇒ new Coordinate(of, e)) *)
+      as(long("id").map(e ⇒ coordinate(of, e)) *)
   }
   private def values(of: DatabaseDimension): List[(Coordinate, String)] = DB.withConnection { implicit c ⇒
     SQL("select id, content from dimension_value where dimension = {dim} order by nr").on("dim" -> of.id).
-      as(long("id") ~ str("content") map { case id ~ content ⇒ (new Coordinate(of, id), content) } *)
+      as(long("id") ~ str("content") map { case id ~ content ⇒ (coordinate(of, id), content) } *)
   }
   private def render(of: DatabaseDimension, at: Coordinate): String = DB.withConnection { implicit c ⇒
     SQL("select content from dimension_value where dimension = {dim} and id = {id}").on("dim" -> of.id, "id" -> at.id).as(scalar[String] single)
@@ -82,7 +53,7 @@ object Dimension {
     val max = SQL("select max(nr) from dimension_value where dimension = {dim}").on("dim" -> to.id).single(scalar[Long] ?)
     val id = SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").
       on("dim" -> to.id, "nr" -> max.map(_ + 1).getOrElse(0), "val" -> v).executeInsert().get
-    new Coordinate(to, id)
+    coordinate(to, id)
   }
   private def addValue(to: DatabaseDimension, v: String, after: Option[Coordinate]): Coordinate = DB.withConnection { implicit c ⇒
     SQL("select nr from dimension_value where id = {id}").on("id" -> to.id).as(long("nr") singleOpt) match {
@@ -90,7 +61,7 @@ object Dimension {
         SQL("update dimension_value set nr = nr + 1 where dimension = {dim} and nr >= {nr}").on("dim" -> to.id, "nr" -> nr).executeUpdate
         val id = SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").
           on("dim" -> to.id, "nr" -> nr, "val" -> v).executeInsert().get
-        new Coordinate(to, id)
+        coordinate(to, id)
       case None ⇒ addValue(to, v)
     }
   }

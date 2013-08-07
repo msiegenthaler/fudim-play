@@ -1,15 +1,16 @@
 package support
 
-import models._
+import java.net.URLEncoder
 import play.api.libs.json._
 import Bindables._
-import java.net.URLEncoder
+import cube._
+import models._
 
 object JsHelper {
 
   /** Pendant to window.fudim.point.parse */
   def serializePoint(p: Point): String = {
-    val json = Json.toJson(p.coordinates.map(Coordinate.serialize).toMap)
+    val json = Json.toJson(p.coordinates.map(Dimension.serializeCoordinate).toMap)
     URLEncoder.encode(json.toString, "UTF-8")
   }
 

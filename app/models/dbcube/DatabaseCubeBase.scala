@@ -10,7 +10,7 @@ import models._
 /**
  * Base class for a database cube.
  */
-private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] {
+private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] with CoordinateFactory {
   protected override type Self <: DatabaseCubeBase[D]
   def table: String
   def dims: Map[Dimension, String]
@@ -54,7 +54,7 @@ private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] {
 
   private def fromDb: RowParser[D] = fromDb("content")
   private def coordToDb(v: Coordinate): ParameterValue[Long] = v.id
-  private def coordFromDb(d: Dimension, nameFromDims: String): RowParser[Coordinate] = long(nameFromDims).map(new Coordinate(d, _))
+  private def coordFromDb(d: Dimension, nameFromDims: String): RowParser[Coordinate] = long(nameFromDims).map(coordinate(d, _))
   private def mkWhere(p: Point): (String, Seq[(Any, ParameterValue[_])]) = {
     val vs = p.coordinates.map(e ⇒ (dims(e.dimension), e))
     val sql = vs.map(_._1).map(l ⇒ s"$l = {$l}").mkString(" AND ")

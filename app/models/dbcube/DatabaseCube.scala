@@ -1,22 +1,22 @@
-package models.cube.db
+package models.dbcube
 
 import anorm._
 import anorm.SqlParser._
 import play.api.db._
 import play.api.Play.current
 import play.api.libs.json._
-import models._
-import models.cube._
-import models.json.JsonMapper
+import cube._
 import Cube._
+import models._
+import support.JsonMapper
 import java.sql.Connection
 
 trait DatabaseCube[T] extends EditableCube[T] {
   protected override type Self <: DatabaseCube[T]
   def id: Long
 
-  private[db] def create: Unit
-  private[db] def drop: Unit
+  private[dbcube] def create: Unit
+  private[dbcube] def drop: Unit
 
   /**
    * Creates a copy of this cube with identical data but an additional dimension.

@@ -1,11 +1,11 @@
-package models.cube.db
+package models.dbcube
 
 import java.sql.Connection
 import play.api.libs.json._
 import anorm._
 import anorm.SqlParser._
+import cube._
 import models._
-import models.cube._
 
 /**
  * Base class for a database cube.

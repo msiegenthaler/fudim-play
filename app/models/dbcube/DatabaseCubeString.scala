@@ -1,4 +1,4 @@
-package models.cube.db
+package models.dbcube
 
 import java.sql.Connection
 import anorm._
@@ -6,7 +6,7 @@ import anorm.SqlParser._
 import play.api.db._
 import play.api.Play.current
 import models._
-import models.cube._
+import cube._
 import Cube._
 
 /** Cube of value type string. */

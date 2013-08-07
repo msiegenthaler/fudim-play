@@ -1,8 +1,9 @@
 package models
 
-import models.cube._
-import models.cube.db.DatabaseCube
-import models.json._
+import cube._
+import models.dbcube.DatabaseCube
+import support.JsonMapperRepository
+import support.JsonMapper
 
 object JsonMappers {
   @volatile

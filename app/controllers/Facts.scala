@@ -4,9 +4,9 @@ import play.api._
 import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
+import cube._
 import models._
-import models.cube._
-import models.cube.db.DatabaseCube
+import models.dbcube.DatabaseCube
 
 object Facts extends Controller {
 

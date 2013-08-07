@@ -1,8 +1,8 @@
-package models.cube
+package cube
 
 import models._
-import models.json.JsonMapper
-import models.json.JsonMapperRepository
+import support.JsonMapper
+import support.JsonMapperRepository
 
 /** Aggregates values. */
 sealed trait Aggregator[D]

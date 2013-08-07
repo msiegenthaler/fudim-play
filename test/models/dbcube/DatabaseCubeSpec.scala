@@ -1,11 +1,11 @@
-package test.models.cube.db
+package models.dbcube
 
 import org.specs2.mutable._
 import play.api.test._
 import play.api.test.Helpers._
+import cube._
 import models._
-import models.cube._
-import models.cube.db._
+import models.dbcube._
 import Point._
 
 class DatabaseCubeSpec extends Specification {

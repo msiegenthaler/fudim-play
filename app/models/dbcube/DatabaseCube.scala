@@ -83,7 +83,9 @@ object DatabaseCube {
   private def loadFromDefinition(definition: CubeDefinition)(implicit c: Connection) = {
     val dims = SQL("select d.id as id, d.name as name from databaseCube_dimension dcd inner join dimension d on d.id = dcd.dimension where dcd.cube={id}").on("id" -> definition.id).
       as(get[Long]("id") ~ get[String]("name") *).map {
-        case id ~ name ⇒ (Dimension.get(name).get, s"dim_$id")
+        case id ~ name ⇒
+          val d: Dimension = Dimension.get(name).get
+          (d, s"dim_$id")
       }.toMap
     val cubeType = typeMapping.values.find(_.tpeName == definition.tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube db-type: ${definition.tpe}"))
     val cube = cubeType(definition.id, definition.tableName, dims)

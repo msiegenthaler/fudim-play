@@ -2,34 +2,39 @@ package cube
 
 import org.specs2.mutable.Specification
 
-class DimensionSpec extends Specification {
-  "ListDimension 'myDimension', [one,two,three]" should {
-    val d = ListDimension("myDimension", "one" :: "two" :: "three" :: Nil)
-
+abstract class DimensionTck(name: String, oneTwoThree: Dimension) extends Specification {
+  s"$name oneTwoThree" should {
     "have a name" in {
-      d.name must_== "myDimension"
+      oneTwoThree.name must_== "oneTwoThree"
     }
     "return its name in toString" in {
-      d.toString must_== d.name
+      oneTwoThree.toString must_== oneTwoThree.name
     }
     "contain three coordinates" in {
-      d.all must have size 3
+      oneTwoThree.all must have size 3
     }
     "contain coordinates that reference that same dimension" in {
-      d.all.map(_.dimension).toSet must_== Set(d)
+      oneTwoThree.all.map(_.dimension).toSet must_== Set(oneTwoThree)
     }
     "render value 'one' for the first coordinate" in {
-      d.render(d.all.head) must_== "one"
+      oneTwoThree.render(oneTwoThree.all.head) must_== "one"
     }
     "render a value for every coordinate" in {
-      d.all.map(d.render) must containTheSameElementsAs(List("one", "two", "three"))
+      oneTwoThree.all.map(oneTwoThree.render) must containTheSameElementsAs(List("one", "two", "three"))
     }
     "return the same for d.all.map(c => (c, d.render(c))) and for d.values" in {
-      d.all.map(c ⇒ (c, d.render(c))) must_== d.values
+      oneTwoThree.all.map(c ⇒ (c, oneTwoThree.render(c))) must_== oneTwoThree.values
     }
+  }
+}
 
+class ListDimensionSpec extends Specification {
+  val d = ListDimension("oneTwoThree", "one" :: "two" :: "three" :: Nil)
+  include(new DimensionTck("ListDimension", d) {})
+
+  "ListDimension [one,two,three]" should {
     "still have the same name after +('four')" in {
-      (d + "four").name must_== "myDimension"
+      (d + "four").name must_== "oneTwoThree"
     }
     "return a dimension with 4 values after +('four')" in {
       (d + "four").all must have size 4
@@ -39,7 +44,7 @@ class DimensionSpec extends Specification {
     }
 
     "still have the same name after -('one')" in {
-      (d - "one").name must_== "myDimension"
+      (d - "one").name must_== "oneTwoThree"
     }
     "return a dimension with 2 values after -('one')" in {
       (d - "one").all must have size 2

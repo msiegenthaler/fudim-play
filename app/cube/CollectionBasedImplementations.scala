@@ -3,7 +3,7 @@ package cube
 import Cube._
 
 /** Simple implementation of Dimension based on a list. */
-case class ListDimension private (name: String, data: List[String]) extends Dimension with CoordinateFactory {
+case class ListDimension(name: String, data: List[String]) extends Dimension with CoordinateFactory {
   override lazy val values = data.zipWithIndex.map(v ⇒ (coordinate(this, v._2), v._1))
   def all: Seq[Coordinate] = values.map(_._1)
   def render(c: Coordinate): String = {

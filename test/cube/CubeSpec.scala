@@ -46,6 +46,9 @@ trait CubeTck extends Specification with DataTables {
   }
   s"$name one-dimensional sliced to 2014" should {
     def oneDS = oneD.slice(Point(year.coordOf("2014")))
+    "have slice Point(2014)" in {
+      oneDS.slice must_== Point(year.coordOf("2014"))
+    }
     "have no dimension" in {
       oneDS.dimensions must be empty
     }
@@ -63,6 +66,42 @@ trait CubeTck extends Specification with DataTables {
     "be undefined at 2013, 2015" in {
       oneDS.isDefinedAt(year.coordOf("2013")) must beFalse
       oneDS.isDefinedAt(year.coordOf("2015")) must beFalse
+    }
+    "raw return the original cube" in {
+      oneDS.raw must_== oneD
+    }
+    "raw have 3 values" in {
+      oneDS.raw.values must have size 3
+    }
+  }
+  s"$name one-dimensional diced to 2014" should {
+    def oneDD = oneD.dice(year, _ == year.coordOf("2014"))
+    "have one dimension (year)" in {
+      oneDD.dimensions must_== Set(year)
+    }
+    "have empty slice" in {
+      oneDD.slice must_== Point.empty
+    }
+    "contain one value (values, sparse, dense)" in {
+      oneDD.values must have size 1
+      oneDD.sparse must have size 1
+      oneDD.dense must have size 1
+    }
+    "return 33 for get(2014)" in {
+      val at = year.coordOf("2014")
+      oneDD.get(at) must_== Some(33)
+      oneDD.isDefinedAt(at) must beTrue
+      oneDD(at) must_== 33
+    }
+    "be undefined at 2013, 2015" in {
+      oneDD.isDefinedAt(year.coordOf("2013")) must beFalse
+      oneDD.isDefinedAt(year.coordOf("2015")) must beFalse
+    }
+    "raw return the original cube" in {
+      oneDD.raw must_== oneD
+    }
+    "raw have 3 values" in {
+      oneDD.raw.values must have size 3
     }
   }
 }

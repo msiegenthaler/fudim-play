@@ -91,7 +91,7 @@ object DatabaseCube {
   }
 
   private val typeMapping: Map[Class[_], CubeType] = {
-    val list = DatabaseCubeString :: Nil
+    val list = DatabaseCubeString :: DatabaseCubeInt :: Nil
     list.map(e ⇒ (e.tpeClass, e)).toMap
   }
 

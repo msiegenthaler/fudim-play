@@ -53,4 +53,15 @@ class ListDimensionSpec extends Specification {
       (d - "one").values.head._2 must_== "two"
     }
   }
+
+  "empty ListDimension" should {
+    val d = ListDimension("emptyDimension", Nil)
+    "be empty" in {
+      d.all must have size 0
+      d.values must have size 0
+    }
+    "return on dimension with one value after +('test')" in {
+      (d + "test").all must have size 1
+    }
+  }
 }

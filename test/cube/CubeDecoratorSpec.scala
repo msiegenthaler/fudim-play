@@ -45,6 +45,20 @@ class CubeDecoratorSpec extends Specification {
     "have a value sum of 36" in {
       dec.values.reduce(_ + _) must_== (36)
     }
+
+    "be unapplyable to the apply-parameters" in {
+      CubeDecorator.unapply(dec) must_== Some(productCube, CubeDecorator.Noop[Int])
+    }
+    "have the decorator to be removable via undecorate" in {
+      CubeDecorator.undecorate(dec) must_== productCube
+    }
+    "have the decorator to be removable completely via undecorate" in {
+      CubeDecorator.undecorateComplete(dec) must_== productCube
+    }
+    "have the decorator to be removable completely via undecorate even when decorated again" in {
+      val dec2 = CubeDecorator(dec, CubeDecorator.Noop[Int])
+      CubeDecorator.undecorateComplete(dec2) must_== productCube
+    }
   }
 
   "decoration of cube with '+1'" should {

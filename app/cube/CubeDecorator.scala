@@ -29,12 +29,12 @@ object EditableCubeDecorator {
   }
 }
 
-trait WrappedCubeDecorator[D] extends CubeDecorator[D] {
+private[cube] trait WrappedCubeDecorator[D] extends CubeDecorator[D] {
   protected[cube] def unwrap: CubeDecorator[D]
 }
 
 trait CubeDecoratorCube[D] extends DecoratedCube[D] {
-  val decorator: CubeDecorator[D]
+  protected[cube] val decorator: CubeDecorator[D]
 }
 
 object CubeDecorator {
@@ -45,8 +45,8 @@ object CubeDecorator {
   def apply[D](cube: EditableCube[D], decorator: CubeDecorator[D]): CubeDecoratorCube[D] with EditableCube[D] = {
     new EditableCubeWithDecorator(cube, EditableCubeDecorator.from(decorator))
   }
-  def unapply[D](cube: Cube[D]): Option[CubeDecorator[D]] = cube match {
-    case c: CubeDecoratorCube[D] ⇒ Some(unwrap(c.decorator))
+  def unapply[D](cube: Cube[D]): Option[(Cube[D], CubeDecorator[D])] = cube match {
+    case c: CubeDecoratorCube[D] ⇒ Some(c.underlying, unwrap(c.decorator))
     case _ ⇒ None
   }
 
@@ -77,7 +77,7 @@ object CubeDecorator {
   case class Noop[D]() extends EditableCubeDecorator[D]
 
   /** Unwraps cube decorators. */
-  def unwrap[D](d: CubeDecorator[D]): CubeDecorator[D] = d match {
+  private def unwrap[D](d: CubeDecorator[D]): CubeDecorator[D] = d match {
     case d: WrappedCubeDecorator[D] ⇒ unwrap(d.unwrap)
     case d ⇒ d
   }

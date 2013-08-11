@@ -30,7 +30,7 @@ trait CubeTck extends Specification with DataTables {
         "2015" !! 34 |> { (y, age) ⇒
           val at = year.coordOf(y)
           oneD.get(at) must_== Some(age)
-          oneD.isDefinedAt(at) must_== true
+          oneD.isDefinedAt(at) must beTrue
           oneD(at) must_== age
         }
     }
@@ -39,6 +39,30 @@ trait CubeTck extends Specification with DataTables {
     }
     "return itself as .raw" in {
       oneD.raw must_== oneD
+    }
+    "have an empty slice" in {
+      oneD.slice must_== Point.empty
+    }
+  }
+  s"$name one-dimensional sliced to 2014" should {
+    def oneDS = oneD.slice(Point(year.coordOf("2014")))
+    "have no dimension" in {
+      oneDS.dimensions must be empty
+    }
+    "contain one value (values, sparse, dense)" in {
+      oneDS.values must have size 1
+      oneDS.sparse must have size 1
+      oneDS.dense must have size 1
+    }
+    "return 33 for get(2014)" in {
+      val at = year.coordOf("2014")
+      oneDS.get(at) must_== Some(33)
+      oneDS.isDefinedAt(at) must beTrue
+      oneDS(at) must_== 33
+    }
+    "be undefined at 2013, 2015" in {
+      oneDS.isDefinedAt(year.coordOf("2013")) must beFalse
+      oneDS.isDefinedAt(year.coordOf("2015")) must beFalse
     }
   }
 }

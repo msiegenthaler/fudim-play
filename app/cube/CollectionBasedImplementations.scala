@@ -38,8 +38,8 @@ class MapCube[D](
     new MapCube(allDimensions, data, slice, filters)
   }
 
-  override def get(at: Point) = data.get(at)
-  override def sparse = data
+  override def get(at: Point) = Some(at).filter(matches).flatMap(data.get)
+  override def sparse = data.filter(v ⇒ matches(v._1))
   override def dense = allPoints.map(p ⇒ (p, get(p)))
 
   def +(kv: (Point, D)) = {

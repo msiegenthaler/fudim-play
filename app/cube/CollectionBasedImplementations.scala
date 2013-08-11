@@ -13,6 +13,14 @@ case class ListDimension(name: String, data: List[String]) extends Dimension wit
   }
   def +(v: String) = copy(data = data :+ v)
   def -(v: String) = copy(data = data.filterNot(_ == v))
+
+  def coordOf(v: String) = {
+    values.find(_._2 == v).map(_._1).
+      getOrElse(throw new IllegalArgumentException(s"Dimension $name does not contain $v"))
+  }
+}
+object ListDimension {
+  def apply(name: String, data: String*): ListDimension = ListDimension(name, data.toList)
 }
 
 /**

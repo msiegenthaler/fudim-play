@@ -37,5 +37,15 @@ class DimensionSpec extends Specification {
     "have the last value as 'four' after +('four')" in {
       (d + "four").values.last._2 must_== "four"
     }
+
+    "still have the same name after -('one')" in {
+      (d - "one").name must_== "myDimension"
+    }
+    "return a dimension with 2 values after -('one')" in {
+      (d - "one").all must have size 2
+    }
+    "have the first value as 'two' after -('one')" in {
+      (d - "one").values.head._2 must_== "two"
+    }
   }
 }

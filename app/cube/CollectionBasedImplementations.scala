@@ -12,6 +12,7 @@ case class ListDimension(name: String, data: List[String]) extends Dimension wit
       getOrElse(throw new IllegalArgumentException(s"Invalid coordinate $c for $name"))
   }
   def +(v: String) = copy(data = data :+ v)
+  def -(v: String) = copy(data = data.filterNot(_ == v))
 }
 
 /**

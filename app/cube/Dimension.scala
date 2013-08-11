@@ -26,7 +26,10 @@ trait Dimension {
   /** Values of this dimensions (ordered). */
   def all: Seq[Coordinate]
 
-  /** String value of the coordinate. */
+  /**
+   * String value of the coordinate.
+   * Throws an IllegalArgumentException if the coordinate is not of this dimension (or does not exist).
+   */
   def render(c: Coordinate): String
   /** all coordinates along with their rendered value. */
   def values: Seq[(Coordinate, String)]

@@ -27,7 +27,7 @@ class CubeDecoratorSpec extends Specification {
   private val zweiTwo = Point(german.coordOf("zwei"), english.coordOf("two"))
 
   "decoration of cube with Noop" should {
-    val dec = CubeDecorator(productCube, CubeDecorator.Noop[Int])
+    val dec = CubeDecorator(productCube, CubeDecorators.noop[Int])
     "still have 9 values" in {
       dec.values must have size 9
       dec.sparse must have size 9
@@ -47,7 +47,7 @@ class CubeDecoratorSpec extends Specification {
     }
 
     "be unapplyable to the apply-parameters" in {
-      CubeDecorator.unapply(dec) must_== Some(productCube, CubeDecorator.Noop[Int])
+      CubeDecorator.unapply(dec) must_== Some(productCube, CubeDecorators.noop)
     }
     "have the decorator to be removable via undecorate" in {
       CubeDecorator.undecorate(dec) must_== productCube
@@ -56,7 +56,7 @@ class CubeDecoratorSpec extends Specification {
       CubeDecorator.undecorateComplete(dec) must_== productCube
     }
     "have the decorator to be removable completely via undecorate even when decorated again" in {
-      val dec2 = CubeDecorator(dec, CubeDecorator.Noop[Int])
+      val dec2 = CubeDecorator(dec, CubeDecorators.noop[Int])
       CubeDecorator.undecorateComplete(dec2) must_== productCube
     }
   }

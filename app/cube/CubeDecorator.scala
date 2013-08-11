@@ -73,9 +73,6 @@ object CubeDecorator {
     case c ⇒ c
   }
 
-  /** Decorator that does not change any behaviour. */
-  case class Noop[D]() extends EditableCubeDecorator[D]
-
   /** Unwraps cube decorators. */
   private def unwrap[D](d: CubeDecorator[D]): CubeDecorator[D] = d match {
     case d: WrappedCubeDecorator[D] ⇒ unwrap(d.unwrap)
@@ -138,6 +135,10 @@ object CubeDecorator {
 }
 
 object CubeDecorators {
+  /** Decorator that does not change any behaviour. */
+  def noop[D]: EditableCubeDecorator[D] = Noop()
+  private case class Noop[D]() extends EditableCubeDecorator[D]
+
   /** Changes all values using f. Aggregate values are not touched. */
   def mapValue[D](f: D ⇒ D) = new CubeDecorator[D] {
     override def get(decoratee: Cube[D])(at: Point) = {

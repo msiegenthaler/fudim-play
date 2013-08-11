@@ -37,6 +37,9 @@ trait CubeTck extends Specification with DataTables {
     "have year as its one and only dimension" in {
       oneD.dimensions must_== Set(year)
     }
+    "return itself as .raw" in {
+      oneD.raw must_== oneD
+    }
   }
 }
 

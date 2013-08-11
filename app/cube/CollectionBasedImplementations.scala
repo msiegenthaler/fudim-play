@@ -29,7 +29,7 @@ object ListDimension {
  */
 class MapCube[D](
   protected override val allDimensions: Set[Dimension],
-  data: Map[Point, D],
+  private val data: Map[Point, D],
   override val slice: Point = Point.empty,
   protected override val filters: DimensionFilter = Map.empty) extends AbstractCube[D] {
 
@@ -55,6 +55,13 @@ class MapCube[D](
   }
   def -(p: Point) = new MapCube(allDimensions, data - p)
   def --(p: Traversable[Point]) = new MapCube(allDimensions, data -- p)
+
+  override def equals(o: Any) = o match {
+    case other: MapCube[_] ⇒ other.data == data && other.slice == slice && other.filters == filters
+    case _ ⇒ false
+  }
+  override def hashCode = dimensions.hashCode ^ slice.hashCode ^ filters.hashCode
+  override def toString = "MapCube(" + allDimensions.mkString(", ") + ") @ " + slice + " with " + filters
 }
 object MapCube {
   /** An empty MapCube. */

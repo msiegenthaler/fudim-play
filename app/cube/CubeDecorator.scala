@@ -136,3 +136,11 @@ object CubeDecorator {
     override def toString = s"EditableCubeWithDecorator($underlying, $decorator)"
   }
 }
+
+object CubeDecorators {
+  def mapValue[D](f: D ⇒ D) = new CubeDecorator[D] {
+    override def get(decoratee: Cube[D])(at: Point) = decoratee.get(at).map(f)
+    override def dense(decoratee: Cube[D]) = decoratee.dense.map(v ⇒ (v._1, v._2.map(f)))
+    override def sparse(decoratee: Cube[D]) = decoratee.sparse.map(v ⇒ (v._1, f(v._2)))
+  }
+}

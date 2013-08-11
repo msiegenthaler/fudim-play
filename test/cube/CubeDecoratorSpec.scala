@@ -37,4 +37,25 @@ class CubeDecoratorSpec extends Specification {
       dec.values.reduce(_ + _) must_== (36)
     }
   }
+
+  "decoration of cube with '+1'" should {
+    val dec = CubeDecorator(productCube, CubeDecorators.mapValue[Int](_ + 1))
+    "still have 9 values" in {
+      dec.values must have size 9
+      dec.sparse must have size 9
+      dec.dense.filter(_._2.isDefined) must have size 9
+    }
+    "still have 9 points" in {
+      dec.dense must have size 9
+    }
+    "have 5 at zwei/two" in {
+      dec.get(zweiTwo) must beSome(5)
+    }
+    "have no value at zwei" in {
+      dec.get(german.coordOf("zwei")) must beNone
+    }
+    "have a value sum of 45" in {
+      dec.values.reduce(_ + _) must_== (45)
+    }
+  }
 }

@@ -51,4 +51,13 @@ class AggregatorSpec extends Specification {
       dec.values.reduce(_ + _) must_== (36)
     }
   }
+
+  "Aggregator" should {
+    "be unapplyable from Decorator" in {
+      val aggr = Aggregators.sum
+      val dec: CubeDecorator[Long] = aggr
+      Aggregator.unapply(dec) must_== Some(aggr)
+    }
+
+  }
 }

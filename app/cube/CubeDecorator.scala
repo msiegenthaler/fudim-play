@@ -138,9 +138,22 @@ object CubeDecorator {
 }
 
 object CubeDecorators {
+  /** Changes all values using f. Aggregate values are not touched. */
   def mapValue[D](f: D ⇒ D) = new CubeDecorator[D] {
-    override def get(decoratee: Cube[D])(at: Point) = decoratee.get(at).map(f)
+    override def get(decoratee: Cube[D])(at: Point) = {
+      if (at.definesExactly(decoratee.dimensions)) decoratee.get(at).map(f)
+      else decoratee.get(at)
+    }
     override def dense(decoratee: Cube[D]) = decoratee.dense.map(v ⇒ (v._1, v._2.map(f)))
     override def sparse(decoratee: Cube[D]) = decoratee.sparse.map(v ⇒ (v._1, f(v._2)))
+  }
+  /** Changes all values using f. Aggregate values are not touched. */
+  def mapValueOption[D](f: Option[D] ⇒ Option[D]) = new CubeDecorator[D] {
+    override def get(decoratee: Cube[D])(at: Point) = {
+      val v = decoratee.get(at)
+      if (at.definesExactly(decoratee.dimensions)) f(v) else v
+    }
+    override def dense(decoratee: Cube[D]) = decoratee.dense.map(v ⇒ (v._1, f(v._2)))
+    override def sparse(decoratee: Cube[D]) = dense(decoratee).flatMap(e ⇒ e._2.map((e._1, _)))
   }
 }

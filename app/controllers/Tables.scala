@@ -4,8 +4,8 @@ import play.api._
 import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
+import cube._
 import models._
-import models.cube.Cube
 import views.html.defaultpages.notFound
 
 object Tables extends Controller {

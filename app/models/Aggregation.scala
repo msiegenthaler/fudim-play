@@ -4,8 +4,8 @@ import scala.util.control.Exception._
 import scalaz._
 import Scalaz._
 import play.api.libs.json._
-import models.cube._
-import models.json.JsonMapper
+import cube._
+import support.JsonMapper
 
 class Aggregation private (val name: String, val aggregator: Option[Aggregator[String]]) {
   def onCube(cube: Cube[String]): Cube[String] = {

@@ -1,4 +1,4 @@
-package models.cube
+package cube
 
 import models._
 import scala.Option.option2Iterable

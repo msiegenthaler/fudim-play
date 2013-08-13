@@ -1,9 +1,9 @@
-@(fact: Fact, cube: models.cube.EditableCube[String], d1: Dimension, d2: Dimension, filter: DimensionsFilter, sumd1: Boolean, sumd2: Boolean)
+@(fact: Fact, cube: _root_.cube.EditableCube[String], d1: _root_.cube.Dimension, d2: _root_.cube.Dimension, filter: DimensionsFilter, sumd1: Boolean, sumd2: Boolean)
 
 @import helper._
 @import helper.twitterBootstrap._
 @import support.JsHelper._
-@import Point._
+@import _root_.cube.Point._
 
 @main("Fact "+fact.name+" ("+d1.name+" / "+d2.name+")") {
 

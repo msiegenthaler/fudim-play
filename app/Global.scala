@@ -1,8 +1,8 @@
 import scala.util.Random
 import play.api._
 import models._
-import models.cube.{ Cube, EditableCube }
-import models.json.JsonMapper
+import cube.{ Cube, EditableCube, Point }
+import support.JsonMapper
 import Point._
 
 object Global extends GlobalSettings {

@@ -1,6 +1,4 @@
-package models
-
-import models.json._
+import support.{ JsonMapper, JsonMapperRepository }
 
 package object cube {
   type JsonCubeMapper = JsonMapper[Cube[_]]

@@ -1,22 +1,22 @@
-package models.cube.db
+package models.dbcube
 
 import anorm._
 import anorm.SqlParser._
 import play.api.db._
 import play.api.Play.current
 import play.api.libs.json._
-import models._
-import models.cube._
-import models.json.JsonMapper
+import cube._
 import Cube._
+import models._
+import support.JsonMapper
 import java.sql.Connection
 
 trait DatabaseCube[T] extends EditableCube[T] {
   protected override type Self <: DatabaseCube[T]
   def id: Long
 
-  private[db] def create: Unit
-  private[db] def drop: Unit
+  private[dbcube] def create: Unit
+  private[dbcube] def drop: Unit
 
   /**
    * Creates a copy of this cube with identical data but an additional dimension.
@@ -83,7 +83,9 @@ object DatabaseCube {
   private def loadFromDefinition(definition: CubeDefinition)(implicit c: Connection) = {
     val dims = SQL("select d.id as id, d.name as name from databaseCube_dimension dcd inner join dimension d on d.id = dcd.dimension where dcd.cube={id}").on("id" -> definition.id).
       as(get[Long]("id") ~ get[String]("name") *).map {
-        case id ~ name ⇒ (Dimension.get(name).get, s"dim_$id")
+        case id ~ name ⇒
+          val d: Dimension = Dimension.get(name).get
+          (d, s"dim_$id")
       }.toMap
     val cubeType = typeMapping.values.find(_.tpeName == definition.tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube db-type: ${definition.tpe}"))
     val cube = cubeType(definition.id, definition.tableName, dims)

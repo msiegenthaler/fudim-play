@@ -1,8 +1,9 @@
-package models.json
+package support
 
 import scalaz._
-import Scalaz._
+import scalaz.Scalaz._
 import play.api.libs.json._
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
 
 /** Serialize/parse a object from/into a json structure. The id is used to lookup the parser on deserialization. */
 trait JsonMapper[O] {

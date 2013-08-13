@@ -8,9 +8,8 @@ import play.api.db._
 import play.api.libs.json._
 import play.api.Play.current
 import java.sql.Connection
-import models.cube._
-import models.cube.Aggregator._
-import models.cube.db.DatabaseCube
+import cube._
+import models.dbcube.DatabaseCube
 
 /** A fact has values for each coordinate in dimensions. */
 sealed trait Fact {

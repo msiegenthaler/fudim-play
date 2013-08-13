@@ -3,16 +3,17 @@ package support
 import util.control.Exception._
 import play.api.mvc.QueryStringBindable
 import java.net.{ URLEncoder, URLDecoder }
+import cube._
 import models._
 
 object Bindables {
-  implicit object PointQueryStringBindable extends QueryStringBindable[Point] {
+  implicit object PointQueryStringBindable extends QueryStringBindable[Point] with CoordinateFactory {
     override def bind(key: String, params: Map[String, Seq[String]]) = {
       try {
         val prefix = key + "."
         val values = params.filter(_._1.startsWith(prefix)).map(v ⇒ (v._1.drop(prefix.length), v._2)).filterNot(_._1.isEmpty).
           flatMap(v ⇒ v._2.map((v._1, _))).map(v ⇒ (dec(v._1), dec(v._2))).
-          flatMap(v ⇒ Coordinate.parse(v))
+          flatMap(v ⇒ Dimension.parseCoordinate(v))
         val point = values.foldLeft(Point.empty)(_ + _)
         Some(Right(point))
       } catch {
@@ -21,7 +22,7 @@ object Bindables {
     }
 
     override def unbind(key: String, value: Point) = {
-      value.coordinates.map(Coordinate.serialize).map(e ⇒ (enc(e._1), enc(e._2))).
+      value.coordinates.map(Dimension.serializeCoordinate).map(e ⇒ (enc(e._1), enc(e._2))).
         map(e ⇒ s"$key.${e._1}=${e._2}").mkString("&")
     }
 

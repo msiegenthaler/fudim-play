@@ -31,28 +31,26 @@ object Facts extends Controller {
     }.getOrElse(NotFound)
   }
   def addDimension(factName: String, dimensionName: String) = Action {
-    Dimension.get(dimensionName).map { dimension ⇒
-      //TODO let user chose coordinate to keep
-      modifyDbCube(factName, _.copyAndAddDimension(dimension.all.head))
-    }.getOrElse(NotFound)
+    val r = for {
+      fact ← Fact.get(factName)
+      dimension ← Dimension.get(dimensionName)
+      moveTo ← dimension.all.headOption
+    } yield {
+      fact.addDimension(moveTo)
+      Redirect(routes.Facts.view(factName))
+    }
+    r.getOrElse(NotFound)
   }
   def removeDimension(factName: String, dimensionName: String) = Action {
-    Dimension.get(dimensionName).map { dimension ⇒
-      //TODO let user chose coordinate to keep
-      modifyDbCube(factName, _.copyAndRemoveDimension(dimension.all.head))
-    }.getOrElse(NotFound)
-  }
-  private def modifyDbCube(factName: String, f: DatabaseCube[String] ⇒ DatabaseCube[String]) = Fact.get(factName) match {
-    case Some(fact) ⇒
-      fact.cube match {
-        case cube: DatabaseCube[String] ⇒
-          val newCube = f(cube)
-          Fact.assignCube(factName, newCube)
-          DatabaseCube.delete(cube)
-          Redirect(routes.Facts.view(factName))
-        case _ ⇒ MethodNotAllowed
-      }
-    case None ⇒ NotFound
+    val r = for {
+      fact ← Fact.get(factName)
+      dimension ← Dimension.get(dimensionName)
+      keepAt ← dimension.all.headOption
+    } yield {
+      fact.removeDimension(keepAt)
+      Redirect(routes.Facts.view(factName))
+    }
+    r.getOrElse(NotFound)
   }
 
   def setAggregation(factName: String) = Action { implicit request ⇒

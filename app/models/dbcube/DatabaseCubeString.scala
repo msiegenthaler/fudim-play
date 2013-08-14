@@ -7,7 +7,6 @@ import play.api.db._
 import play.api.Play.current
 import models._
 import cube._
-import Cube._
 
 /** Cube of value type string. */
 private case class DatabaseCubeString(id: Long, table: String, dims: Map[Dimension, String], slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends DatabaseCubeBase[String] {

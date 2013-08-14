@@ -6,7 +6,6 @@ import play.api.db._
 import play.api.Play.current
 import play.api.libs.json._
 import cube._
-import Cube._
 import models._
 import support.JsonMapper
 import java.sql.Connection

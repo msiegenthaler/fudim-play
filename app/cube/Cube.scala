@@ -41,8 +41,6 @@ trait DecoratedCube[D] extends Cube[D] {
 }
 
 object Cube {
-  type DimensionFilter = Map[Dimension, Coordinate ⇒ Boolean]
-
   /** Removes all decoration from a cube. */
   def undecorate[D](cube: Cube[D]): Cube[D] = cube match {
     case c: DecoratedCube[D] ⇒ undecorate(c.underlying)
@@ -104,7 +102,6 @@ case class ValueCannotBeSetException(at: Point) extends RuntimeException(s"Canno
 
 /** Implements the slicing/dicing. */
 trait AbstractCube[D] extends Cube[D] {
-  import Cube._
   protected type Self <: AbstractCube[D]
 
   val slice: Point

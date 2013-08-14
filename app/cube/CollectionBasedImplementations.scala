@@ -1,7 +1,5 @@
 package cube
 
-import Cube._
-
 /** Simple implementation of Dimension based on a list. */
 case class ListDimension(name: String, data: List[String]) extends Dimension with CoordinateFactory {
   override lazy val values = data.zipWithIndex.map(v ⇒ (coordinate(this, v._2), v._1))

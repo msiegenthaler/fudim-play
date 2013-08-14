@@ -48,6 +48,13 @@ class DatabaseCubeSpec extends Specification {
   }
 
   "DatabaseCube of type String with one dimension" should {
+    "be createble" in new withplay {
+      val d = Dimension.create("TestDimension")
+      DatabaseCube.create(Set(d), classOf[String])
+    }
+    "be loadable" in new oneDimensionalCube {
+      DatabaseCube.load(cube.id) must beSome
+    }
     "be droppable" in new oneDimensionalCube {
       DatabaseCube.delete(cube)
       DatabaseCube.load(cube.id) must beNone

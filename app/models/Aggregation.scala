@@ -47,7 +47,7 @@ object Aggregation {
   val all = none :: sum :: product :: concat :: Nil
 
   def unapply(cube: Cube[String]): Option[Aggregation] = cube match {
-    case CubeDecorator(Aggregator(aggr)) ⇒ all.find(_.aggregator.filter(_ == aggr).isDefined)
+    case CubeDecorator(_, Aggregator(aggr)) ⇒ all.find(_.aggregator.filter(_ == aggr).isDefined)
     case _ ⇒ None
   }
 

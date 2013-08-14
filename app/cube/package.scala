@@ -3,7 +3,8 @@ import support.{ JsonMapper, JsonMapperRepository }
 package object cube {
   type DimensionFilter = Map[Dimension, Coordinate ⇒ Boolean]
 
-  type Formula[D] = Map[String, Dimension] ⇒ BoundFormula[D]
+  type CubeModel = Map[String, Cube[_]]
+  type Formula[D] = CubeModel ⇒ BoundFormula[D]
   type BoundFormula[D] = Point ⇒ Option[D]
 
   type JsonCubeMapper = JsonMapper[Cube[_]]

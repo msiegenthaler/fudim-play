@@ -62,9 +62,7 @@ object Facts extends Controller {
       aggrName ⇒ {
         Fact.get(factName).map { fact ⇒
           val aggr = Aggregation.all.find(_.name == aggrName).getOrElse(Aggregation.none)
-          val newCube = aggr.onCube(fact.cube)
-          Fact.assignCube(factName, newCube)
-          // TODO DatabaseCube.delete(cube)
+          fact.aggregation = aggr
           Redirect(routes.Facts.view(factName))
         }.getOrElse(NotFound)
       })

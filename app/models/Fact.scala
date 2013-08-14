@@ -18,6 +18,10 @@ sealed trait Fact {
   final def dimensions: Set[Dimension] = cube.dimensions
 
   def cube: Cube[String]
+  protected def updateCube(aggregation: Aggregation): Unit
+
+  def aggregation: Aggregation = cube match { case Aggregation(aggr) ⇒ aggr }
+  def aggregation_=(aggr: Aggregation) = updateCube(aggr)
 }
 
 object Fact {
@@ -28,12 +32,20 @@ object Fact {
     SQL("select * from fact").as(fact *).flatten
   }
 
-  private case class FactImpl(name: String, cube: Cube[String]) extends Fact
+  private class FactImpl(val name: String, private var _cube: Cube[String]) extends Fact {
+    override def cube = _cube
+    override protected def updateCube(aggr: Aggregation) = {
+      val raw = CubeDecorator.undecorate(cube)
+      val newCube = aggr.aggregator.map(a ⇒ CubeDecorator(raw, a)).getOrElse(raw)
+      assignCube(name, newCube)
+      _cube = newCube
+    }
+  }
   private val fact = {
     long("id") ~ str("name") ~ str("config") map {
       case id ~ name ~ config ⇒
         val json = Json.parse(config)
-        val cube = JsonMappers.cube.parse(json).map(cube ⇒ FactImpl(name, cube.asInstanceOf[Cube[String]]))
+        val cube = JsonMappers.cube.parse(json).map(cube ⇒ new FactImpl(name, cube.asInstanceOf[Cube[String]]))
         cube.leftMap(msg ⇒ Logger.info(s"Could not load cube for fact $name: $msg"))
         cube.toOption
     }
@@ -46,10 +58,9 @@ object Fact {
     get(name).getOrElse(throw new IllegalStateException(s"creation of fact $name failed, see log"))
   }
 
-  def assignCube[C <: Cube[String]](fact: String, cube: C): Fact = DB.withConnection { implicit c ⇒
+  def assignCube[C <: Cube[String]](fact: String, cube: C): Unit = DB.withConnection { implicit c ⇒
     val updated = SQL("update fact set config={config} where name={name}").on("config" -> cubeConfig(cube), "name" -> fact).executeUpdate
     if (updated != 1) throw new IllegalArgumentException(s"no fact named $fact")
-    FactImpl(fact, cube)
   }
 
   private def cubeConfig[C <: Cube[String]](cube: C) = {

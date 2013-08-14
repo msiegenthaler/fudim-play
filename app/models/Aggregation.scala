@@ -8,10 +8,6 @@ import cube._
 import support.JsonMapper
 
 class Aggregation private (val name: String, val aggregator: Option[Aggregator[String]]) {
-  def onCube(cube: Cube[String]): Cube[String] = {
-    val raw = CubeDecorator.undecorate(cube)
-    aggregator.map(a ⇒ CubeDecorator(raw, a)).getOrElse(raw)
-  }
   override def toString = name
 }
 

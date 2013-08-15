@@ -4,6 +4,7 @@ import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
 import support.JsonMapperRepository
 import CubeDecorator._
+import support.ObjectJsonMapper
 
 class CubeDecoratorSpec extends Specification {
   trait germanEnglish extends Scope {
@@ -157,6 +158,44 @@ class CubeDecoratorSpec extends Specification {
     }
     "have value -1 at eins/two" in new decNone10 {
       dec.get(einsTwo) must beSome(-1)
+    }
+  }
+
+  trait serializableDecorator extends Scope {
+    val decorator = CubeDecorators.mapValue[Int](_ + 1)
+    val decoratorMapper: JsonCubeDecoratorMapper = ObjectJsonMapper("addOne", decorator)
+    val decoratorRepo = new JsonCubeDecoratorMapperRepository {
+      override val mappers = decoratorMapper :: Nil
+    }
+  }
+  trait serializableCube extends serializableDecorator with productCube {
+    val cubeMapper: JsonCubeMapper = ObjectJsonMapper("productCube", productCube)
+    val cubeRepo = new JsonCubeMapperRepository {
+      override val mappers = cubeMapper :: Nil
+    }
+    val mapper = CubeDecorator.json(decoratorRepo, cubeRepo)
+    val cube = CubeDecorator(productCube, decorator)
+  }
+  "CubeDecorator" should {
+    "if decorator and cube are serializable (precond)" in new serializableCube {
+      decoratorRepo.serialize(decorator).isSuccess must beTrue
+      cubeRepo.serialize(productCube).isSuccess must beTrue
+    }
+    "be serializable to json" in new serializableCube {
+      mapper.serializer(cube).isSuccess must beTrue
+    }
+    "be reparsable" in new serializableCube {
+      val p = for {
+        json ← mapper.serializer(cube)
+        c ← mapper.parser(json)
+      } yield c
+      p.isSuccess must beTrue
+
+      p.toOption.get match {
+        case CubeDecorator(u, d) ⇒
+          u must_== productCube
+          d must_== decorator
+      }
     }
   }
 }

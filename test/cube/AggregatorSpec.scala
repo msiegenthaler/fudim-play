@@ -1,7 +1,10 @@
 package cube
 
 import org.specs2.mutable.Specification
+import org.specs2.specification.Scope
 import TestFixtures._
+import support._
+import CubeDecorator._
 
 class AggregatorSpec extends Specification {
   trait sumCube extends productCube {
@@ -39,11 +42,41 @@ class AggregatorSpec extends Specification {
     }
   }
 
+  trait serializableAggregator extends Scope {
+    val aggregator = Aggregators.sumInt
+    val aggregatorMapper: JsonMapper[Aggregator[_]] = ObjectJsonMapper("sumInt", aggregator)
+    val aggregatorRepo = new JsonMapperRepository[Aggregator[_]] {
+      override val mappers = aggregatorMapper :: Nil
+    }
+  }
+  trait serializableDecorator extends serializableAggregator {
+    val decoratorRepo = new JsonCubeDecoratorMapperRepository {
+      override val mappers = Aggregator.json(aggregatorRepo) :: Nil
+    }
+  }
   "Aggregator" should {
     "be unapplyable from Decorator" in {
       val aggr = Aggregators.sumInt
       val dec: CubeDecorator[Int] = aggr
       Aggregator.unapply(dec) must_== Some(aggr)
+    }
+
+    "be serializable to json (if aggregator is serializable)" in new serializableDecorator {
+      val dec: CubeDecorator[Int] = aggregator
+      decoratorRepo.serialize(dec).isSuccess must beTrue
+    }
+    "be reparsable from json (if aggregator is serializable)" in new serializableDecorator {
+      val dec: CubeDecorator[Int] = aggregator
+      val p = for {
+        json ← decoratorRepo.serialize(dec)
+        c ← decoratorRepo.parse(json)
+      } yield c
+      p.isSuccess must beTrue
+
+      p.toOption.get match {
+        case Aggregator(a) ⇒
+          a must_== aggregator
+      }
     }
   }
 }

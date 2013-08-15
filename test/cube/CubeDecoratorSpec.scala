@@ -1,146 +1,161 @@
 package cube
 
 import org.specs2.mutable.Specification
+import org.specs2.specification.Scope
+import support.JsonMapperRepository
+import CubeDecorator._
 
 class CubeDecoratorSpec extends Specification {
+  trait germanEnglish extends Scope {
+    val german = ListDimension("german", "eins", "zwei", "drei")
+    val english = ListDimension("english", "one", "two", "three")
 
-  val german = ListDimension("german", "eins", "zwei", "drei")
-  val english = ListDimension("english", "one", "two", "three")
-
-  val productCube = {
-    val data = for {
-      (cg, vg) ← german.all.zipWithIndex
-      (ce, ve) ← english.all.zipWithIndex
-    } yield (Point(cg, ce), (vg + 1) * (ve + 1))
-    MapCube(data.toMap)
+    val einsOne = Point(german.coordOf("eins"), english.coordOf("one"))
+    val einsTwo = Point(german.coordOf("eins"), english.coordOf("two"))
+    val zweiTwo = Point(german.coordOf("zwei"), english.coordOf("two"))
   }
-  val hasDiffCube = {
-    val data = for {
-      (cg, vg) ← german.all.zipWithIndex
-      (ce, ve) ← english.all.zipWithIndex if ve != vg
-    } yield (Point(cg, ce), (vg + 1) - (ve + 1))
-    MapCube(data.toMap)
+  trait productCube extends germanEnglish {
+    val productCube = {
+      val data = for {
+        (cg, vg) ← german.all.zipWithIndex
+        (ce, ve) ← english.all.zipWithIndex
+      } yield (Point(cg, ce), (vg + 1) * (ve + 1))
+      MapCube(data.toMap)
+    }
+  }
+  trait hasDiffCube extends germanEnglish {
+    val hasDiffCube = {
+      val data = for {
+        (cg, vg) ← german.all.zipWithIndex
+        (ce, ve) ← english.all.zipWithIndex if ve != vg
+      } yield (Point(cg, ce), (vg + 1) - (ve + 1))
+      MapCube(data.toMap)
+    }
   }
 
-  private val einsOne = Point(german.coordOf("eins"), english.coordOf("one"))
-  private val einsTwo = Point(german.coordOf("eins"), english.coordOf("two"))
-  private val zweiTwo = Point(german.coordOf("zwei"), english.coordOf("two"))
-
-  "decoration of cube with Noop" should {
+  trait decNoop extends productCube {
     val dec = CubeDecorator(productCube, CubeDecorators.noop[Int])
-    "still have 9 values" in {
+  }
+  "decoration of cube with Noop" should {
+    "still have 9 values" in new decNoop {
       dec.values must have size 9
       dec.sparse must have size 9
       dec.dense.filter(_._2.isDefined) must have size 9
     }
-    "still have 9 points" in {
+    "still have 9 points" in new decNoop {
       dec.dense must have size 9
     }
-    "have 4 at zwei/two" in {
+    "have 4 at zwei/two" in new decNoop {
       dec.get(zweiTwo) must beSome(4)
     }
-    "have no value at zwei" in {
+    "have no value at zwei" in new decNoop {
       dec.get(german.coordOf("zwei")) must beNone
     }
-    "have a value sum of 36" in {
+    "have a value sum of 36" in new decNoop {
       dec.values.reduce(_ + _) must_== (36)
     }
 
-    "be unapplyable to the apply-parameters" in {
+    "be unapplyable to the apply-parameters" in new decNoop {
       CubeDecorator.unapply(dec) must_== Some(productCube, CubeDecorators.noop)
     }
-    "have the decorator to be removable via undecorate" in {
+    "have the decorator to be removable via undecorate" in new decNoop {
       CubeDecorator.undecorate(dec) must_== productCube
     }
-    "have the decorator to be removable completely via undecorate" in {
+    "have the decorator to be removable completely via undecorate" in new decNoop {
       CubeDecorator.undecorateComplete(dec) must_== productCube
     }
-    "have the decorator to be removable completely via undecorate even when decorated again" in {
+    "have the decorator to be removable completely via undecorate even when decorated again" in new decNoop {
       val dec2 = CubeDecorator(dec, CubeDecorators.noop[Int])
       CubeDecorator.undecorateComplete(dec2) must_== productCube
     }
   }
 
-  "decoration of cube with '+1'" should {
+  trait decPlusOne extends productCube {
     val dec = CubeDecorator(productCube, CubeDecorators.mapValue[Int](_ + 1))
-    "still have 9 values" in {
+  }
+  "decoration of cube with '+1'" should {
+    "still have 9 values" in new decPlusOne {
       dec.values must have size 9
       dec.sparse must have size 9
       dec.dense.filter(_._2.isDefined) must have size 9
     }
-    "still have 9 points" in {
+    "still have 9 points" in new decPlusOne {
       dec.dense must have size 9
     }
-    "have 5 at zwei/two" in {
+    "have 5 at zwei/two" in new decPlusOne {
       dec.get(zweiTwo) must beSome(5)
     }
-    "have no value at zwei" in {
+    "have no value at zwei" in new decPlusOne {
       dec.get(german.coordOf("zwei")) must beNone
     }
-    "have a value sum of 45" in {
+    "have a value sum of 45" in new decPlusOne {
       dec.values.reduce(_ + _) must_== (45)
     }
   }
 
-  "decoration of cube with 1 => None" should {
+  trait decOneNone extends productCube {
     val dec = CubeDecorator(productCube, CubeDecorators.mapValueOption[Int](_ match {
       case Some(1) ⇒ None
       case other ⇒ other
     }))
-    "have 8 values" in {
+  }
+  "decoration of cube with 1 => None" should {
+    "have 8 values" in new decOneNone {
       dec.values must have size 8
       dec.sparse must have size 8
       dec.dense.filter(_._2.isDefined) must have size 8
     }
-    "have one undefined point" in {
+    "have one undefined point" in new decOneNone {
       dec.dense.filter(_._2.isEmpty) must have size 1
     }
-    "still have 9 points" in {
+    "still have 9 points" in new decOneNone {
       dec.dense must have size 9
     }
-    "have 4 at zwei/two" in {
+    "have 4 at zwei/two" in new decOneNone {
       dec.get(zweiTwo) must beSome(4)
     }
-    "have no value at zwei" in {
+    "have no value at zwei" in new decOneNone {
       dec.get(german.coordOf("zwei")) must beNone
     }
-    "have a value sum of 35" in {
+    "have a value sum of 35" in new decOneNone {
       dec.values.reduce(_ + _) must_== (35)
     }
-    "have no value at eins/one" in {
+    "have no value at eins/one" in new decOneNone {
       dec.get(einsOne) must beNone
     }
   }
 
-  "decoration of cube with None => 10" should {
+  trait decNone10 extends hasDiffCube {
     val dec = CubeDecorator(hasDiffCube, CubeDecorators.mapValueOption[Int](_ match {
       case None ⇒ Some(10)
       case other ⇒ other
     }))
-    "have 9 values" in {
+  }
+  "decoration of cube with None => 10" should {
+    "have 9 values" in new decNone10 {
       dec.values must have size 9
       dec.sparse must have size 9
       dec.dense.filter(_._2.isDefined) must have size 9
     }
-    "have 6 values before" in {
+    "have 6 values before" in new decNone10 {
       hasDiffCube.values must have size 6
     }
-    "still have 9 points" in {
+    "still have 9 points" in new decNone10 {
       dec.dense must have size 9
     }
-    "have 10 at zwei/two" in {
+    "have 10 at zwei/two" in new decNone10 {
       dec.get(zweiTwo) must beSome(10)
     }
-    "have no value at zwei" in {
+    "have no value at zwei" in new decNone10 {
       dec.get(german.coordOf("zwei")) must beNone
     }
-    "have a value sum of 30" in {
+    "have a value sum of 30" in new decNone10 {
       dec.values.reduce(_ + _) must_== (30)
     }
-    "have value 10 at eins/one" in {
+    "have value 10 at eins/one" in new decNone10 {
       dec.get(einsOne) must beSome(10)
     }
-    "have value -1 at eins/two" in {
+    "have value -1 at eins/two" in new decNone10 {
       dec.get(einsTwo) must beSome(-1)
     }
   }

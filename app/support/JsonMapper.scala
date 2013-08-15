@@ -34,3 +34,11 @@ trait JsonMapperRepository[O] {
     } yield Json.obj(mapper.id -> subjson)
   }
 }
+
+/** JsonMapper that only uses the id and maps that to an object. */
+case class ObjectJsonMapper[O](id: String, instance: O) extends JsonMapper[O] {
+  override def parser = json ⇒ instance.success
+  override def serializer = {
+    case `instance` ⇒ JsArray().success
+  }
+}

@@ -73,5 +73,6 @@ object Aggregators {
 
   def reduce[A](f: (A, A) ⇒ A): Aggregator[A] = sparse(_.reduceOption(f))
 
-  def sum = reduce[Long](_ + _)
+  def sumLong = reduce[Long](_ + _)
+  def sumInt = reduce[Int](_ + _)
 }

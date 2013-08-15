@@ -5,7 +5,7 @@ import scalaz._
 import Scalaz._
 import play.api.libs.json._
 import cube._
-import support.JsonMapper
+import support.ObjectJsonMapper
 
 class Aggregation private (val name: String, val aggregator: Option[Aggregator[String]]) {
   override def toString = name
@@ -48,11 +48,7 @@ object Aggregation {
   }
 
   private def apply(name: String, aggr: Aggregator[String]) = {
-    JsonMappers.registerAggregator(new JsonMapper[Aggregator[_]] {
-      override val id = name
-      override def parser = json ⇒ aggr.success
-      override def serializer = { case `aggr` ⇒ JsArray().success }
-    })
+    JsonMappers.registerAggregator(ObjectJsonMapper(name, aggr))
     new Aggregation(name, Some(aggr))
   }
 }

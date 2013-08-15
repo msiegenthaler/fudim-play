@@ -89,5 +89,23 @@ class DatabaseCubeSpec extends Specification {
       cube2.values.toSet must equalTo(Set("X"))
       cube2.get(jan) must beSome("X")
     }
+
+    "serialize to json" in new oneDimensionalCube {
+      val ser = DatabaseCube.json.serializer
+      ser.isDefinedAt(cube) must beTrue
+      ser(cube).isSuccess must beTrue
+    }
+    "reparse from json" in new oneDimensionalCube {
+      cube.set(jan, Some("X"))
+      val p = for {
+        json ← DatabaseCube.json.serializer(cube)
+        c2 ← DatabaseCube.json.parser(json)
+      } yield c2
+      p.isSuccess must beTrue
+
+      val cube2 = p.toOption.get
+      cube2.id must_== cube.id
+      cube2.get(jan) must beSome("X")
+    }
   }
 }

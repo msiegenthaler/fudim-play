@@ -3,7 +3,6 @@ package cube
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
 import support.JsonMapperRepository
-import CubeDecorator._
 import support.ObjectJsonMapper
 import TestFixtures._
 

@@ -79,9 +79,6 @@ object CubeDecorator {
     case d ⇒ d
   }
 
-  type JsonCubeDecoratorMapper = JsonMapper[CubeDecorator[_]]
-  type JsonCubeDecoratorMapperRepository = JsonMapperRepository[CubeDecorator[_]]
-
   def json(decoratorRepo: JsonCubeDecoratorMapperRepository, cubeRepo: JsonCubeMapperRepository): JsonCubeMapper = new JsonCubeMapper {
     override val id = "cubeDecorator"
     override def parser = json ⇒ {

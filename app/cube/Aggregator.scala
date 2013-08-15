@@ -35,7 +35,7 @@ object Aggregator {
     override def apply(v: Traversable[Option[D]]) = f(v)
   }
 
-  def json(aggrRepo: JsonMapperRepository[Aggregator[_]]) = new JsonMapper[CubeDecorator[_]] {
+  def json(aggrRepo: JsonAggregatorMapperRepository) = new JsonCubeDecoratorMapper {
     val id = "aggregator"
     override def parser = json ⇒ {
       aggrRepo.parse(json).map(decorator(_))

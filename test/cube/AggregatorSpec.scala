@@ -4,7 +4,6 @@ import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
 import TestFixtures._
 import support._
-import CubeDecorator._
 
 class AggregatorSpec extends Specification {
   trait sumCube extends productCube {

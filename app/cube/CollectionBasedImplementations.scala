@@ -74,4 +74,9 @@ object MapCube {
       foreach(p ⇒ throw new IllegalArgumentException(s"Point $p is invalid, does not match dimensions of cube: ${dimensions.mkString(",")}"))
     new MapCube(dimensions, data)
   }
+  /**
+   * Create MapCube from the Point->value tuples.
+   *  Note that all point must define exactly the same dimensions.
+   */
+  def apply[D](data: (Point, D)*): MapCube[D] = apply(data.toMap)
 }

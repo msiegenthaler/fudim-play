@@ -1,9 +1,8 @@
 import scala.util.Random
 import play.api._
 import models._
-import cube.{ Cube, EditableCube, Point }
+import cube._
 import support.JsonMapper
-import Point._
 
 object Global extends GlobalSettings {
   val aggregation = Aggregation.all //so they get registered

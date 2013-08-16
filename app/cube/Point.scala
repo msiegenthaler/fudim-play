@@ -51,6 +51,4 @@ object Point {
     if (value.size != set.size) throw new IllegalArgumentException(s"$value contains duplicate dimensions")
     new Point(set)
   }
-
-  implicit def coordToPoint(c: Coordinate) = Point(c)
 }

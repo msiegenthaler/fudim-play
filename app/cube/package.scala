@@ -9,4 +9,6 @@ package object cube {
   type JsonCubeDecoratorMapperRepository = JsonMapperRepository[CubeDecorator[_]]
   type JsonAggregatorMapper = JsonMapper[Aggregator[_]]
   type JsonAggregatorMapperRepository = JsonMapperRepository[Aggregator[_]]
+
+  implicit def coordToPoint(c: Coordinate) = Point(c)
 }

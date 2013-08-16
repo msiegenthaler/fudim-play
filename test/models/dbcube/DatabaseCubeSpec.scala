@@ -8,7 +8,6 @@ import play.api.test.Helpers._
 import cube._
 import models._
 import models.dbcube._
-import Point._
 
 class DatabaseCubeSpec extends Specification {
   include(new CubeTck("DatabaseCube") with BeforeAfterExample {

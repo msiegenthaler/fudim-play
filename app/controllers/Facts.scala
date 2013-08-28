@@ -11,20 +11,20 @@ import models.dbcube.DatabaseCube
 object Facts extends Controller {
 
   def list = Action {
-    Ok(views.html.facts(Fact.all, addForm))
+    Ok(views.html.facts(FactRepo.all, addForm))
   }
 
   def add = Action { implicit request ⇒
     addForm.bindFromRequest.fold(
-      errors ⇒ BadRequest(views.html.facts(Fact.all, errors)),
+      errors ⇒ BadRequest(views.html.facts(FactRepo.all, errors)),
       name ⇒ {
-        val fact = Fact.createDatabaseBacked(name, Set.empty, None)
+        val fact = FactRepo.createDatabaseBacked(name, Set.empty, None)
         Redirect(routes.Facts.view(name))
       })
   }
 
   def view(name: String) = Action {
-    Fact.get(name).map { fact ⇒
+    FactRepo.get(name).map { fact ⇒
       val dims = DimensionRepo.all.filterNot(fact.dimensions.contains)
       val aggr = Aggregation.unapply(fact.cube).getOrElse(Aggregation.none)
       Ok(views.html.fact(fact, dims, Aggregation.all, aggrForm.fill(aggr.name)))
@@ -32,7 +32,7 @@ object Facts extends Controller {
   }
   def addDimension(factName: String, dimensionName: String) = Action {
     val r = for {
-      fact ← Fact.get(factName)
+      fact ← FactRepo.get(factName)
       dimension ← DimensionRepo.get(dimensionName)
       moveTo ← dimension.all.headOption
     } yield {
@@ -43,7 +43,7 @@ object Facts extends Controller {
   }
   def removeDimension(factName: String, dimensionName: String) = Action {
     val r = for {
-      fact ← Fact.get(factName)
+      fact ← FactRepo.get(factName)
       dimension ← DimensionRepo.get(dimensionName)
       keepAt ← dimension.all.headOption
     } yield {
@@ -58,7 +58,7 @@ object Facts extends Controller {
       errors ⇒
         NotImplemented,
       aggrName ⇒ {
-        Fact.get(factName).map { fact ⇒
+        FactRepo.get(factName).map { fact ⇒
           val aggr = Aggregation.all.find(_.name == aggrName).getOrElse(Aggregation.none)
           fact.aggregation = aggr
           Redirect(routes.Facts.view(factName))
@@ -68,14 +68,14 @@ object Facts extends Controller {
 
   def get(factName: String, at: Point) = Action {
     val r = for {
-      fact ← Fact.get(factName)
+      fact ← FactRepo.get(factName)
       value ← fact.cube.get(at)
     } yield Ok(value)
     r.getOrElse(NotFound)
   }
   def save(factName: String, at: Point) = Action { request ⇒
     request.body.asText.filterNot(_.isEmpty).map { value ⇒
-      Fact.get(factName).map { fact ⇒
+      FactRepo.get(factName).map { fact ⇒
         fact.cube match {
           case cube: EditableCube[_] ⇒
             try {

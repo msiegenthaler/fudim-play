@@ -27,7 +27,7 @@ sealed trait Fact {
   def removeDimension(keepAt: Coordinate): Unit
 }
 
-object Fact {
+object FactRepo {
   def get(name: String): Option[Fact] = DB.withConnection { implicit c ⇒
     SQL("select * from fact where name={name}").on("name" -> name).as(fact singleOpt).flatten
   }

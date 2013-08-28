@@ -26,7 +26,7 @@ object DimensionRepo extends CoordinateFactory {
     SQL("insert into dimension(name) values({name})").on("name" -> name).executeUpdate
     get(name).getOrElse(throw new IllegalStateException(s"Insert of dimension $name failed"))
   }
-  def delete(name: String) = DB.withConnection { implicit c ⇒
+  def remove(name: String) = DB.withConnection { implicit c ⇒
     get(name).foreach { d ⇒
       val id = idOf(d)
       SQL("delete from dimension where id = {id}").on("id" -> id).executeUpdate

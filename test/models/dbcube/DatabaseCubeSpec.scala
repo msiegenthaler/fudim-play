@@ -15,7 +15,7 @@ class DatabaseCubeSpec extends Specification {
     override def after = Play.stop
 
     override def makeDimension(name: String, data: List[String]) = {
-      val d = Dimension.create(name)
+      val d = DimensionRepo.create(name)
       data.foreach(d.add)
       d
 
@@ -39,7 +39,7 @@ class DatabaseCubeSpec extends Specification {
     override def after = Play.stop
   }
   trait oneDimensionalCube extends withplay {
-    lazy val monat = Dimension.get("Monat").get
+    lazy val monat = DimensionRepo.get("Monat").get
     def jan = monat.all(0)
     def feb = monat.all(1)
     def mar = monat.all(2)
@@ -48,7 +48,7 @@ class DatabaseCubeSpec extends Specification {
 
   "DatabaseCube of type String with one dimension" should {
     "be createble" in new withplay {
-      val d = Dimension.create("TestDimension")
+      val d = DimensionRepo.create("TestDimension")
       DatabaseCube.create(Set(d), classOf[String])
     }
     "be loadable" in new oneDimensionalCube {

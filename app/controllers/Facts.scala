@@ -25,7 +25,7 @@ object Facts extends Controller {
 
   def view(name: String) = Action {
     Fact.get(name).map { fact ⇒
-      val dims = Dimension.all.filterNot(fact.dimensions.contains)
+      val dims = DimensionRepo.all.filterNot(fact.dimensions.contains)
       val aggr = Aggregation.unapply(fact.cube).getOrElse(Aggregation.none)
       Ok(views.html.fact(fact, dims, Aggregation.all, aggrForm.fill(aggr.name)))
     }.getOrElse(NotFound)
@@ -33,7 +33,7 @@ object Facts extends Controller {
   def addDimension(factName: String, dimensionName: String) = Action {
     val r = for {
       fact ← Fact.get(factName)
-      dimension ← Dimension.get(dimensionName)
+      dimension ← DimensionRepo.get(dimensionName)
       moveTo ← dimension.all.headOption
     } yield {
       fact.addDimension(moveTo)
@@ -44,7 +44,7 @@ object Facts extends Controller {
   def removeDimension(factName: String, dimensionName: String) = Action {
     val r = for {
       fact ← Fact.get(factName)
-      dimension ← Dimension.get(dimensionName)
+      dimension ← DimensionRepo.get(dimensionName)
       keepAt ← dimension.all.headOption
     } yield {
       fact.removeDimension(keepAt)

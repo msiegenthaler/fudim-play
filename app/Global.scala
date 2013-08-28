@@ -12,21 +12,21 @@ object Global extends GlobalSettings {
 }
 
 object InitialData {
-  def hasData = !Dimension.all.isEmpty
+  def hasData = !DimensionRepo.all.isEmpty
   def insert {
-    val monat = Dimension.create("Monat")
+    val monat = DimensionRepo.create("Monat")
     monat.add("Jan")
     monat.add("Feb")
     monat.add("Mar")
     monat.add("Apr")
     monat.add("Mai")
 
-    val project = Dimension.create("Projekt")
+    val project = DimensionRepo.create("Projekt")
     project.add("BZ")
     project.add("AB")
     project.add("GG")
 
-    val kostenart = Dimension.create("Kostenart")
+    val kostenart = DimensionRepo.create("Kostenart")
     val ka_ma = kostenart.add("Mitarbeiter")
     val ka_ext = kostenart.add("Externe")
     val ka_mat = kostenart.add("Material")

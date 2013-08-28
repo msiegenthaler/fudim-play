@@ -14,7 +14,7 @@ trait EditableDimension extends cube.Dimension {
   def add(value: String, after: Option[Coordinate]): Coordinate
 }
 
-object Dimension extends CoordinateFactory {
+object DimensionRepo extends CoordinateFactory {
   def get(name: String): Option[EditableDimension] = DB.withConnection { implicit c ⇒
     SQL("select * from dimension where name={name}").on("name" -> name).as(dimension.singleOpt)
   }
@@ -38,7 +38,7 @@ object Dimension extends CoordinateFactory {
   def parseCoordinate(v: (String, String)) = {
     def long(s: String) = catching(classOf[NumberFormatException]).opt(s.toLong)
     for {
-      dim ← Dimension.get(v._1)
+      dim ← DimensionRepo.get(v._1)
       cid ← long(v._2)
       coord = coordinate(dim, cid)
       _ ← catching(classOf[Exception]).opt(dim.render(coord)) // must exist
@@ -85,9 +85,9 @@ object Dimension extends CoordinateFactory {
   }
 
   private case class DatabaseDimension(id: Long, name: String) extends EditableDimension {
-    override def all = Dimension.coordinates(this)
-    override def values = Dimension.values(this)
-    override def render(c: Coordinate) = Dimension.render(this, c)
+    override def all = DimensionRepo.coordinates(this)
+    override def values = DimensionRepo.values(this)
+    override def render(c: Coordinate) = DimensionRepo.render(this, c)
     override def add(v: String) = addValue(this, v)
     override def add(v: String, after: Option[Coordinate]) = addValue(this, v, after)
   }

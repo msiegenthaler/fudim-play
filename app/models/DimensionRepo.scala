@@ -7,15 +7,8 @@ import play.api.Play.current
 import util.control.Exception._
 import cube._
 
-trait EditableDimension extends cube.Dimension {
-  /** Add a value to the dimension (at last index). */
-  def add(value: String): Coordinate
-  /** Adds a value to the dimension directly after another value (use None to insert as first). */
-  def add(value: String, after: Option[Coordinate]): Coordinate
-}
-
 object DimensionRepo extends CoordinateFactory {
-  def get(name: String): Option[EditableDimension] = DB.withConnection { implicit c ⇒
+  def get(name: String): Option[FudimDimension] = DB.withConnection { implicit c ⇒
     SQL("select * from dimension where name={name}").on("name" -> name).as(dimension.singleOpt)
   }
 
@@ -73,7 +66,7 @@ object DimensionRepo extends CoordinateFactory {
     }
   }
 
-  private[models] val dimension: RowParser[EditableDimension] = {
+  private[models] val dimension: RowParser[FudimDimension] = {
     long("dimension.id") ~ str("dimension.name") map {
       case id ~ name ⇒ DatabaseDimension(id, name)
     }
@@ -84,7 +77,7 @@ object DimensionRepo extends CoordinateFactory {
     case _ ⇒ throw new IllegalArgumentException(s"Dimension $d.name is not supported by idOf")
   }
 
-  private case class DatabaseDimension(id: Long, name: String) extends EditableDimension {
+  private case class DatabaseDimension(id: Long, name: String) extends FudimDimension {
     override def all = DimensionRepo.coordinates(this)
     override def values = DimensionRepo.values(this)
     override def render(c: Coordinate) = DimensionRepo.render(this, c)

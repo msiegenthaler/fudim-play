@@ -19,7 +19,7 @@ object Tables extends Controller {
       val filter = DimensionsFilter(filterDims.map { d ⇒
         fixed.coordinate(d).map(c ⇒ DimensionSelection(d, (c, d.render(c)))).getOrElse(DimensionUnrestricted(d))
       }.toList)
-      val cube = Cube.editable(fact.cube)
+      val cube = Cube.editable(fact.data)
       Ok(views.html.table(fact, cube, d1, d2, filter, sum1, sum2))
     }
     r.getOrElse(NotFound)

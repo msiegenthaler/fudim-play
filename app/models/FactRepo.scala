@@ -11,33 +11,18 @@ import java.sql.Connection
 import cube._
 import models.dbcube.DatabaseCube
 
-/** A fact has values for each coordinate in dimensions. */
-sealed trait Fact {
-  /** Unique name of the fact. */
-  def name: String
-
-  def cube: Cube[String]
-  protected def updateCube(aggregation: Aggregation): Unit
-
-  def aggregation: Aggregation = cube match { case Aggregation(aggr) ⇒ aggr }
-  def aggregation_=(aggr: Aggregation) = updateCube(aggr)
-
-  def dimensions: Set[Dimension] = cube.dimensions
-  def addDimension(moveTo: Coordinate): Unit
-  def removeDimension(keepAt: Coordinate): Unit
-}
-
 object FactRepo {
-  def get(name: String): Option[Fact] = DB.withConnection { implicit c ⇒
+  def get(name: String): Option[FudimFact[String]] = DB.withConnection { implicit c ⇒
     SQL("select * from fact where name={name}").on("name" -> name).as(fact singleOpt).flatten
   }
-  def all: Iterable[Fact] = DB.withConnection { implicit c ⇒
+  def all: Iterable[FudimFact[String]] = DB.withConnection { implicit c ⇒
     SQL("select * from fact").as(fact *).flatten
   }
 
-  private class DatabaseFact(val name: String, private var _cube: Cube[String]) extends Fact {
-    override def cube = _cube
-    def databaseCube = CubeDecorator.undecorateComplete(cube) match {
+  private class DatabaseFact(val name: String, private var _cube: Cube[String]) extends FudimFact[String] {
+    override def data = _cube
+    override def rendered = data
+    def databaseCube = CubeDecorator.undecorateComplete(data) match {
       case d: DatabaseCube[String] ⇒ d
       case _ ⇒ throw new IllegalStateException("our cube is not a database cube")
     }
@@ -63,7 +48,7 @@ object FactRepo {
     }
   }
 
-  def createDatabaseBacked(name: String, dims: Set[Dimension], aggregator: Option[Aggregator[String]]): Fact = DB.withConnection { implicit c ⇒
+  def createDatabaseBacked(name: String, dims: Set[Dimension], aggregator: Option[Aggregator[String]]): FudimFact[String] = DB.withConnection { implicit c ⇒
     val rawCube = DatabaseCube.create(dims, classOf[String])
     val cube = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
     SQL("insert into fact(name, config) values({name}, {config})").on("name" -> name, "config" -> cubeConfig(cube)).executeInsert().get

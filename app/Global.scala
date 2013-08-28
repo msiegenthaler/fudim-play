@@ -39,13 +39,13 @@ object InitialData {
     for (m ← monat.all) {
       for (p ← project.all) {
         val at = m + p
-        umsatz.cube.set(at, (rnd.nextInt(1000) + 9500).toString)
+        umsatz.data.set(at, (rnd.nextInt(1000) + 9500).toString)
 
         val k = rnd.nextInt(1000) + 8500
-        kosten.cube.set(at + ka_ma, (k * 0.7).round.toString)
-        kosten.cube.set(at + ka_ext, (k * 0.05).round.toString)
-        kosten.cube.set(at + ka_mat, "0")
-        kosten.cube.set(at + ka_gk, (k * 0.25).round.toString)
+        kosten.data.set(at + ka_ma, (k * 0.7).round.toString)
+        kosten.data.set(at + ka_ext, (k * 0.05).round.toString)
+        kosten.data.set(at + ka_mat, "0")
+        kosten.data.set(at + ka_gk, (k * 0.25).round.toString)
       }
     }
   }

@@ -26,7 +26,7 @@ object Facts extends Controller {
   def view(name: String) = Action {
     FactRepo.get(name).map { fact ⇒
       val dims = DimensionRepo.all.filterNot(fact.dimensions.contains)
-      val aggr = Aggregation.unapply(fact.cube).getOrElse(Aggregation.none)
+      val aggr = Aggregation.unapply(fact.data).getOrElse(Aggregation.none)
       Ok(views.html.fact(fact, dims, Aggregation.all, aggrForm.fill(aggr.name)))
     }.getOrElse(NotFound)
   }
@@ -69,14 +69,14 @@ object Facts extends Controller {
   def get(factName: String, at: Point) = Action {
     val r = for {
       fact ← FactRepo.get(factName)
-      value ← fact.cube.get(at)
+      value ← fact.data.get(at)
     } yield Ok(value)
     r.getOrElse(NotFound)
   }
   def save(factName: String, at: Point) = Action { request ⇒
     request.body.asText.filterNot(_.isEmpty).map { value ⇒
       FactRepo.get(factName).map { fact ⇒
-        fact.cube match {
+        fact.data match {
           case cube: EditableCube[_] ⇒
             try {
               cube.set(at, value)

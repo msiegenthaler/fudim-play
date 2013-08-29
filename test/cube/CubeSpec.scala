@@ -168,6 +168,26 @@ abstract class CubeTck(name: String) extends Specification with DataTables {
     "have a total of 2638 products sold (when aggregating dense)" in new sales {
       sales.dense.map(_._2).flatten.reduce(_ + _) must_== 2638
     }
+    "have values 20, 15, 100 for shirts in Bern" in new sales {
+      val slice = sales.slice(product("shirt") + location("Bern"))
+      slice.values.toSet must_== Set(20, 15, 100)
+    }
+    "have sparses 20, 15, 100 for shirts in Bern" in new sales {
+      val p = product("shirt") + location("Bern")
+      val slice = sales.slice(p)
+      slice.sparse.toMap must_== Map(
+        (p + color("red"), 20),
+        (p + color("green"), 15),
+        (p + color("white"), 100))
+    }
+    "have denses Some(20), Some(15), Some(100) for shirts in Bern" in new sales {
+      val p = product("shirt") + location("Bern")
+      val slice = sales.slice(p)
+      slice.dense.toMap must_== Map(
+        (p + color("red"), Some(20)),
+        (p + color("green"), Some(15)),
+        (p + color("white"), Some(100)))
+    }
     "have sold 555 white socks in Bern" in new sales {
       val at = Point(product("socks"), location("Bern"), color("white"))
       sales.get(at) must beSome(555)

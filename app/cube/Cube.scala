@@ -31,6 +31,8 @@ trait Cube[T] extends PartialFunction[Point, T] {
 
   /** Restrict the values within a dimension. If the dimension is already filtered then the both filters are combined with AND. */
   def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean): Self
+
+  def map[A](f: T ⇒ A): Cube[A] = MappedCube(this, f)
 }
 
 /** Cube that decorates another cube. I.e. to add aggragation of values. */
@@ -102,16 +104,16 @@ case class ValueCannotBeSetException(at: Point) extends RuntimeException(s"Canno
 
 /** Implements the slicing/dicing. */
 trait AbstractCube[T] extends Cube[T] {
-  protected type Self <: AbstractCube[T]
+  override protected type Self <: AbstractCube[T]
 
-  val slice: Point
+  override val slice: Point
   protected[this] val filters: DimensionFilter
   protected def allDimensions: Set[Dimension]
 
   override def dimensions = allDimensions -- slice.on
-  def raw = derive(Point.empty, Map.empty)
-  def slice(to: Point) = derive(slice = to)
-  def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = {
+  override def raw = derive(Point.empty, Map.empty)
+  override def slice(to: Point) = derive(slice = to)
+  override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = {
     val combFilter = filters.get(dimension).map(f ⇒ ((c: Coordinate) ⇒ f(c) && filter(c))).getOrElse(filter)
     derive(filters = filters + (dimension -> combFilter))
   }
@@ -131,5 +133,23 @@ trait AbstractCube[T] extends Cube[T] {
       }
       ps.flatMap(p ⇒ coords.map(c ⇒ p + c))
     }
+  }
+}
+
+private object MappedCube {
+  def apply[A, B](cube: Cube[A], f: A ⇒ B): Cube[B] = MappedCube(cube, f)
+
+  case class MappedCube[A, B](cube: Cube[A], f: A ⇒ B) extends Cube[B] {
+    override protected type Self = Cube[B]
+    override def get(at: Point) = cube.get(at).map(f)
+    override def dense = cube.dense.map(t ⇒ (t._1, t._2.map(f)))
+    override def sparse = cube.sparse.map(t ⇒ (t._1, f(t._2)))
+    override def values = cube.values.map(f)
+    override def slice = cube.slice
+    override def raw = wrap(cube.raw)
+    override def dimensions = cube.dimensions
+    override def slice(to: Point) = wrap(cube.slice(to))
+    override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = wrap(cube.dice(dimension, filter))
+    protected def wrap(cube: Cube[A]): Self = copy(cube = cube)
   }
 }

@@ -18,7 +18,8 @@ object Facts extends Controller {
     addForm.bindFromRequest.fold(
       errors ⇒ BadRequest(views.html.facts(FactRepo.all, errors)),
       name ⇒ {
-        val fact = FactRepo.createDatabaseBacked(name, Set.empty, None)
+        //TODO let the user choose the data-type
+        val fact = FactRepo.createDatabaseBacked(name, DataType.string, Set.empty, None)
         Redirect(routes.Facts.view(name))
       })
   }
@@ -27,7 +28,7 @@ object Facts extends Controller {
     FactRepo.get(name).map { fact ⇒
       val dims = DimensionRepo.all.filterNot(fact.dimensions.contains)
       val aggr = Aggregation.unapply(fact.data).getOrElse(Aggregation.none)
-      Ok(views.html.fact(fact, dims, Aggregation.all, aggrForm.fill(aggr.name)))
+      Ok(views.html.fact(fact, dims, fact.dataType.aggregations, aggrForm.fill(aggr.name)))
     }.getOrElse(NotFound)
   }
   def addDimension(factName: String, dimensionName: String) = Action {
@@ -59,7 +60,7 @@ object Facts extends Controller {
         NotImplemented,
       aggrName ⇒ {
         FactRepo.get(factName).map { fact ⇒
-          val aggr = Aggregation.all.find(_.name == aggrName).getOrElse(Aggregation.none)
+          val aggr = fact.dataType.aggregations.find(_.name == aggrName).getOrElse(Aggregation.none)
           fact.aggregation = aggr
           Redirect(routes.Facts.view(factName))
         }.getOrElse(NotFound)
@@ -69,7 +70,7 @@ object Facts extends Controller {
   def get(factName: String, at: Point) = Action {
     val r = for {
       fact ← FactRepo.get(factName)
-      value ← fact.data.get(at)
+      value ← fact.rendered.get(at)
     } yield Ok(value)
     r.getOrElse(NotFound)
   }
@@ -78,12 +79,15 @@ object Facts extends Controller {
       FactRepo.get(factName).map { fact ⇒
         fact.data match {
           case cube: EditableCube[_] ⇒
-            try {
-              cube.set(at, value)
-              Ok(value)
-            } catch {
-              case ValueCannotBeSetException(_) ⇒ cannotSet
-            }
+            val tpe = fact.dataType
+            tpe.parse(value).map { v ⇒
+              try {
+                cube.set(at, v)
+                Ok(tpe.render(v))
+              } catch {
+                case ValueCannotBeSetException(_) ⇒ cannotSet
+              }
+            }.getOrElse(NotAcceptable)
           case _ ⇒ cannotSet
         }
       }.getOrElse(NotFound)

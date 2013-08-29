@@ -12,55 +12,63 @@ import cube._
 import models.dbcube.DatabaseCube
 
 object FactRepo {
-  def get(name: String): Option[FudimFact[String]] = DB.withConnection { implicit c ⇒
+  def get[T](name: String): Option[FudimFact[Any]] = DB.withConnection { implicit c ⇒
     SQL("select * from fact where name={name}").on("name" -> name).as(fact singleOpt).flatten
   }
-  def all: Iterable[FudimFact[String]] = DB.withConnection { implicit c ⇒
+  def all: Iterable[FudimFact[_]] = DB.withConnection { implicit c ⇒
     SQL("select * from fact").as(fact *).flatten
   }
 
-  private class DatabaseFact(val name: String, private var _cube: Cube[String]) extends FudimFact[String] {
+  private class DatabaseFact[T](val name: String, val dataType: DataType[T], private var _cube: Cube[T]) extends FudimFact[T] {
     override def data = _cube
-    override def rendered = data
     def databaseCube = CubeDecorator.undecorateComplete(data) match {
-      case d: DatabaseCube[String] ⇒ d
+      case d: DatabaseCube[T] ⇒ d
       case _ ⇒ throw new IllegalStateException("our cube is not a database cube")
     }
-    protected def updateCube(databaseCube: DatabaseCube[String], aggr: Aggregation) = {
+    protected def updateCube(databaseCube: DatabaseCube[T], aggr: Aggregation[T]) = {
       val newCube = aggr.aggregator.map(a ⇒ CubeDecorator(databaseCube, a)).
         getOrElse(databaseCube)
       assignCube(name, newCube)
       _cube = newCube
     }
-    override protected def updateCube(aggr: Aggregation) = updateCube(databaseCube, aggr)
+    override protected def updateCube(aggr: Aggregation[T]) = updateCube(databaseCube, aggr)
     def addDimension(moveTo: Coordinate) =
       updateCube(databaseCube.copyAndAddDimension(moveTo), aggregation)
     def removeDimension(keepAt: Coordinate) =
       updateCube(databaseCube.copyAndRemoveDimension(keepAt), aggregation)
   }
   private val fact = {
-    long("id") ~ str("name") ~ str("config") map {
-      case id ~ name ~ config ⇒
-        val json = Json.parse(config)
-        val cube = JsonMappers.cube.parse(json).map(cube ⇒ new DatabaseFact(name, cube.asInstanceOf[Cube[String]]))
-        cube.leftMap(msg ⇒ Logger.info(s"Could not load cube for fact $name: $msg"))
-        cube.toOption
+    import scalaz._
+    import Scalaz._
+    long("id") ~ str("name") ~ str("type") ~ str("config") map {
+      case id ~ name ~ typeName ~ config ⇒
+        val fact = for {
+          dataType ← DataType.get(typeName).toSuccess(s"DataType $typeName is not known")
+          json = Json.parse(config)
+          cube ← JsonMappers.cube.parse(json)
+        } yield new DatabaseFact(name, dataType.asInstanceOf[DataType[Any]], cube.asInstanceOf[Cube[Any]])
+        fact.leftMap(msg ⇒ Logger.info(s"Could not load fact $name: $msg"))
+        fact.toOption
     }
   }
 
-  def createDatabaseBacked(name: String, dims: Set[Dimension], aggregator: Option[Aggregator[String]]): FudimFact[String] = DB.withConnection { implicit c ⇒
-    val rawCube = DatabaseCube.create(dims, classOf[String])
-    val cube = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
-    SQL("insert into fact(name, config) values({name}, {config})").on("name" -> name, "config" -> cubeConfig(cube)).executeInsert().get
-    get(name).getOrElse(throw new IllegalStateException(s"creation of fact $name failed, see log"))
+  def createDatabaseBacked[T](name: String, dataType: DataType[T], dims: Set[Dimension], aggregator: Option[Aggregator[T]]): FudimFact[T] = DB.withConnection { implicit c ⇒
+    val rawCube = DatabaseCube.create(dims, dataType.tpe)
+    val cube: Cube[T] = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
+    SQL("insert into fact(name, type, config) values({name}, {type}, {config})").
+      on("name" -> name, "config" -> cubeConfig(cube), "type" -> dataType.name).
+      executeInsert().get
+    get(name).
+      map(_.asInstanceOf[FudimFact[T]]).
+      getOrElse(throw new IllegalStateException(s"Creation of fact $name failed, see log"))
   }
 
-  private def assignCube[C <: Cube[String]](fact: String, cube: C): Unit = DB.withConnection { implicit c ⇒
+  private def assignCube[T](fact: String, cube: Cube[T]): Unit = DB.withConnection { implicit c ⇒
     val updated = SQL("update fact set config={config} where name={name}").on("config" -> cubeConfig(cube), "name" -> fact).executeUpdate
     if (updated != 1) throw new IllegalArgumentException(s"no fact named $fact")
   }
 
-  private def cubeConfig[C <: Cube[String]](cube: C) = {
+  private def cubeConfig(cube: Cube[_]) = {
     val json = JsonMappers.cube.serialize(cube).
       leftMap(msg ⇒ Logger.info(s"Could not serialize cube $cube: $msg")).
       getOrElse(throw new IllegalArgumentException(s"Cube $cube is not serializable"))

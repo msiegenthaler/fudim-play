@@ -20,7 +20,7 @@ object Tables extends Controller {
         fixed.coordinate(d).map(c ⇒ DimensionSelection(d, (c, d.render(c)))).getOrElse(DimensionUnrestricted(d))
       }.toList)
       val cube = Cube.editable(fact.data)
-      Ok(views.html.table(fact, cube, d1, d2, filter, sum1, sum2))
+      Ok(views.html.table(fact, fact.rendered, cube.isSettable _, d1, d2, filter, sum1, sum2))
     }
     r.getOrElse(NotFound)
   }

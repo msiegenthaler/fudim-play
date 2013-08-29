@@ -1,4 +1,4 @@
-@(fact: FudimFact[_], cube: _root_.cube.EditableCube[String], d1: _root_.cube.Dimension, d2: _root_.cube.Dimension, filter: DimensionsFilter, sumd1: Boolean, sumd2: Boolean)
+@(fact: FudimFact[_], data: _root_.cube.Cube[String], isSettable: _root_.cube.Point => Boolean, d1: _root_.cube.Dimension, d2: _root_.cube.Dimension, filter: DimensionsFilter, sumd1: Boolean, sumd2: Boolean)
 
 @import helper._
 @import helper.twitterBootstrap._
@@ -66,11 +66,11 @@
         <th id="y-@y._2" point="@serializePoint(y._1._1)">@y._1._2</th>
       @d1.values.zipWithIndex.map { x =>
         @defining(filter.point + x._1._1 + y._1._1) { p =>
-        <td id="c-@x._2-@y._2" @if(cube.isSettable(p)) {contentEditable}>@cube.get(p).getOrElse("")</td>
+        <td id="c-@x._2-@y._2" @if(isSettable(p)) {contentEditable}>@data.get(p).getOrElse("")</td>
        }
       }
       @if(sumd2) {
-        <td class="sum" point="@serializePoint(y._1._1)">@cube.get(filter.point + y._1._1).getOrElse("")</td>
+        <td class="sum" point="@serializePoint(y._1._1)">@data.get(filter.point + y._1._1).getOrElse("")</td>
       }
       </tr>
     }
@@ -78,10 +78,10 @@
       <tr class="sum">
         <th></th>
       @d1.values.map { x =>
-         <td class="sum" point="@serializePoint(filter.point + x._1)">@cube.get(filter.point + x._1).getOrElse("")</td>
+         <td class="sum" point="@serializePoint(filter.point + x._1)">@data.get(filter.point + x._1).getOrElse("")</td>
       }
       @if(sumd2) {
-        <td class="sum" point="@serializePoint(filter.point)">@cube.get(filter.point).getOrElse("")</td>
+        <td class="sum" point="@serializePoint(filter.point)">@data.get(filter.point).getOrElse("")</td>
       }
       </tr>
     }

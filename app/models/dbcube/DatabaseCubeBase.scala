@@ -10,16 +10,16 @@ import models._
 /**
  * Base class for a database cube.
  */
-private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] with CoordinateFactory {
-  protected override type Self <: DatabaseCubeBase[D]
+private trait DatabaseCubeBase[T] extends DatabaseCube[T] with AbstractCube[T] with CoordinateFactory {
+  protected override type Self <: DatabaseCubeBase[T]
   def table: String
   def dims: Map[Dimension, String]
   override def allDimensions = dims.keys.toSet
   def cubeType: CubeType
 
   protected def sqlType: String
-  protected def fromDb(name: String): RowParser[D]
-  protected def toDb(value: D): ParameterValue[_] = value
+  protected def fromDb(name: String): RowParser[T]
+  protected def toDb(value: T): ParameterValue[_] = value
   protected def withConnection[A](f: Connection ⇒ A): A
 
   def create: Unit = withConnection { implicit c ⇒
@@ -52,7 +52,7 @@ private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] w
   }
   protected def cloneWithoutData(dims: Set[Dimension]) = DatabaseCube.create(dims, cubeType.tpeClass).asInstanceOf[Self]
 
-  private def fromDb: RowParser[D] = fromDb("content")
+  private def fromDb: RowParser[T] = fromDb("content")
   private def coordToDb(v: Coordinate): ParameterValue[Long] = v.id
   private def coordFromDb(d: Dimension, nameFromDims: String): RowParser[Coordinate] = long(nameFromDims).map(coordinate(d, _))
   private def mkWhere(p: Point): (String, Seq[(Any, ParameterValue[_])]) = {
@@ -67,14 +67,14 @@ private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] w
     }
   }
 
-  private def insert(p: Point, value: D)(implicit c: Connection): Unit = {
+  private def insert(p: Point, value: T)(implicit c: Connection): Unit = {
     val fields = p.on.map(dims.apply)
     val values = fields.map(f ⇒ s"{$f}")
     val ons = p.coordinates.map(e ⇒ (dims(e.dimension), coordToDb(e))).toSeq :+ ("content" -> toDb(value))
     SQL(s"INSERT INTO $table(content,${fields.mkString(",")}) VALUES ({content},${values.mkString(",")})").
       on(ons: _*).execute
   }
-  private def update(at: Point, value: D)(implicit c: Connection): Boolean = {
+  private def update(at: Point, value: T)(implicit c: Connection): Boolean = {
     val (where, ons) = mkWhere(at)
     val ons2 = ons :+ ("content" -> toDb(value))
     SQL(s"UPDATE $table SET content={content} WHERE $where").on(ons2: _*).executeUpdate match {
@@ -107,7 +107,7 @@ private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] w
   override def dense = allPoints.map(p ⇒ (p, get(p)))
 
   override def isSettable(at: Point) = at.definesExactly(dims.keys)
-  override def set(at: Point, to: Option[D]) = withConnection { implicit c ⇒
+  override def set(at: Point, to: Option[T]) = withConnection { implicit c ⇒
     if (isSettable(at)) {
       to match {
         case Some(value) ⇒ if (!update(at, value)) insert(at, value)
@@ -115,7 +115,7 @@ private trait DatabaseCubeBase[D] extends DatabaseCube[D] with AbstractCube[D] w
       }
     } else throw new ValueCannotBeSetException(at)
   }
-  override def setAll(to: Option[D]) = allPoints.foreach(set(_, to))
+  override def setAll(to: Option[T]) = allPoints.foreach(set(_, to))
 
   override def toString = s"DatabaseCube($id)"
 }

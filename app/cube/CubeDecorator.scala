@@ -5,77 +5,77 @@ import models._
 import support.{ JsonMapper, JsonMapperRepository }
 
 /** Decorator for a cube, for use with DecoratedCube.apply(). */
-trait CubeDecorator[D] {
-  def get(decoratee: Cube[D])(at: Point) = decoratee.get(at)
-  def dense(decoratee: Cube[D]) = decoratee.dense
-  def sparse(decoratee: Cube[D]) = decoratee.sparse
+trait CubeDecorator[T] {
+  def get(decoratee: Cube[T])(at: Point) = decoratee.get(at)
+  def dense(decoratee: Cube[T]) = decoratee.dense
+  def sparse(decoratee: Cube[T]) = decoratee.sparse
 }
 /** Decorator for a cube that also handles changes to the cube. Use with DecoratedCube.apply(). */
-trait EditableCubeDecorator[D] extends CubeDecorator[D] {
-  def isSettable(decoratee: EditableCube[D])(at: Point) = decoratee.isSettable(at)
-  def set(decoratee: EditableCube[D])(at: Point, value: Option[D]) = decoratee.set(at, value)
-  def setAll(decoratee: EditableCube[D])(value: Option[D]) = decoratee.setAll(value)
+trait EditableCubeDecorator[T] extends CubeDecorator[T] {
+  def isSettable(decoratee: EditableCube[T])(at: Point) = decoratee.isSettable(at)
+  def set(decoratee: EditableCube[T])(at: Point, value: Option[T]) = decoratee.set(at, value)
+  def setAll(decoratee: EditableCube[T])(value: Option[T]) = decoratee.setAll(value)
 }
 object EditableCubeDecorator {
-  def from[D](d: CubeDecorator[D]): EditableCubeDecorator[D] = d match {
-    case d: EditableCubeDecorator[D] ⇒ d
-    case d ⇒ new EditableCubeDecorator[D] with WrappedCubeDecorator[D] {
+  def from[T](d: CubeDecorator[T]): EditableCubeDecorator[T] = d match {
+    case d: EditableCubeDecorator[T] ⇒ d
+    case d ⇒ new EditableCubeDecorator[T] with WrappedCubeDecorator[T] {
       override protected[cube] def unwrap = d
-      override def get(decoratee: Cube[D])(at: Point) = d.get(decoratee)(at)
-      override def dense(decoratee: Cube[D]) = d.dense(decoratee)
-      override def sparse(decoratee: Cube[D]) = d.sparse(decoratee)
+      override def get(decoratee: Cube[T])(at: Point) = d.get(decoratee)(at)
+      override def dense(decoratee: Cube[T]) = d.dense(decoratee)
+      override def sparse(decoratee: Cube[T]) = d.sparse(decoratee)
       override def toString = d.toString
     }
   }
 }
 
-private[cube] trait WrappedCubeDecorator[D] extends CubeDecorator[D] {
-  protected[cube] def unwrap: CubeDecorator[D]
+private[cube] trait WrappedCubeDecorator[T] extends CubeDecorator[T] {
+  protected[cube] def unwrap: CubeDecorator[T]
 }
 
-trait CubeDecoratorCube[D] extends DecoratedCube[D] {
-  protected[cube] val decorator: CubeDecorator[D]
+trait CubeDecoratorCube[T] extends DecoratedCube[T] {
+  protected[cube] val decorator: CubeDecorator[T]
 }
 
 object CubeDecorator {
-  def apply[D](cube: Cube[D], decorator: CubeDecorator[D]): CubeDecoratorCube[D] = cube match {
-    case cube: EditableCube[D] ⇒ new EditableCubeWithDecorator(cube, EditableCubeDecorator.from(decorator))
+  def apply[T](cube: Cube[T], decorator: CubeDecorator[T]): CubeDecoratorCube[T] = cube match {
+    case cube: EditableCube[T] ⇒ new EditableCubeWithDecorator(cube, EditableCubeDecorator.from(decorator))
     case cube ⇒ new CubeWithDecorator(cube, decorator)
   }
-  def apply[D](cube: EditableCube[D], decorator: CubeDecorator[D]): CubeDecoratorCube[D] with EditableCube[D] = {
+  def apply[T](cube: EditableCube[T], decorator: CubeDecorator[T]): CubeDecoratorCube[T] with EditableCube[T] = {
     new EditableCubeWithDecorator(cube, EditableCubeDecorator.from(decorator))
   }
-  def unapply[D](cube: Cube[D]): Option[(Cube[D], CubeDecorator[D])] = cube match {
-    case c: CubeDecoratorCube[D] ⇒ Some(c.underlying, unwrap(c.decorator))
+  def unapply[T](cube: Cube[T]): Option[(Cube[T], CubeDecorator[T])] = cube match {
+    case c: CubeDecoratorCube[T] ⇒ Some(c.underlying, unwrap(c.decorator))
     case _ ⇒ None
   }
 
   /** Removes the outermost decorator from the cube. */
-  def undecorate[D](cube: Cube[D]): Cube[D] = cube match {
-    case c: CubeWithDecorator[D] ⇒ c.underlying
-    case c: EditableCubeWithDecorator[D] ⇒ c.underlying
+  def undecorate[T](cube: Cube[T]): Cube[T] = cube match {
+    case c: CubeWithDecorator[T] ⇒ c.underlying
+    case c: EditableCubeWithDecorator[T] ⇒ c.underlying
     case c ⇒ c
   }
   /** Removes the outermost decorator from the cube. */
-  def undecorate[D](cube: EditableCube[D]): EditableCube[D] = cube match {
-    case c: EditableCubeWithDecorator[D] ⇒ c.underlying
+  def undecorate[T](cube: EditableCube[T]): EditableCube[T] = cube match {
+    case c: EditableCubeWithDecorator[T] ⇒ c.underlying
     case c ⇒ c
   }
   /** Removes all decorators from the cube. */
-  def undecorateComplete[D](cube: Cube[D]): Cube[D] = cube match {
-    case c: CubeWithDecorator[D] ⇒ undecorateComplete(c.underlying)
-    case c: EditableCubeWithDecorator[D] ⇒ undecorateComplete(c.underlying)
+  def undecorateComplete[T](cube: Cube[T]): Cube[T] = cube match {
+    case c: CubeWithDecorator[T] ⇒ undecorateComplete(c.underlying)
+    case c: EditableCubeWithDecorator[T] ⇒ undecorateComplete(c.underlying)
     case c ⇒ c
   }
   /** Removes all decorators from the cube. */
-  def undecorateComplete[D](cube: EditableCube[D]): EditableCube[D] = cube match {
-    case c: EditableCubeWithDecorator[D] ⇒ undecorateComplete(c.underlying)
+  def undecorateComplete[T](cube: EditableCube[T]): EditableCube[T] = cube match {
+    case c: EditableCubeWithDecorator[T] ⇒ undecorateComplete(c.underlying)
     case c ⇒ c
   }
 
   /** Unwraps cube decorators. */
-  private def unwrap[D](d: CubeDecorator[D]): CubeDecorator[D] = d match {
-    case d: WrappedCubeDecorator[D] ⇒ unwrap(d.unwrap)
+  private def unwrap[T](d: CubeDecorator[T]): CubeDecorator[T] = d match {
+    case d: WrappedCubeDecorator[T] ⇒ unwrap(d.unwrap)
     case d ⇒ d
   }
 
@@ -96,10 +96,10 @@ object CubeDecorator {
     }
   }
 
-  private class CubeWithDecorator[D](val underlying: Cube[D], val decorator: CubeDecorator[D]) extends CubeDecoratorCube[D] {
-    override protected type Self = CubeWithDecorator[D]
-    override type Underlying = Cube[D]
-    private def wrap(c: Cube[D]) = new CubeWithDecorator(c, decorator)
+  private class CubeWithDecorator[T](val underlying: Cube[T], val decorator: CubeDecorator[T]) extends CubeDecoratorCube[T] {
+    override protected type Self = CubeWithDecorator[T]
+    override type Underlying = Cube[T]
+    private def wrap(c: Cube[T]) = new CubeWithDecorator(c, decorator)
 
     override def get(at: Point) = decorator.get(underlying)(at)
     override def dense = decorator.dense(underlying)
@@ -111,10 +111,10 @@ object CubeDecorator {
     override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = wrap(underlying.dice(dimension, filter))
     override def toString = s"CubeWithDecorator($underlying, $decorator)"
   }
-  private class EditableCubeWithDecorator[D](val underlying: EditableCube[D], val decorator: EditableCubeDecorator[D]) extends CubeDecoratorCube[D] with EditableCube[D] {
-    override protected type Self = EditableCubeWithDecorator[D]
-    override type Underlying = EditableCube[D]
-    private def wrap(c: EditableCube[D]) = new EditableCubeWithDecorator(c, decorator)
+  private class EditableCubeWithDecorator[T](val underlying: EditableCube[T], val decorator: EditableCubeDecorator[T]) extends CubeDecoratorCube[T] with EditableCube[T] {
+    override protected type Self = EditableCubeWithDecorator[T]
+    override type Underlying = EditableCube[T]
+    private def wrap(c: EditableCube[T]) = new EditableCubeWithDecorator(c, decorator)
 
     override def get(at: Point) = decorator.get(underlying)(at)
     override def dense = decorator.dense(underlying)
@@ -125,33 +125,33 @@ object CubeDecorator {
     override def slice(to: Point) = wrap(underlying.slice(to))
     override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = wrap(underlying.dice(dimension, filter))
     override def isSettable(at: Point) = decorator.isSettable(underlying)(at)
-    override def set(at: Point, value: Option[D]) = decorator.set(underlying)(at, value)
-    override def setAll(value: Option[D]) = decorator.setAll(underlying)(value)
+    override def set(at: Point, value: Option[T]) = decorator.set(underlying)(at, value)
+    override def setAll(value: Option[T]) = decorator.setAll(underlying)(value)
     override def toString = s"EditableCubeWithDecorator($underlying, $decorator)"
   }
 }
 
 object CubeDecorators {
   /** Decorator that does not change any behaviour. */
-  def noop[D]: EditableCubeDecorator[D] = Noop()
-  private case class Noop[D]() extends EditableCubeDecorator[D]
+  def noop[T]: EditableCubeDecorator[T] = Noop()
+  private case class Noop[T]() extends EditableCubeDecorator[T]
 
   /** Changes all values using f. Aggregate values are not touched. */
-  def mapValue[D](f: D ⇒ D) = new CubeDecorator[D] {
-    override def get(decoratee: Cube[D])(at: Point) = {
+  def mapValue[T](f: T ⇒ T) = new CubeDecorator[T] {
+    override def get(decoratee: Cube[T])(at: Point) = {
       if (at.definesExactly(decoratee.dimensions)) decoratee.get(at).map(f)
       else decoratee.get(at)
     }
-    override def dense(decoratee: Cube[D]) = decoratee.dense.map(v ⇒ (v._1, v._2.map(f)))
-    override def sparse(decoratee: Cube[D]) = decoratee.sparse.map(v ⇒ (v._1, f(v._2)))
+    override def dense(decoratee: Cube[T]) = decoratee.dense.map(v ⇒ (v._1, v._2.map(f)))
+    override def sparse(decoratee: Cube[T]) = decoratee.sparse.map(v ⇒ (v._1, f(v._2)))
   }
   /** Changes all values using f. Aggregate values are not touched. */
-  def mapValueOption[D](f: Option[D] ⇒ Option[D]) = new CubeDecorator[D] {
-    override def get(decoratee: Cube[D])(at: Point) = {
+  def mapValueOption[T](f: Option[T] ⇒ Option[T]) = new CubeDecorator[T] {
+    override def get(decoratee: Cube[T])(at: Point) = {
       val v = decoratee.get(at)
       if (at.definesExactly(decoratee.dimensions)) f(v) else v
     }
-    override def dense(decoratee: Cube[D]) = decoratee.dense.map(v ⇒ (v._1, f(v._2)))
-    override def sparse(decoratee: Cube[D]) = dense(decoratee).flatMap(e ⇒ e._2.map((e._1, _)))
+    override def dense(decoratee: Cube[T]) = decoratee.dense.map(v ⇒ (v._1, f(v._2)))
+    override def sparse(decoratee: Cube[T]) = dense(decoratee).flatMap(e ⇒ e._2.map((e._1, _)))
   }
 }

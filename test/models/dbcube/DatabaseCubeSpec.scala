@@ -24,7 +24,7 @@ class DatabaseCubeSpec extends Specification {
     override def makeSales(color: Dimension, location: Dimension, product: Dimension, data: Map[Point, Int]) =
       dbCubeForData(classOf[Int], data)
 
-    private def dbCubeForData[D](tpe: Class[D], data: Traversable[(Point, D)]) = {
+    private def dbCubeForData[T](tpe: Class[T], data: Traversable[(Point, T)]) = {
       val cube = DatabaseCube.create(data.head._1.on, tpe)
       data.foreach { v ⇒
         val (point, value) = v

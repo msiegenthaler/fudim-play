@@ -16,3 +16,12 @@ trait FudimFact[T] extends RenderFact[T] {
   def addDimension(moveTo: Coordinate): Unit
   def removeDimension(keepAt: Coordinate): Unit
 }
+
+trait FudimFactRepo {
+  def get[T](domain: DomainId, name: String): Option[FudimFact[_]]
+  def all(domain: DomainId): Iterable[FudimFact[_]]
+  def all: Iterable[FudimFact[_]]
+
+  def createDatabaseBacked[T](domain: DomainId, name: String, dataType: DataType[T],
+    dimensions: Set[Dimension], aggregator: Option[Aggregator[T]]): FudimFact[T]
+}

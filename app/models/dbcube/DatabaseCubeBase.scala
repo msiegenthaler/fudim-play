@@ -21,6 +21,7 @@ private trait DatabaseCubeBase[T] extends DatabaseCube[T] with AbstractCube[T] w
   protected def fromDb(name: String): RowParser[T]
   protected def toDb(value: T): ParameterValue[_] = value
   protected def withConnection[A](f: Connection ⇒ A): A
+  protected def repo: DatabaseCubeRepo
 
   def create: Unit = withConnection { implicit c ⇒
     val fields = s"content $sqlType" :: dims.values.map { d ⇒ s"$d integer not null" }.toList
@@ -50,7 +51,7 @@ private trait DatabaseCubeBase[T] extends DatabaseCube[T] with AbstractCube[T] w
       on("d" -> keepAt.id).executeUpdate
     newCube
   }
-  protected def cloneWithoutData(dims: Set[Dimension]) = DatabaseCube.create(dims, cubeType.tpeClass).asInstanceOf[Self]
+  protected def cloneWithoutData(dims: Set[Dimension]) = repo.create(dims, cubeType.tpeClass).asInstanceOf[Self]
 
   private def fromDb: RowParser[T] = fromDb("content")
   private def coordToDb(v: Coordinate): ParameterValue[Long] = v.id

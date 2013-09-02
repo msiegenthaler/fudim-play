@@ -9,7 +9,7 @@ import play.api.libs.json._
 import play.api.Play.current
 import java.sql.Connection
 import cube._
-import models.dbcube.DatabaseCube
+import models.dbcube.{ DatabaseCube, DatabaseCubeRepo }
 
 object FactRepo {
   def get[T](name: String): Option[FudimFact[Any]] = DB.withConnection { implicit c ⇒
@@ -45,7 +45,7 @@ object FactRepo {
         val fact = for {
           dataType ← DataType.get(typeName).toSuccess(s"DataType $typeName is not known")
           json = Json.parse(config)
-          cube ← JsonMappers.cube.parse(json)
+          cube ← jsonCubeMapperRepo.parse(json)
         } yield new DatabaseFact(name, dataType.asInstanceOf[DataType[Any]], cube.asInstanceOf[Cube[Any]])
         fact.leftMap(msg ⇒ Logger.info(s"Could not load fact $name: $msg"))
         fact.toOption
@@ -53,7 +53,7 @@ object FactRepo {
   }
 
   def createDatabaseBacked[T](name: String, dataType: DataType[T], dims: Set[Dimension], aggregator: Option[Aggregator[T]]): FudimFact[T] = DB.withConnection { implicit c ⇒
-    val rawCube = DatabaseCube.create(dims, dataType.tpe)
+    val rawCube = DbCubes.create(dims, dataType.tpe)
     val cube: Cube[T] = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
     SQL("insert into fact(name, type, config) values({name}, {type}, {config})").
       on("name" -> name, "config" -> cubeConfig(cube), "type" -> dataType.name).
@@ -63,13 +63,20 @@ object FactRepo {
       getOrElse(throw new IllegalStateException(s"Creation of fact $name failed, see log"))
   }
 
+  object DbCubes extends DatabaseCubeRepo {
+    override def withConnection[A](f: Connection ⇒ A) = DB.withConnection(f)
+  }
+  private val jsonCubeMapperRepo = new JsonCubeMapperRepository {
+    override val mappers = DbCubes.json :: CubeDecorator.json(JsonMappers.decorator, this) :: Nil
+  }
+
   private def assignCube[T](fact: String, cube: Cube[T]): Unit = DB.withConnection { implicit c ⇒
     val updated = SQL("update fact set config={config} where name={name}").on("config" -> cubeConfig(cube), "name" -> fact).executeUpdate
     if (updated != 1) throw new IllegalArgumentException(s"no fact named $fact")
   }
 
   private def cubeConfig(cube: Cube[_]) = {
-    val json = JsonMappers.cube.serialize(cube).
+    val json = jsonCubeMapperRepo.serialize(cube).
       leftMap(msg ⇒ Logger.info(s"Could not serialize cube $cube: $msg")).
       getOrElse(throw new IllegalArgumentException(s"Cube $cube is not serializable"))
     Json.stringify(json)

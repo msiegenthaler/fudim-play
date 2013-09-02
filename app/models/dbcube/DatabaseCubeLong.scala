@@ -9,7 +9,7 @@ import models._
 import cube._
 
 /** Cube of value type int (64-bit signed). */
-private case class DatabaseCubeLong(id: Long, table: String, dims: Map[Dimension, String], slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends DatabaseCubeBase[Long] {
+private case class DatabaseCubeLong(repo: DatabaseCubeRepo, id: Long, table: String, dims: Map[Dimension, String], slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends DatabaseCubeBase[Long] {
   protected override type Self = DatabaseCubeLong
   override def cubeType = DatabaseCubeLong
   override def sqlType = "bigint"
@@ -21,5 +21,6 @@ private case class DatabaseCubeLong(id: Long, table: String, dims: Map[Dimension
 private object DatabaseCubeLong extends CubeType {
   override val tpeName = "long"
   override val tpeClass = classOf[Long]
-  override def apply(id: Long, table: String, dims: Map[Dimension, String]) = new DatabaseCubeLong(id, table, dims)
+  override def apply(repo: DatabaseCubeRepo)(id: Long, table: String, dims: Map[Dimension, String]) =
+    new DatabaseCubeLong(repo, id, table, dims)
 }

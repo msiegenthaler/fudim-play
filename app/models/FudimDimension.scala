@@ -11,7 +11,9 @@ trait FudimDimension extends Dimension {
 
 trait FudimDimensionRepo {
   def get(domain: DomainId, name: String): Option[FudimDimension]
-  def all(): List[FudimDimension]
+  def all(domain: DomainId): Iterable[FudimDimension]
+  def all: Iterable[FudimDimension]
+
   def create(domain: DomainId, name: String): FudimDimension
   def remove(domain: DomainId, name: String): Unit
 }

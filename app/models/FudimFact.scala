@@ -24,4 +24,6 @@ trait FudimFactRepo {
 
   def createDatabaseBacked[T](domain: DomainId, name: String, dataType: DataType[T],
     dimensions: Set[Dimension], aggregator: Option[Aggregator[T]]): FudimFact[T]
+
+  def remove(domain: DomainId, name: String)
 }

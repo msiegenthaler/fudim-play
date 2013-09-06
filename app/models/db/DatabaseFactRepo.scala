@@ -12,15 +12,13 @@ import models.dbcube.{ DatabaseCube, DatabaseCubeRepo }
 trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
   protected def jsonCubeMapperRepo: JsonCubeMapperRepository
   protected def databaseCubeRepo: DatabaseCubeRepo
+  def domain: DomainId
 
-  override def get[T](domain: DomainId, name: String) = withConnection { implicit c ⇒
+  override def get[T](name: String) = withConnection { implicit c ⇒
     SQL("select * from fact where domain={domain} and name={name}").on("domain" -> domain.id, "name" -> name).as(fact singleOpt).flatten
   }
 
   override def all = withConnection { implicit c ⇒
-    SQL("select * from fact").as(fact *).flatten
-  }
-  override def all(domain: DomainId) = withConnection { implicit c ⇒
     SQL("select * from fact where domain={domain}").on("domain" -> domain.id).as(fact *).flatten
   }
 
@@ -30,13 +28,13 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
     SQL("insert into fact(domain, name, type, config) values({domain}, {name}, {type}, {config})").
       on("domain" -> domain.id, "name" -> name, "config" -> cubeConfig(cube), "type" -> dataType.name).
       executeInsert().get
-    get(domain, name).
+    get(name).
       map(_.asInstanceOf[FudimFact[T]]).
       getOrElse(throw new IllegalStateException(s"Creation of fact $name failed, see log"))
   }
 
   override def remove(domain: DomainId, name: String) = {
-    get(domain, name).foreach {
+    get(name).foreach {
       case fact: DatabaseFact[_] ⇒
         databaseCubeRepo.delete(fact.databaseCube)
         SQL("delete from fact where id={id}").on("id" -> fact.id)

@@ -10,8 +10,7 @@ trait FudimDomain extends Domain {
   def id: DomainId
 
   def dimensionRepo: FudimDimensionRepo
-
-  def removeFact(name: String): Unit
+  def factRepo: FudimFactRepo
 }
 
 trait FudimDomainRepo {

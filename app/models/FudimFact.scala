@@ -18,12 +18,11 @@ trait FudimFact[T] extends RenderFact[T] {
 }
 
 trait FudimFactRepo {
-  def get[T](domain: DomainId, name: String): Option[FudimFact[_]]
-  def all(domain: DomainId): Iterable[FudimFact[_]]
+  def get[T](name: String): Option[FudimFact[_]]
   def all: Iterable[FudimFact[_]]
 
-  def createDatabaseBacked[T](domain: DomainId, name: String, dataType: DataType[T],
+  def createDatabaseBacked[T](name: String, dataType: DataType[T],
     dimensions: Set[Dimension], aggregator: Option[Aggregator[T]]): FudimFact[T]
 
-  def remove(domain: DomainId, name: String)
+  def remove(name: String)
 }

@@ -25,18 +25,17 @@ trait DatabaseDomainRepo extends FudimDomainRepo with DatabaseRepo {
   }
 
   private val domain: RowParser[FudimDomain] = long("id").map(DomainId(_)) ~ str("name") map {
-    case id ~ name ⇒ DatabaseDomain(id, name, dimensionRepo(id))
+    case id ~ name ⇒ DatabaseDomain(id, name, dimensionRepo(id), factRepo(id))
   }
 
   protected def dimensionRepo(domain: DomainId): FudimDimensionRepo
-  protected def factRepo: FudimFactRepo
+  protected def factRepo(domain: DomainId): FudimFactRepo
 
-  private case class DatabaseDomain(id: DomainId, name: String, dimensionRepo: FudimDimensionRepo) extends FudimDomain {
-    lazy val dimensions = dimensionRepo.all.toSet
+  private case class DatabaseDomain(id: DomainId, name: String, dimensionRepo: FudimDimensionRepo, factRepo: FudimFactRepo) extends FudimDomain {
+    def dimensions = dimensionRepo.all.toSet
     def dimension(name: String) = dimensionRepo.get(name)
 
-    def facts = factRepo.all(id).toSet
-    def fact(name: String) = factRepo.get(id, name)
-    def removeFact(name: String) = factRepo.remove(id, name)
+    def facts = factRepo.all.toSet
+    def fact(name: String) = factRepo.get(name)
   }
 }

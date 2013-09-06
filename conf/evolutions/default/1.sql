@@ -21,6 +21,7 @@ CREATE SEQUENCE fact_id_seq;
 CREATE TABLE fact (
   id integer not null default nextval('fact_id_seq'),
   name varchar(1024) not null,
+  domain integer not null,
   type varchar(100) not null,
   config text not null
 );

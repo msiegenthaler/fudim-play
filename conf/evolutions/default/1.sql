@@ -5,6 +5,7 @@
 CREATE SEQUENCE dimension_id_seq;
 CREATE TABLE dimension (
   id integer not null default nextval('dimension_id_seq'),
+  domain integer not null,
   name varchar(1024) not null
 );
 

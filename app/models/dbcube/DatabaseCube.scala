@@ -29,10 +29,10 @@ trait DatabaseCube[T] extends EditableCube[T] {
 
 trait DatabaseCubeRepo {
   protected def withConnection[A](f: Connection ⇒ A): A
+  protected def dimension(name: String): Option[Dimension]
 
   private case class CubeDefinition(id: Long, tpe: String) {
     def tableName = s"databaseCube_data_$id"
-    def dimensionName(d: Dimension) = "dim_" + DimensionRepo.idOf(d)
   }
   private val cubeDefinition = {
     get[Long]("id") ~ get[String]("type") map {
@@ -61,9 +61,9 @@ trait DatabaseCubeRepo {
     val definition = CubeDefinition(id, cubeType.tpeName)
 
     val cdims = dims.map { dim ⇒
-      SQL("insert into databaseCube_dimension(cube, dimension) values ({cube}, {dimension})").
-        on("cube" -> id, "dimension" -> DimensionRepo.idOf(dim)).executeInsert()
-      (dim, definition.dimensionName(dim))
+      val dimId = SQL("insert into databaseCube_dimension(cube, dimension) values ({cube}, {dimension})").
+        on("cube" -> id, "dimension" -> dim.name).executeInsert().map("dim_" + _).get
+      (dim, dimId)
     }.toMap
 
     val cube = cubeType(this)(id, definition.tableName, cdims)
@@ -84,7 +84,7 @@ trait DatabaseCubeRepo {
     val dims = SQL("select d.id as id, d.name as name from databaseCube_dimension dcd inner join dimension d on d.id = dcd.dimension where dcd.cube={id}").on("id" -> definition.id).
       as(get[Long]("id") ~ get[String]("name") *).map {
         case id ~ name ⇒
-          val d: Dimension = DimensionRepo.get(name).get
+          val d: Dimension = dimension(name).getOrElse(throw new IllegalStateException(s"Could not find dimension $name"))
           (d, s"dim_$id")
       }.toMap
     val cubeType = typeMapping.values.find(_.tpeName == definition.tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube db-type: ${definition.tpe}"))

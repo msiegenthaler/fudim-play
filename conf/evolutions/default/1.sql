@@ -38,9 +38,11 @@ CREATE TABLE databaseCube (
   type varchar(255) not null
 );
 
+CREATE SEQUENCE databaseCube_dimension_id_seq;
 CREATE TABLE databaseCube_dimension (
+  id integer not null default nextval('databaseCube_dimension_id_seq'),
   cube integer not null,
-  dimension integer not null
+  dimension varchar(1024) not null
 );
 
 
@@ -48,6 +50,7 @@ CREATE TABLE databaseCube_dimension (
 
 # --- !Downs
 
+DROP SEQUENCE databaseCube_dimension_id_seq;
 DROP TABLE databaseCube_dimension;
 
 DROP SEQUENCE databaseCube_id_seq;

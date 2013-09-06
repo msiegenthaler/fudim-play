@@ -8,6 +8,7 @@ case class DomainId(id: Long)
 
 trait FudimDomain extends Domain {
   def id: DomainId
+
   def addDimension(name: String): FudimDimension
   def removeDimension(name: String): Unit
 
@@ -15,10 +16,10 @@ trait FudimDomain extends Domain {
   def removeFact(name: String): Unit
 }
 
-trait DomainRepo {
-  def all: List[Domain]
-  def get(name: String): Option[Domain]
-  def get(id: DomainId): Option[Domain]
-  def add(name: String): Domain
-  def remove(name: String): Domain
+trait FudimDomainRepo {
+  def all: List[FudimDomain]
+  def get(name: String): Option[FudimDomain]
+  def get(id: DomainId): Option[FudimDomain]
+  def add(name: String): FudimDomain
+  def remove(id: FudimDomain): Unit
 }

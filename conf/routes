@@ -5,10 +5,10 @@
 # Home page
 GET     /                           controllers.Application.index
 
-GET     /dimension                  controllers.Dimensions.index
-POST    /dimension                  controllers.Dimensions.add
-GET     /dimension/:dim             controllers.Dimensions.get(dim: String)
-POST    /dimension/:dim             controllers.Dimensions.addValue(dim: String)
+GET     /domain/:domain/dimension                  controllers.Dimensions.index(domain: String)
+POST    /domain/:domain/dimension                  controllers.Dimensions.add(domain: String)
+GET     /domain/:domain/dimension/:dim             controllers.Dimensions.get(domain: String, dim: String)
+POST    /domain/:domain/dimension/:dim             controllers.Dimensions.addValue(domain: String, dim: String)
 
 GET     /fact                       controllers.Facts.list
 POST    /fact                       controllers.Facts.add

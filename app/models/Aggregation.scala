@@ -3,7 +3,7 @@ package models
 import scala.util.control.Exception._
 import scalaz._
 import Scalaz._
-import play.api.libs.json._
+import _root_.play.api.libs.json._
 import cube._
 import support.ObjectJsonMapper
 import support.JsonMapper

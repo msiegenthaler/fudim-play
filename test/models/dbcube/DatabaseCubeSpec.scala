@@ -11,6 +11,7 @@ import play.api.test.Helpers._
 import cube._
 import models._
 import models.dbcube._
+import models.db.DatabaseDimensionRepo
 
 class DatabaseCubeSpec extends Specification {
   object CubeRepo extends DatabaseCubeRepo {
@@ -21,12 +22,6 @@ class DatabaseCubeSpec extends Specification {
     override def before = Play.start(FakeApplication())
     override def after = Play.stop
 
-    override def makeDimension(name: String, data: List[String]) = {
-      val d = DimensionRepo.create(name)
-      data.foreach(d.add)
-      d
-
-    }
     override def makeAge(year: Dimension, data: Map[Point, Int]) = dbCubeForData(classOf[Int], data)
     override def makeSales(color: Dimension, location: Dimension, product: Dimension, data: Map[Point, Int]) =
       dbCubeForData(classOf[Int], data)
@@ -46,7 +41,7 @@ class DatabaseCubeSpec extends Specification {
     override def after = Play.stop
   }
   trait oneDimensionalCube extends withplay {
-    lazy val monat = DimensionRepo.get("Monat").get
+    lazy val monat = ListDimension("Monat", "Jan", "Feb", "Mar")
     def jan = monat.all(0)
     def feb = monat.all(1)
     def mar = monat.all(2)
@@ -55,7 +50,7 @@ class DatabaseCubeSpec extends Specification {
 
   "DatabaseCube of type String with one dimension" should {
     "be createble" in new withplay {
-      val d = DimensionRepo.create("TestDimension")
+      val d = ListDimension("TestDimension", "1", "2", "3")
       CubeRepo.create(Set(d), classOf[String])
     }
     "be loadable" in new oneDimensionalCube {

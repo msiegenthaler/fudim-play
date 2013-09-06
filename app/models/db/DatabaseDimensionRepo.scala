@@ -7,22 +7,21 @@ import cube._
 import models.{ DomainId, FudimDimension, FudimDimensionRepo }
 
 trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory with DatabaseRepo {
-  override def get(domain: DomainId, name: String) = withConnection { implicit c ⇒
+  def domain: DomainId
+
+  override def get(name: String) = withConnection { implicit c ⇒
     SQL("select * from dimension where domain={domain} and name={name}").on("domain" -> domain.id, "name" -> name).as(dimension.singleOpt)
   }
 
   override def all = withConnection { implicit c ⇒
-    SQL("select * from dimension").as(dimension *)
-  }
-  override def all(domain: DomainId) = withConnection { implicit c ⇒
     SQL("select * from dimension where domain={domain}").on("domain" -> domain.id).as(dimension *)
   }
-  def create(domain: DomainId, name: String) = withConnection { implicit c ⇒
+  def create(name: String) = withConnection { implicit c ⇒
     SQL("insert into dimension(domain, name) values({domain, name})").on("domain" -> domain.id, "name" -> name).executeUpdate
-    get(domain, name).getOrElse(throw new IllegalStateException(s"Insert of dimension $name failed"))
+    get(name).getOrElse(throw new IllegalStateException(s"Insert of dimension $name failed"))
   }
-  def remove(domain: DomainId, name: String) = withConnection { implicit c ⇒
-    get(domain, name).foreach { d ⇒
+  def remove(name: String) = withConnection { implicit c ⇒
+    get(name).foreach { d ⇒
       val id = idOf(d)
       SQL("delete from dimension where id = {id}").on("id" -> id).executeUpdate
       SQL("delete from dimension_value where dimension = {id}").on("id" -> id).executeUpdate

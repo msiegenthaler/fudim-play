@@ -6,23 +6,40 @@ import java.net.{ URLEncoder, URLDecoder }
 import cube._
 import models._
 
+sealed trait PointDefinition extends Function1[FudimDomain, Point] {
+  private[support] def raw: Iterable[(String, Long)]
+}
+object PointDefinition {
+  implicit def apply(p: Point): PointDefinition = new PointDefinition {
+    override def apply(d: FudimDomain) = p
+    override def raw = p.coordinates.map(c ⇒ (c.dimension.name, c.id))
+  }
+}
+
 object Bindables {
-  implicit object PointQueryStringBindable extends QueryStringBindable[Point] with CoordinateFactory {
+  implicit object PointQueryStringBindable extends QueryStringBindable[PointDefinition] with CoordinateFactory {
     override def bind(key: String, params: Map[String, Seq[String]]) = {
+      def long(s: String) = catching(classOf[NumberFormatException]).opt(s.toLong)
       try {
         val prefix = key + "."
-        val values = params.filter(_._1.startsWith(prefix)).map(v ⇒ (v._1.drop(prefix.length), v._2)).filterNot(_._1.isEmpty).
+        val rawValues = params.filter(_._1.startsWith(prefix)).map(v ⇒ (v._1.drop(prefix.length), v._2)).filterNot(_._1.isEmpty).
           flatMap(v ⇒ v._2.map((v._1, _))).map(v ⇒ (dec(v._1), dec(v._2))).
-          flatMap(v ⇒ DimensionRepo.parseCoordinate(v))
-        val point = values.foldLeft(Point.empty)(_ + _)
-        Some(Right(point))
+          flatMap(v ⇒ long(v._2).map((v._1, _)))
+        val definition = new PointDefinition {
+          override def apply(domain: FudimDomain) = {
+            rawValues.
+              flatMap(v ⇒ domain.dimension(v._1).flatMap(_.get(v._2))).
+              foldLeft(Point.empty)(_ + _)
+          }
+        }
+        Some(Right(definition))
       } catch {
         case r: RuntimeException ⇒ Some(Left(r.toString))
       }
     }
 
-    override def unbind(key: String, value: Point) = {
-      value.coordinates.map(DimensionRepo.serializeCoordinate).map(e ⇒ (enc(e._1), enc(e._2))).
+    override def unbind(key: String, value: PointDefinition) = {
+      value.raw.map(e ⇒ (enc(e._1), enc(e._2.toString))).
         map(e ⇒ s"$key.${e._1}=${e._2}").mkString("&")
     }
 

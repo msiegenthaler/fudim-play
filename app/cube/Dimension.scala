@@ -25,6 +25,8 @@ trait Dimension {
 
   /** Values of this dimensions (ordered). */
   def all: Seq[Coordinate]
+  /** Value at the specified coordinate. */
+  def get(id: Long): Option[Coordinate] = all.find(_.id == id)
 
   /**
    * String value of the coordinate.

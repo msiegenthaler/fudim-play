@@ -2,6 +2,12 @@
 
 # --- !Ups
 
+CREATE SEQUENCE domain_id_seq;
+CREATE TABLE domain (
+  id integer not null default nextval('domain_id_seq'),
+  name varchar(1024) not null
+);
+
 CREATE SEQUENCE dimension_id_seq;
 CREATE TABLE dimension (
   id integer not null default nextval('dimension_id_seq'),
@@ -55,3 +61,6 @@ DROP TABLE dimension_value;
 
 DROP SEQUENCE dimension_id_seq;
 DROP TABLE dimension;
+
+DROP SEQUENCE domain_id_seq;
+DROP TABLE domain;

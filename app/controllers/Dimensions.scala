@@ -6,6 +6,7 @@ import play.api.data._
 import play.api.data.Forms._
 import models._
 import support.DomainAction
+import support.DimensionAction
 
 object Dimensions extends Controller {
   def index(domain: String) = DomainAction(domain) { domain ⇒
@@ -21,25 +22,17 @@ object Dimensions extends Controller {
       })
   })
 
-  def get(domainName: String, name: String) = DomainAction(domainName) { domain ⇒
-    val r = for {
-      d ← domain.dimension(name)
-      vs = d.values
-    } yield Ok(views.html.dimension(d, vs, addValueForm))
-    r.getOrElse(NotFound)
+  def get(domainName: String, name: String) = DimensionAction(domainName, name) { dimension ⇒
+    Ok(views.html.dimension(dimension, dimension.values, addValueForm))
   }
 
-  def addValue(domainName: String, name: String) = DomainAction(domainName).on(domain ⇒ { implicit request ⇒
-    (for {
-      d ← domain.dimensionRepo.get(name)
-    } yield {
-      addValueForm.bindFromRequest.fold(
-        errors ⇒ BadRequest(views.html.dimension(d, d.values, errors)),
-        value ⇒ {
-          d.add(value)
-          Redirect(routes.Dimensions.get(domainName, name))
-        })
-    }).getOrElse(NotFound)
+  def addValue(domainName: String, name: String) = DimensionAction(domainName, name).on(dimension ⇒ { implicit request ⇒
+    addValueForm.bindFromRequest.fold(
+      errors ⇒ BadRequest(views.html.dimension(dimension, dimension.values, errors)),
+      value ⇒ {
+        dimension.add(value)
+        Redirect(routes.Dimensions.get(domainName, name))
+      })
   })
 
   val addForm = Form("name" -> nonEmptyText)

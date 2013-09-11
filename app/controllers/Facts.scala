@@ -9,6 +9,7 @@ import models._
 import models.dbcube.DatabaseCube
 import support.DomainAction
 import support.FactAction
+import support.PointDefinition
 
 object Facts extends Controller {
 
@@ -68,16 +69,16 @@ object Facts extends Controller {
       aggrName ⇒ changeAggr(fact, aggrName))
   })
 
-  def get(domainName: String, factName: String, at: Point) = FactAction(domainName, factName) { fact ⇒
-    fact.rendered.get(at).map(v ⇒ Ok(v)).getOrElse(NotFound)
+  def get(domainName: String, factName: String, at: PointDefinition) = FactAction(domainName, factName) { fact ⇒
+    fact.rendered.get(at(fact)).map(v ⇒ Ok(v)).getOrElse(NotFound)
   }
-  def save(domainName: String, factName: String, at: Point) = FactAction(domainName, factName).on(fact ⇒ { request ⇒
+  def save(domainName: String, factName: String, at: PointDefinition) = FactAction(domainName, factName).on(fact ⇒ { request ⇒
     def setValue[T](fact: FudimFact[T], value: String) = fact.data match {
       case cube: EditableCube[T] ⇒
         val tpe = fact.dataType
         tpe.parse(value).map { v ⇒
           try {
-            cube.set(at, v)
+            cube.set(at(fact), v)
             Ok(tpe.render(v))
           } catch {
             case ValueCannotBeSetException(_) ⇒ cannotSet

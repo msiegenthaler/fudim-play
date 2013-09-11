@@ -16,8 +16,7 @@ object ApplicationBuild extends Build {
 
   val main = play.Project(appName, appVersion, appDependencies).settings(
     // Add your own project settings here      
-    routesImport += "cube._",
-    routesImport += "models._",
+    routesImport += "support.PointDefinition",
     routesImport += "support.Bindables._",
     lessEntryPoints <<= baseDirectory(customLessEntryPoints))
 

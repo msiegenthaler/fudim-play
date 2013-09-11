@@ -1,4 +1,4 @@
-package models.play
+package models.playbinding
 
 import java.sql.Connection
 import _root_.play.api.db._

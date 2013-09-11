@@ -1,5 +1,5 @@
 package models
-package play
+package playbinding
 
 import cube._
 import db._

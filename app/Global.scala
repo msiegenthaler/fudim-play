@@ -3,7 +3,7 @@ import play.api._
 import models._
 import cube._
 import support.JsonMapper
-import models.play.DomainRepo
+import models.playbinding.DomainRepo
 
 object Global extends GlobalSettings {
   val aggregation = Aggregation.all //so they get registered

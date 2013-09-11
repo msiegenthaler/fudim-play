@@ -3,7 +3,7 @@ package support
 import play.api._
 import play.api.mvc._
 import models._
-import models.play.DomainRepo
+import models.playbinding.DomainRepo
 
 trait ObjectAction[T] {
   def apply(f: T ⇒ Result): Action[AnyContent]

@@ -1,0 +1,11 @@
+@(domains: Iterable[FudimDomain])
+
+@main("Dimensions") {
+	<ul>
+	  @domains.map { domain =>
+      <li>
+        <a href="@routes.Domains.get(domain.name)">@domain.name</a>
+      </li>
+    }
+	</ul>
+}

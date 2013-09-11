@@ -6,7 +6,7 @@ import play.api.mvc._
 object Application extends Controller {
 
   def index = Action {
-    Ok(views.html.index())
+    Redirect(routes.Domains.index())
   }
 
   def javascriptRoutes = Action { implicit request ⇒

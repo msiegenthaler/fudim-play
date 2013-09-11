@@ -10,15 +10,15 @@ POST    /domain/:domain/dimension                  controllers.Dimensions.add(do
 GET     /domain/:domain/dimension/:dim             controllers.Dimensions.get(domain: String, dim: String)
 POST    /domain/:domain/dimension/:dim             controllers.Dimensions.addValue(domain: String, dim: String)
 
-GET     /fact                       controllers.Facts.list
-POST    /fact                       controllers.Facts.add
-GET     /fact/:fact                 controllers.Facts.view(fact: String)
-POST    /fact/:fact/dimension/add    controllers.Facts.addDimension(fact: String, name: String)
-POST    /fact/:fact/dimension/remove controllers.Facts.removeDimension(fact: String, name: String)
-POST    /fact/:fact/aggregation     controllers.Facts.setAggregation(fact: String)
+GET     /fact/:domain                        controllers.Facts.list(domain: String)
+POST    /fact/:domain                        controllers.Facts.add(domain: String)
+GET     /fact/:domain/:fact                  controllers.Facts.view(domain: String, fact: String)
+POST    /fact/:domain/:fact/dimension/add    controllers.Facts.addDimension(domain: String, fact: String, name: String)
+POST    /fact/:domain/:fact/dimension/remove controllers.Facts.removeDimension(domain: String, fact: String, name: String)
+POST    /fact/:domain/:fact/aggregation      controllers.Facts.setAggregation(domain: String, fact: String)
 
-GET     /fact/:fact/value           controllers.Facts.get(fact: String, pos: Point)
-PUT     /fact/:fact/value           controllers.Facts.save(fact: String, pos: Point)
+GET     /fact/:domain/:fact/value            controllers.Facts.get(domain: String, fact: String, pos: Point)
+PUT     /fact/:domain/:fact/value            controllers.Facts.save(domain: String, fact: String, pos: Point)
 
 GET     /fact/:fact/table/:d1/:d2   controllers.Tables.show(fact: String, d1: String, d2: String, filter: Point ?= Point.empty, sum1: Boolean ?= false, sum2: Boolean ?= false)
 

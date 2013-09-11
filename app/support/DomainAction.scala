@@ -7,7 +7,7 @@ import models.play.DomainRepo
 
 trait ObjectAction[T] {
   def apply(f: T ⇒ Result): Action[AnyContent]
-  def on(f: T ⇒ Request[_] ⇒ Result): Action[AnyContent]
+  def on(f: T ⇒ Request[AnyContent] ⇒ Result): Action[AnyContent]
 }
 trait ObjectActionCompanion[I, T] {
   protected def get(id: I): Option[T]
@@ -16,7 +16,7 @@ trait ObjectActionCompanion[I, T] {
   }
   def apply(id: I) = new ObjectAction[T] {
     def apply(f: T ⇒ Result) = Action(in(id)(f))
-    def on(f: (Request[_], T) ⇒ Result) = {
+    def on(f: (Request[AnyContent], T) ⇒ Result) = {
       Action(request ⇒ in(id)(obj ⇒ f(request, obj)))
     }
   }
@@ -30,5 +30,12 @@ object DimensionAction extends ObjectActionCompanion[(String, String), FudimDime
   override protected def get(id: (String, String)) = {
     val (domain, dimension) = id
     DomainRepo.get(domain).flatMap(_.dimensionRepo.get(dimension))
+  }
+}
+
+object FactAction extends ObjectActionCompanion[(String, String), FudimFact[_]] {
+  override protected def get(id: (String, String)) = {
+    val (domain, fact) = id
+    DomainRepo.get(domain).flatMap(_.factRepo.get(fact))
   }
 }

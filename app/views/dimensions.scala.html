@@ -1,4 +1,4 @@
-@(dims: Iterable[cube.Dimension], addForm: Form[String])
+@(domain: String, dims: Iterable[cube.Dimension], addForm: Form[String])
 
 @import helper._
 @implicitField = @{ FieldConstructor(inlineElementConstructor.f) }
@@ -7,12 +7,12 @@
 	<ul>
 	  @dims.map { dimension =>
       <li>
-        <a href="@routes.Dimensions.get(dimension.name)">@dimension.name</a>
+        <a href="@routes.Dimensions.get(domain, dimension.name)">@dimension.name</a>
       </li>
     }
 	</ul>
 
-  @form(routes.Dimensions.add, 'class -> "form-inline") {
+  @form(routes.Dimensions.add(domain), 'class -> "form-inline") {
       @inputText(addForm("name"), 'label -> "Name", 'placeholder -> " Name of Dimension")
 
       <input type="submit" value="Add">

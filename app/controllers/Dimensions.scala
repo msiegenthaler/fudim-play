@@ -9,13 +9,13 @@ import support.DomainAction
 import support.DimensionAction
 
 object Dimensions extends Controller {
-  def index(domain: String) = DomainAction(domain) { domain ⇒
-    Ok(views.html.dimensions(domain.dimensions, addForm))
+  def index(domainName: String) = DomainAction(domainName) { domain ⇒
+    Ok(views.html.dimensions(domainName, domain.dimensions, addForm))
   }
 
   def add(domainName: String) = DomainAction(domainName).on(domain ⇒ { implicit request ⇒
     addForm.bindFromRequest.fold(
-      errors ⇒ BadRequest(views.html.dimensions(domain.dimensions, errors)),
+      errors ⇒ BadRequest(views.html.dimensions(domainName, domain.dimensions, errors)),
       name ⇒ {
         domain.dimensionRepo.create(name)
         Redirect(routes.Dimensions.index(domainName))
@@ -23,12 +23,12 @@ object Dimensions extends Controller {
   })
 
   def get(domainName: String, name: String) = DimensionAction(domainName, name) { dimension ⇒
-    Ok(views.html.dimension(dimension, dimension.values, addValueForm))
+    Ok(views.html.dimension(domainName, dimension, dimension.values, addValueForm))
   }
 
   def addValue(domainName: String, name: String) = DimensionAction(domainName, name).on(dimension ⇒ { implicit request ⇒
     addValueForm.bindFromRequest.fold(
-      errors ⇒ BadRequest(views.html.dimension(dimension, dimension.values, errors)),
+      errors ⇒ BadRequest(views.html.dimension(domainName, dimension, dimension.values, errors)),
       value ⇒ {
         dimension.add(value)
         Redirect(routes.Dimensions.get(domainName, name))

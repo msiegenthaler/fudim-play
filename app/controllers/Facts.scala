@@ -22,7 +22,7 @@ object Facts extends Controller {
       name ⇒ {
         //TODO let the user choose the data-type
         val fact = domain.factRepo.createDatabaseBacked(name, DataType.string, Set.empty, None)
-        Redirect(routes.Facts.view(name))
+        Redirect(routes.Facts.view(domainName, name))
       })
   })
 
@@ -40,7 +40,7 @@ object Facts extends Controller {
       moveTo ← dimension.all.headOption
     } yield {
       fact.addDimension(moveTo)
-      Redirect(routes.Facts.view(factName))
+      Redirect(routes.Facts.view(domainName, factName))
     }
     r.getOrElse(NotFound)
   }
@@ -51,7 +51,7 @@ object Facts extends Controller {
       keepAt ← dimension.all.headOption
     } yield {
       fact.removeDimension(keepAt)
-      Redirect(routes.Facts.view(factName))
+      Redirect(routes.Facts.view(domainName, factName))
     }
     r.getOrElse(NotFound)
   }
@@ -60,7 +60,7 @@ object Facts extends Controller {
     def changeAggr[T](fact: FudimFact[T], aggrName: String) = {
       val aggr = fact.dataType.aggregations.find(_.name == aggrName).getOrElse(Aggregation.none)
       fact.aggregation = aggr
-      Redirect(routes.Facts.view(factName))
+      Redirect(routes.Facts.view(domainName, factName))
     }
     aggrForm.bindFromRequest.fold(
       errors ⇒

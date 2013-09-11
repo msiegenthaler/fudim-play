@@ -1,4 +1,4 @@
-@(fact: FudimFact[_], dims: Iterable[cube.Dimension], aggrs: List[Aggregation[_]], aggrForm: Form[String])
+@(domain: String, fact: FudimFact[_], dims: Iterable[cube.Dimension], aggrs: List[Aggregation[_]], aggrForm: Form[String])
 
 @import helper._
 @import helper.twitterBootstrap._
@@ -8,8 +8,8 @@
 	<ul>
 	  @fact.dimensions.map { dim =>
       <li>
-        <a href="@routes.Dimensions.get(dim.name)">@dim.name</a>
-        @form(routes.Facts.removeDimension(fact.name, dim.name)) {
+        <a href="@routes.Dimensions.get(domain, dim.name)">@dim.name</a>
+        @form(routes.Facts.removeDimension(domain, fact.name, dim.name)) {
           <input type="submit" value="Remove">
         }
       </li>
@@ -20,7 +20,7 @@
 	<ul>
     @dims.map { dim =>
       <li>
-        @form(routes.Facts.addDimension(fact.name, dim.name)) {
+        @form(routes.Facts.addDimension(domain, fact.name, dim.name)) {
           @dim.name <input type="submit" value="Add">
         }
       </li>
@@ -29,7 +29,7 @@
 	}
 	
 	<h2>Aggregation</h2>
-	@form(routes.Facts.setAggregation(fact.name)) {
+	@form(routes.Facts.setAggregation(domain, fact.name)) {
 	  @select(aggrForm("aggregation"), options=aggrs.map(a => (a.name, a.name)), '_label -> "Aggregation")
 	  <input type="submit" value="Save">
 	}
@@ -38,7 +38,7 @@
 	<ul>
     @fact.dimensions.flatMap(d1 => fact.dimensions.map((d1, _))).filterNot(v => v._1 == v._2).map { v =>
       <li>
-        <a href="@routes.Tables.show(fact.name, v._1.name, v._2.name)">@v._1.name / @v._2.name</a>
+        <a href="@routes.Tables.show(domain, fact.name, v._1.name, v._2.name)">@v._1.name / @v._2.name</a>
       </li>
     }
 	</ul>

@@ -14,12 +14,12 @@ import support.PointDefinition
 object Facts extends Controller {
 
   def list(domainName: String) = DomainAction(domainName) { domain ⇒
-    Ok(views.html.facts(domain.factRepo.all, addForm))
+    Ok(views.html.facts(domainName, domain.factRepo.all, addForm))
   }
 
   def add(domainName: String) = DomainAction(domainName).on(domain ⇒ { implicit request ⇒
     addForm.bindFromRequest.fold(
-      errors ⇒ BadRequest(views.html.facts(domain.factRepo.all, errors)),
+      errors ⇒ BadRequest(views.html.facts(domainName, domain.factRepo.all, errors)),
       name ⇒ {
         //TODO let the user choose the data-type
         val fact = domain.factRepo.createDatabaseBacked(name, DataType.string, Set.empty, None)
@@ -31,7 +31,7 @@ object Facts extends Controller {
     domain.factRepo.get(name).map { fact ⇒
       val dims = domain.dimensionRepo.all.filterNot(fact.dimensions.contains)
       val aggr = Aggregation.unapply(fact.data).getOrElse(Aggregation.none)
-      Ok(views.html.fact(fact, dims, fact.dataType.aggregations, aggrForm.fill(aggr.name)))
+      Ok(views.html.fact(domainName, fact, dims, fact.dataType.aggregations, aggrForm.fill(aggr.name)))
     }.getOrElse(NotFound)
   }
   def addDimension(domainName: String, factName: String, dimensionName: String) = DomainAction(domainName) { domain ⇒
@@ -64,8 +64,7 @@ object Facts extends Controller {
       Redirect(routes.Facts.view(domainName, factName))
     }
     aggrForm.bindFromRequest.fold(
-      errors ⇒
-        NotImplemented,
+      errors ⇒ NotImplemented,
       aggrName ⇒ changeAggr(fact, aggrName))
   })
 

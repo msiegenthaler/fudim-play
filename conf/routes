@@ -9,26 +9,26 @@ GET     /domain                     controllers.Domains.index
 POST    /domain                     controllers.Domains.add
 GET     /domain/:domain             controllers.Domains.get(domain: String)
 
-GET     /domain/:domain/dimension                  controllers.Dimensions.index(domain: String)
-POST    /domain/:domain/dimension                  controllers.Dimensions.add(domain: String)
-GET     /domain/:domain/dimension/:dim             controllers.Dimensions.get(domain: String, dim: String)
-POST    /domain/:domain/dimension/:dim             controllers.Dimensions.addValue(domain: String, dim: String)
+GET     /domain/:domain/dimension                   controllers.Dimensions.index(domain: String)
+POST    /domain/:domain/dimension                   controllers.Dimensions.add(domain: String)
+GET     /domain/:domain/dimension/:dim              controllers.Dimensions.get(domain: String, dim: String)
+POST    /domain/:domain/dimension/:dim              controllers.Dimensions.addValue(domain: String, dim: String)
 
-GET     /fact/:domain                        controllers.Facts.list(domain: String)
-POST    /fact/:domain                        controllers.Facts.add(domain: String)
-GET     /fact/:domain/:fact                  controllers.Facts.view(domain: String, fact: String)
-POST    /fact/:domain/:fact/dimension/add    controllers.Facts.addDimension(domain: String, fact: String, name: String)
-POST    /fact/:domain/:fact/dimension/remove controllers.Facts.removeDimension(domain: String, fact: String, name: String)
-POST    /fact/:domain/:fact/aggregation      controllers.Facts.setAggregation(domain: String, fact: String)
+GET     /domain/:domain/fact                        controllers.Facts.list(domain: String)
+POST    /domain/:domain/fact                        controllers.Facts.add(domain: String)
+GET     /domain/:domain/fact/:fact                  controllers.Facts.view(domain: String, fact: String)
+POST    /domain/:domain/fact/:fact/dimension/add    controllers.Facts.addDimension(domain: String, fact: String, name: String)
+POST    /domain/:domain/fact/:fact/dimension/remove controllers.Facts.removeDimension(domain: String, fact: String, name: String)
+POST    /domain/:domain/fact/:fact/aggregation      controllers.Facts.setAggregation(domain: String, fact: String)
 
-GET     /fact/:domain/:fact/value            controllers.Facts.get(domain: String, fact: String, pos: PointDefinition)
-PUT     /fact/:domain/:fact/value            controllers.Facts.save(domain: String, fact: String, pos: PointDefinition)
+GET     /domain/:domain/fact/:fact/value            controllers.Facts.get(domain: String, fact: String, pos: PointDefinition)
+PUT     /domain/:domain/fact/:fact/value            controllers.Facts.save(domain: String, fact: String, pos: PointDefinition)
 
-GET     /fact/:domain/:fact/table/:d1/:d2    controllers.Tables.show(domain: String, fact: String, d1: String, d2: String, filter: PointDefinition ?= PointDefinition.empty, sum1: Boolean ?= false, sum2: Boolean ?= false)
+GET     /domain/:domain/fact/:fact/table/:d1/:d2    controllers.Tables.show(domain: String, fact: String, d1: String, d2: String, filter: PointDefinition ?= PointDefinition.empty, sum1: Boolean ?= false, sum2: Boolean ?= false)
 
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/javascripts/routes.js   controllers.Application.javascriptRoutes()
+GET     /assets/javascripts/routes.js               controllers.Application.javascriptRoutes()
 GET     /assets/img/glyphicons-halflings.png        controllers.Assets.at(path="/public", file="/images/bootstrap/glyphicons-halflings.png")
 GET     /assets/img/glyphicons-halflings-white.png  controllers.Assets.at(path="/public", file="/images/bootstrap/glyphicons-halflings-white.png")
-GET     /assets/*file               controllers.Assets.at(path="/public", file)
+GET     /assets/*file                               controllers.Assets.at(path="/public", file)

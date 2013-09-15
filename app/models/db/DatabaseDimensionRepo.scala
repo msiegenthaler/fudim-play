@@ -17,7 +17,7 @@ trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory wi
     SQL("select * from dimension where domain={domain}").on("domain" -> domain.id).as(dimension *)
   }
   def create(name: String) = withConnection { implicit c ⇒
-    SQL("insert into dimension(domain, name) values({domain, name})").on("domain" -> domain.id, "name" -> name).executeUpdate
+    SQL("insert into dimension(domain, name) values({domain}, {name})").on("domain" -> domain.id, "name" -> name).executeUpdate
     get(name).getOrElse(throw new IllegalStateException(s"Insert of dimension $name failed"))
   }
   def remove(name: String) = withConnection { implicit c ⇒

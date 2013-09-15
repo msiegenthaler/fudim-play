@@ -22,7 +22,7 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
     SQL("select * from fact where domain={domain}").on("domain" -> domain.id).as(fact *).flatten
   }
 
-  override def createDatabaseBacked[T](domain: DomainId, name: String, dataType: DataType[T], dims: Set[Dimension], aggregator: Option[Aggregator[T]]) = withConnection { implicit c ⇒
+  override def createDatabaseBacked[T](name: String, dataType: DataType[T], dims: Set[Dimension], aggregator: Option[Aggregator[T]]) = withConnection { implicit c ⇒
     val rawCube = databaseCubeRepo.create(dims, dataType.tpe)
     val cube: Cube[T] = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
     SQL("insert into fact(domain, name, type, config) values({domain}, {name}, {type}, {config})").
@@ -33,7 +33,7 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
       getOrElse(throw new IllegalStateException(s"Creation of fact $name failed, see log"))
   }
 
-  override def remove(domain: DomainId, name: String) = {
+  override def remove(name: String) = {
     get(name).foreach {
       case fact: DatabaseFact[_] ⇒
         databaseCubeRepo.delete(fact.databaseCube)

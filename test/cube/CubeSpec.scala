@@ -5,7 +5,7 @@ import org.specs2.matcher.DataTables
 import org.specs2.specification.Scope
 
 abstract class CubeTck(name: String) extends Specification with DataTables {
-  def makeDimension(name: String, data: List[String]): Dimension
+  def makeDimension(name: String, data: List[String]): Dimension = ListDimension(name, data)
   def makeAge(year: Dimension, data: Map[Point, Int]): Cube[Int]
   def makeSales(color: Dimension, location: Dimension, product: Dimension, data: Map[Point, Int]): Cube[Int]
 
@@ -469,7 +469,6 @@ abstract class CubeTck(name: String) extends Specification with DataTables {
 
 class MapCubeSpec extends Specification {
   include(new CubeTck("MapCube") {
-    override def makeDimension(name: String, data: List[String]) = ListDimension(name, data: _*)
     override def makeAge(year: Dimension, data: Map[Point, Int]) = MapCube(data)
     override def makeSales(color: Dimension, location: Dimension, product: Dimension, data: Map[Point, Int]) = MapCube(data)
   })

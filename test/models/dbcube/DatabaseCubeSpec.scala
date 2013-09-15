@@ -14,10 +14,6 @@ import models.dbcube._
 import models.db.DatabaseDimensionRepo
 
 class DatabaseCubeSpec extends Specification {
-  object CubeRepo extends DatabaseCubeRepo {
-    override def withConnection[A](f: Connection ⇒ A) = DB.withConnection(f)
-  }
-
   include(new CubeTck("DatabaseCube") with BeforeAfterExample {
     override def before = Play.start(FakeApplication())
     override def after = Play.stop
@@ -26,6 +22,16 @@ class DatabaseCubeSpec extends Specification {
     override def makeSales(color: Dimension, location: Dimension, product: Dimension, data: Map[Point, Int]) =
       dbCubeForData(classOf[Int], data)
 
+    override def makeDimension(name: String, data: List[String]) = {
+      val d = super.makeDimension(name, data)
+      dimensions = d :: dimensions
+      d
+    }
+    private var dimensions: List[Dimension] = Nil
+    private object CubeRepo extends DatabaseCubeRepo {
+      override def withConnection[A](f: Connection ⇒ A) = DB.withConnection(f)
+      override def dimension(name: String) = dimensions.find(_.name == name)
+    }
     private def dbCubeForData[T](tpe: Class[T], data: Traversable[(Point, T)]) = {
       val cube = CubeRepo.create(data.head._1.on, tpe)
       data.foreach { v ⇒
@@ -39,18 +45,26 @@ class DatabaseCubeSpec extends Specification {
   trait withplay extends Scope with BeforeAfter {
     override def before = Play.start(FakeApplication())
     override def after = Play.stop
+
+    var dimensions: List[Dimension] = Nil
+    object CubeRepo extends DatabaseCubeRepo {
+      override def withConnection[A](f: Connection ⇒ A) = DB.withConnection(f)
+      override def dimension(name: String) = dimensions.find(_.name == name)
+    }
   }
   trait oneDimensionalCube extends withplay {
     lazy val monat = ListDimension("Monat", "Jan", "Feb", "Mar")
     def jan = monat.all(0)
     def feb = monat.all(1)
     def mar = monat.all(2)
+    dimensions = monat :: dimensions
     lazy val cube = CubeRepo.create(Set(monat), classOf[String])
   }
 
-  "DatabaseCube of type String with one dimension" should {
+  "DatabaseCube ListDimensionof type String with one dimension" should {
     "be createble" in new withplay {
       val d = ListDimension("TestDimension", "1", "2", "3")
+      dimensions = d :: dimensions
       CubeRepo.create(Set(d), classOf[String])
     }
     "be loadable" in new oneDimensionalCube {

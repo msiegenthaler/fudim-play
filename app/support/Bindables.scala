@@ -38,6 +38,7 @@ object Bindables {
               flatMap(v ⇒ ds.find(_.name == v._1).flatMap(_.get(v._2))).
               foldLeft(Point.empty)(_ + _)
           }
+          override def raw = rawValues
         }
         Some(Right(definition))
       } catch {

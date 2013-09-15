@@ -36,8 +36,9 @@ private trait DatabaseCubeBase[T] extends DatabaseCube[T] with AbstractCube[T] w
     if (dimensions.contains(newDimension)) throw new IllegalArgumentException(s"$this already contains dimension $newDimension")
     val newCube = cloneWithoutData(dimensions + newDimension)
     val newDim = newCube.dims(newDimension)
-    val fields = ("content" :: dims.map(_._2).toList).mkString(",")
-    SQL(s"INSERT INTO ${newCube.table} ($fields, $newDim) SELECT $fields, {d} FROM $table").
+    val oldFields = ("content" :: dims.map(_._2).toList).mkString(",")
+    val newFields = ("content" :: dims.map(d ⇒ newCube.dims(d._1)).toList).mkString(",")
+    SQL(s"INSERT INTO ${newCube.table} ($newFields, $newDim) SELECT $oldFields, {d} FROM $table").
       on("d" -> moveTo.id).executeUpdate
     newCube
   }
@@ -46,8 +47,9 @@ private trait DatabaseCubeBase[T] extends DatabaseCube[T] with AbstractCube[T] w
     if (!dimensions.contains(droppedDimension)) throw new IllegalArgumentException(s"$this does not contains dimension $droppedDimension")
     val newCube = cloneWithoutData(dimensions - droppedDimension)
     val droppedDim = dims(droppedDimension)
-    val fields = ("content" :: newCube.dims.map(_._2).toList).mkString(",")
-    SQL(s"INSERT INTO ${newCube.table} ($fields) SELECT $fields FROM $table WHERE $droppedDim = {d}").
+    val oldFields = ("content" :: newCube.dims.map(d ⇒ dims(d._1)).toList).mkString(",")
+    val newFields = ("content" :: newCube.dims.map(_._2).toList).mkString(",")
+    SQL(s"INSERT INTO ${newCube.table} ($newFields) SELECT $oldFields FROM $table WHERE $droppedDim = {d}").
       on("d" -> keepAt.id).executeUpdate
     newCube
   }

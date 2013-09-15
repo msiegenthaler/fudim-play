@@ -6,6 +6,7 @@
 GET     /                           controllers.Application.index
 
 GET     /domain                     controllers.Domains.index
+POST    /domain                     controllers.Domains.add
 GET     /domain/:domain             controllers.Domains.get(domain: String)
 
 GET     /domain/:domain/dimension                  controllers.Dimensions.index(domain: String)

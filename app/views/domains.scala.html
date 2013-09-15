@@ -1,4 +1,7 @@
-@(domains: Iterable[FudimDomain])
+@(domains: Iterable[FudimDomain], addForm: Form[String])
+
+@import helper._
+@implicitField = @{ FieldConstructor(inlineElementConstructor.f) }
 
 @main("Domains", None) {
 	<ul>
@@ -8,4 +11,10 @@
       </li>
     }
 	</ul>
+
+  @form(routes.Domains.add, 'class -> "form-inline") {
+      @inputText(addForm("name"), 'label -> "Name", 'placeholder -> "Name of Domain")
+
+      <input type="submit" value="Add">
+  }
 }

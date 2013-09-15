@@ -3,7 +3,7 @@
 @import helper._
 @implicitField = @{ FieldConstructor(inlineElementConstructor.f) }
 
-@main("Facts") {
+@main("Facts", Some(domain)) {
 	<ul>
 	  @facts.map { fact =>
       <li>

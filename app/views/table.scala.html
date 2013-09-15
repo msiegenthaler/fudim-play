@@ -5,7 +5,7 @@
 @import support.JsHelper._
 @import _root_.cube.Point._
 
-@main("Fact "+fact.name+" ("+d1.name+" / "+d2.name+")") {
+@main("Fact "+fact.name+" ("+d1.name+" / "+d2.name+")", Some(domain)) {
 
   <ul class="unstyled form-horizontal">
     @filter.restrictions.map { r =>

@@ -3,7 +3,7 @@
 @import helper._
 @import helper.twitterBootstrap._
 
-@main("Fact "+fact.name) {
+@main("Fact "+fact.name, Some(domain)) {
   <h2>Dimensions</h2>
 	<ul>
 	  @fact.dimensions.map { dim =>

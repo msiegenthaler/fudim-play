@@ -15,9 +15,9 @@ trait ObjectActionCompanion[I, T] {
     get(id).map(f).getOrElse(Results.NotFound)
   }
   def apply(id: I) = new ObjectAction[T] {
-    def apply(f: T ⇒ Result) = Action(in(id)(f))
-    def on(f: (Request[AnyContent], T) ⇒ Result) = {
-      Action(request ⇒ in(id)(obj ⇒ f(request, obj)))
+    override def apply(f: T ⇒ Result) = Action(in(id)(f))
+    override def on(f: T ⇒ Request[AnyContent] ⇒ Result): Action[AnyContent] = {
+      Action(request ⇒ in(id)(obj ⇒ f(obj)(request)))
     }
   }
 }

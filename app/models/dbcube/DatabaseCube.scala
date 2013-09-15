@@ -81,8 +81,8 @@ trait DatabaseCubeRepo {
   }
 
   private def loadFromDefinition(definition: CubeDefinition)(implicit c: Connection) = {
-    val dims = SQL("select d.id as id, d.name as name from databaseCube_dimension dcd inner join dimension d on d.id = dcd.dimension where dcd.cube={id}").on("id" -> definition.id).
-      as(get[Long]("id") ~ get[String]("name") *).map {
+    val dims = SQL("select id, dimension from databaseCube_dimension where cube={id}").on("id" -> definition.id).
+      as(get[Long]("id") ~ get[String]("dimension") *).map {
         case id ~ name ⇒
           val d: Dimension = dimension(name).getOrElse(throw new IllegalStateException(s"Could not find dimension $name"))
           (d, s"dim_$id")

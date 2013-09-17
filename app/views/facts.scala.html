@@ -1,4 +1,4 @@
-@(domain: String, facts: Iterable[FudimFact[_]], addForm: Form[String])
+@(domain: String, facts: Iterable[FudimFact[_]], types: List[DataType[_]], addForm: Form[(String,String)])
 
 @import helper._
 @implicitField = @{ FieldConstructor(inlineElementConstructor.f) }
@@ -19,7 +19,8 @@
 	</ul>
 
   @form(routes.Facts.add(domain), 'class -> "form-inline") {
-      @inputText(addForm("name"), 'label -> "Name", 'placeholder -> "Name of Fact")
+      @inputText(addForm("name"), 'label -> "Name", 'placeholder -> "Name of Fact", '_label -> "Name")
+      @select(addForm("type"), options=("", "<data type>") :: types.map(t => (t.name, t.name)), '_label -> "Type")
 
       <input type="submit" value="Add">
   }

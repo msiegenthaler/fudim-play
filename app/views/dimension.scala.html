@@ -1,9 +1,9 @@
-@(dimension: cube.Dimension, values: Traversable[(cube.Coordinate, String)], addForm: Form[String])
+@(domain: String, dimension: cube.Dimension, values: Traversable[(cube.Coordinate, String)], addForm: Form[String])
 
 @import helper._
 @implicitField = @{ FieldConstructor(inlineElementConstructor.f) }
 
-@main("Dimension "+dimension.name) {
+@main("Dimension "+dimension.name, Some(domain)) {
 	<ul>
 	  @values.map { v =>
       <li>
@@ -12,7 +12,7 @@
     }
 	</ul>
 
-  @form(routes.Dimensions.addValue(dimension.name), 'class -> "form-inline") {
+  @form(routes.Dimensions.addValue(domain, dimension.name), 'class -> "form-inline") {
       @inputText(addForm("value"), 'label -> "Value", 'placeholder -> "New Value")
 
       <input type="submit" value="Add">

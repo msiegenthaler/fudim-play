@@ -9,7 +9,7 @@ import models._
 import cube._
 
 /** Cube of value type string. */
-private case class DatabaseCubeString(id: Long, table: String, dims: Map[Dimension, String], slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends DatabaseCubeBase[String] {
+private case class DatabaseCubeString(repo: DatabaseCubeRepo, id: Long, table: String, dims: Map[Dimension, String], slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends DatabaseCubeBase[String] {
   protected override type Self = DatabaseCubeString
   override def cubeType = DatabaseCubeString
   override def sqlType = "varchar(1024)"
@@ -21,5 +21,6 @@ private case class DatabaseCubeString(id: Long, table: String, dims: Map[Dimensi
 private object DatabaseCubeString extends CubeType {
   override val tpeName = "string"
   override val tpeClass = classOf[String]
-  override def apply(id: Long, table: String, dims: Map[Dimension, String]) = new DatabaseCubeString(id, table, dims)
+  override def apply(repo: DatabaseCubeRepo)(id: Long, table: String, dims: Map[Dimension, String]) =
+    new DatabaseCubeString(repo, id, table, dims)
 }

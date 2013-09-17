@@ -1,13 +1,13 @@
-@(facts: Iterable[Fact], addForm: Form[String])
+@(domain: String, facts: Iterable[FudimFact[_]], addForm: Form[String])
 
 @import helper._
 @implicitField = @{ FieldConstructor(inlineElementConstructor.f) }
 
-@main("Facts") {
+@main("Facts", Some(domain)) {
 	<ul>
 	  @facts.map { fact =>
       <li>
-        <a href="@routes.Facts.view(fact.name)">@fact.name</a>
+        <a href="@routes.Facts.view(domain, fact.name)">@fact.name</a>
         @if(fact.dimensions.isEmpty) {
           (dimensionless)
         } else {
@@ -18,7 +18,7 @@
     }
 	</ul>
 
-  @form(routes.Facts.add, 'class -> "form-inline") {
+  @form(routes.Facts.add(domain), 'class -> "form-inline") {
       @inputText(addForm("name"), 'label -> "Name", 'placeholder -> "Name of Fact")
 
       <input type="submit" value="Add">

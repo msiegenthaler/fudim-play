@@ -2,8 +2,6 @@ package models.dbcube
 
 import anorm._
 import anorm.SqlParser._
-import play.api.db._
-import play.api.Play.current
 import play.api.libs.json._
 import cube._
 import models._
@@ -28,10 +26,13 @@ trait DatabaseCube[T] extends EditableCube[T] {
    */
   def copyAndRemoveDimension(keepAt: Coordinate): Self
 }
-object DatabaseCube {
+
+trait DatabaseCubeRepo {
+  protected def withConnection[A](f: Connection ⇒ A): A
+  protected def dimension(name: String): Option[Dimension]
+
   private case class CubeDefinition(id: Long, tpe: String) {
     def tableName = s"databaseCube_data_$id"
-    def dimensionName(d: Dimension) = "dim_" + Dimension.idOf(d)
   }
   private val cubeDefinition = {
     get[Long]("id") ~ get[String]("type") map {
@@ -39,7 +40,7 @@ object DatabaseCube {
     }
   }
 
-  def load[T](id: Long, tpe: Class[T]): Option[DatabaseCube[T]] = DB.withConnection { implicit c ⇒
+  def load[T](id: Long, tpe: Class[T]): Option[DatabaseCube[T]] = withConnection { implicit c ⇒
     SQL("select * from databaseCube where id={id}").on("id" -> id).as(cubeDefinition.singleOpt).map { definition ⇒
       val (cube, cubeType) = loadFromDefinition(definition)
       val cubeTypeExpect = typeMapping.get(tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube type: ${tpe.getName}"))
@@ -48,29 +49,29 @@ object DatabaseCube {
       cube.asInstanceOf[DatabaseCube[T]]
     }
   }
-  def load[T](id: Long): Option[DatabaseCube[_]] = DB.withConnection { implicit c ⇒
+  def load[T](id: Long): Option[DatabaseCube[_]] = withConnection { implicit c ⇒
     SQL("select * from databaseCube where id={id}").on("id" -> id).as(cubeDefinition.singleOpt).
       map(loadFromDefinition).map(_._1)
   }
 
-  def create[T](dims: Set[Dimension], tpe: Class[T]): DatabaseCube[T] = DB.withConnection { implicit c ⇒
+  def create[T](dims: Set[Dimension], tpe: Class[T]): DatabaseCube[T] = withConnection { implicit c ⇒
     val cubeType = typeMapping.get(tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube type: ${tpe.getName}"))
     val id = SQL("insert into databaseCube(type) values({type})").on("type" -> cubeType.tpeName).executeInsert().
       getOrElse(throw new RuntimeException(s"Could not create the cube in the database"))
     val definition = CubeDefinition(id, cubeType.tpeName)
 
     val cdims = dims.map { dim ⇒
-      SQL("insert into databaseCube_dimension(cube, dimension) values ({cube}, {dimension})").
-        on("cube" -> id, "dimension" -> Dimension.idOf(dim)).executeInsert()
-      (dim, definition.dimensionName(dim))
+      val dimId = SQL("insert into databaseCube_dimension(cube, dimension) values ({cube}, {dimension})").
+        on("cube" -> id, "dimension" -> dim.name).executeInsert().map("dim_" + _).get
+      (dim, dimId)
     }.toMap
 
-    val cube = cubeType(id, definition.tableName, cdims)
+    val cube = cubeType(this)(id, definition.tableName, cdims)
     cube.create
     cube.asInstanceOf[DatabaseCube[T]]
   }
 
-  def delete(cube: DatabaseCube[_]) = DB.withConnection { implicit c ⇒
+  def delete(cube: DatabaseCube[_]) = withConnection { implicit c ⇒
     SQL("select * from databaseCube where id={id}").on("id" -> cube.id).as(cubeDefinition.singleOpt).foreach { definition ⇒
       val (cube, cubeType) = loadFromDefinition(definition)
       cube.drop
@@ -80,19 +81,19 @@ object DatabaseCube {
   }
 
   private def loadFromDefinition(definition: CubeDefinition)(implicit c: Connection) = {
-    val dims = SQL("select d.id as id, d.name as name from databaseCube_dimension dcd inner join dimension d on d.id = dcd.dimension where dcd.cube={id}").on("id" -> definition.id).
-      as(get[Long]("id") ~ get[String]("name") *).map {
+    val dims = SQL("select id, dimension from databaseCube_dimension where cube={id}").on("id" -> definition.id).
+      as(get[Long]("id") ~ get[String]("dimension") *).map {
         case id ~ name ⇒
-          val d: Dimension = Dimension.get(name).get
+          val d: Dimension = dimension(name).getOrElse(throw new IllegalStateException(s"Could not find dimension $name"))
           (d, s"dim_$id")
       }.toMap
     val cubeType = typeMapping.values.find(_.tpeName == definition.tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube db-type: ${definition.tpe}"))
-    val cube = cubeType(definition.id, definition.tableName, dims)
+    val cube = cubeType(this)(definition.id, definition.tableName, dims)
     (cube, cubeType)
   }
 
   private val typeMapping: Map[Class[_], CubeType] = {
-    val list = DatabaseCubeString :: DatabaseCubeInt :: Nil
+    val list = DatabaseCubeString :: DatabaseCubeInt :: DatabaseCubeLong :: Nil
     list.map(e ⇒ (e.tpeClass, e)).toMap
   }
 
@@ -102,7 +103,7 @@ object DatabaseCube {
     override val id = "databaseCube"
     override def parser = json ⇒ for {
       id ← (json \ "id").asOpt[Long].toSuccess("Missing value 'id'")
-      cube ← DatabaseCube.load(id).toSuccess(s"Could not find cube with id $id in database")
+      cube ← load(id).toSuccess(s"Could not find cube with id $id in database")
     } yield cube
     override def serializer = {
       case cube: DatabaseCube[_] ⇒ Json.obj("id" -> cube.id).success
@@ -113,6 +114,6 @@ object DatabaseCube {
 private trait CubeType {
   val tpeName: String
   val tpeClass: Class[_]
-  def apply(id: Long, table: String, dims: Map[Dimension, String]): DatabaseCube[_]
+  def apply(repo: DatabaseCubeRepo)(id: Long, table: String, dims: Map[Dimension, String]): DatabaseCube[_]
   override def toString = tpeName
 }

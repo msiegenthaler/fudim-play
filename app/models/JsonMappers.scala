@@ -18,8 +18,4 @@ object JsonMappers {
   def decorator = new JsonMapperRepository[CubeDecorator[_]] {
     override val mappers = Aggregator.json(aggregator) :: Nil
   }
-
-  def cube = new JsonCubeMapperRepository {
-    override val mappers = DatabaseCube.json :: CubeDecorator.json(decorator, this) :: Nil
-  }
 }

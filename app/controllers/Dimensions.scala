@@ -5,42 +5,35 @@ import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
 import models._
+import support.DomainAction
+import support.DimensionAction
 
 object Dimensions extends Controller {
-
-  def index = Action {
-    Ok(views.html.dimensions(Dimension.all, addForm))
+  def index(domainName: String) = DomainAction(domainName) { domain ⇒
+    Ok(views.html.dimensions(domainName, domain.dimensions, addForm))
   }
 
-  def add = Action { implicit request ⇒
+  def add(domainName: String) = DomainAction(domainName).on(domain ⇒ { implicit request ⇒
     addForm.bindFromRequest.fold(
-      errors ⇒ BadRequest(views.html.dimensions(Dimension.all, errors)),
+      errors ⇒ BadRequest(views.html.dimensions(domainName, domain.dimensions, errors)),
       name ⇒ {
-        Dimension.create(name)
-        Redirect(routes.Dimensions.index)
+        domain.dimensionRepo.create(name)
+        Redirect(routes.Dimensions.index(domainName))
       })
+  })
+
+  def get(domainName: String, name: String) = DimensionAction(domainName, name) { dimension ⇒
+    Ok(views.html.dimension(domainName, dimension, dimension.values, addValueForm))
   }
 
-  def get(name: String) = Action {
-    val r = for {
-      d ← Dimension.get(name)
-      vs = d.values
-    } yield Ok(views.html.dimension(d, vs, addValueForm))
-    r.getOrElse(NotFound)
-  }
-
-  def addValue(name: String) = Action { implicit request ⇒
-    (for {
-      d ← Dimension.get(name)
-    } yield {
-      addValueForm.bindFromRequest.fold(
-        errors ⇒ BadRequest(views.html.dimension(d, d.values, errors)),
-        value ⇒ {
-          d.add(value)
-          Redirect(routes.Dimensions.get(name))
-        })
-    }).getOrElse(NotFound)
-  }
+  def addValue(domainName: String, name: String) = DimensionAction(domainName, name).on(dimension ⇒ { implicit request ⇒
+    addValueForm.bindFromRequest.fold(
+      errors ⇒ BadRequest(views.html.dimension(domainName, dimension, dimension.values, errors)),
+      value ⇒ {
+        dimension.add(value)
+        Redirect(routes.Dimensions.get(domainName, name))
+      })
+  })
 
   val addForm = Form("name" -> nonEmptyText)
 

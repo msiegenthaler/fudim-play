@@ -7,20 +7,21 @@ import play.api.data.Forms._
 import cube._
 import models._
 import views.html.defaultpages.notFound
+import support.FactAction
+import support.PointDefinition
 
 object Tables extends Controller {
-  def show(factName: String, d1Name: String, d2Name: String, fixed: Point = Point.empty, sum1: Boolean = false, sum2: Boolean = false) = Action {
+  def show(domainName: String, factName: String, d1Name: String, d2Name: String, fixed: PointDefinition = PointDefinition.empty, sum1: Boolean = false, sum2: Boolean = false) = FactAction(domainName, factName) { fact ⇒
     val r = for {
-      fact ← Fact.get(factName)
       d1 ← fact.dimensions.find(_.name == d1Name)
       d2 ← fact.dimensions.find(_.name == d2Name)
     } yield {
       val filterDims = fact.dimensions - d1 - d2
       val filter = DimensionsFilter(filterDims.map { d ⇒
-        fixed.coordinate(d).map(c ⇒ DimensionSelection(d, (c, d.render(c)))).getOrElse(DimensionUnrestricted(d))
+        fixed(fact).coordinate(d).map(c ⇒ DimensionSelection(d, (c, d.render(c)))).getOrElse(DimensionUnrestricted(d))
       }.toList)
-      val cube = Cube.editable(fact.cube)
-      Ok(views.html.table(fact, cube, d1, d2, filter, sum1, sum2))
+      val cube = Cube.editable(fact.data)
+      Ok(views.html.table(domainName, fact, fact.rendered, cube.isSettable _, d1, d2, filter, sum1, sum2))
     }
     r.getOrElse(NotFound)
   }

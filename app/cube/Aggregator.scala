@@ -5,34 +5,34 @@ import support.JsonMapper
 import support.JsonMapperRepository
 
 /** Aggregates values. */
-sealed trait Aggregator[D]
+sealed trait Aggregator[T]
 /** Aggregator that only cares for defined values. */
-trait SparseAggregator[D] extends Aggregator[D] with Function1[Traversable[D], Option[D]] {
-  def apply(v: Traversable[D]): Option[D]
+trait SparseAggregator[T] extends Aggregator[T] with Function1[Traversable[T], Option[T]] {
+  def apply(v: Traversable[T]): Option[T]
 }
 /** Aggregator that cares for non-defined values. */
-trait DenseAggregator[D] extends Aggregator[D] with Function1[Traversable[Option[D]], Option[D]] {
-  def apply(v: Traversable[Option[D]]): Option[D]
+trait DenseAggregator[T] extends Aggregator[T] with Function1[Traversable[Option[T]], Option[T]] {
+  def apply(v: Traversable[Option[T]]): Option[T]
 }
 
 object Aggregator {
   /** Creates a  CubeDecorator from the aggregator. */
-  implicit def decorator[D](aggregator: Aggregator[D]): CubeDecorator[D] = aggregator match {
-    case a: SparseAggregator[D] ⇒ new SparseAggregationDecorator(a)
-    case a: DenseAggregator[D] ⇒ new DenseAggregationDecorator(a)
+  implicit def decorator[T](aggregator: Aggregator[T]): CubeDecorator[T] = aggregator match {
+    case a: SparseAggregator[T] ⇒ new SparseAggregationDecorator(a)
+    case a: DenseAggregator[T] ⇒ new DenseAggregationDecorator(a)
   }
-  def apply[D](aggregator: Aggregator[D]) = decorator(aggregator)
-  def unapply[D](dec: CubeDecorator[D]): Option[Aggregator[D]] = dec match {
+  def apply[T](aggregator: Aggregator[T]) = decorator(aggregator)
+  def unapply[T](dec: CubeDecorator[T]): Option[Aggregator[T]] = dec match {
     case SparseAggregationDecorator(aggr) ⇒ Some(aggr)
     case DenseAggregationDecorator(aggr) ⇒ Some(aggr)
     case _ ⇒ None
   }
 
-  implicit def sparse[D](f: Traversable[D] ⇒ Option[D]) = new SparseAggregator[D] {
-    override def apply(v: Traversable[D]) = f(v)
+  implicit def sparse[T](f: Traversable[T] ⇒ Option[T]) = new SparseAggregator[T] {
+    override def apply(v: Traversable[T]) = f(v)
   }
-  implicit def dense[D](f: Traversable[Option[D]] ⇒ Option[D]) = new DenseAggregator[D] {
-    override def apply(v: Traversable[Option[D]]) = f(v)
+  implicit def dense[T](f: Traversable[Option[T]] ⇒ Option[T]) = new DenseAggregator[T] {
+    override def apply(v: Traversable[Option[T]]) = f(v)
   }
 
   def json(aggrRepo: JsonAggregatorMapperRepository) = new JsonCubeDecoratorMapper {
@@ -48,16 +48,16 @@ object Aggregator {
     }
   }
 
-  private case class DenseAggregationDecorator[D](aggregator: DenseAggregator[D]) extends CubeDecorator[D] {
-    override def get(decoratee: Cube[D])(at: Point) = {
+  private case class DenseAggregationDecorator[T](aggregator: DenseAggregator[T]) extends CubeDecorator[T] {
+    override def get(decoratee: Cube[T])(at: Point) = {
       if (!decoratee.slice.contains(at)) None // not contained in this cube, so ignore
       else if (at.defines(decoratee.dimensions)) decoratee.get(at)
       else aggregator(decoratee.slice(at).dense.map(_._2))
     }
     override def toString = s"DenseAggregator($aggregator)"
   }
-  private case class SparseAggregationDecorator[D](aggregator: SparseAggregator[D]) extends CubeDecorator[D] {
-    override def get(decoratee: Cube[D])(at: Point) = {
+  private case class SparseAggregationDecorator[T](aggregator: SparseAggregator[T]) extends CubeDecorator[T] {
+    override def get(decoratee: Cube[T])(at: Point) = {
       if (!decoratee.slice.contains(at)) None // not contained in this cube, so ignore
       else if (at.defines(decoratee.dimensions)) decoratee.get(at)
       else aggregator(decoratee.slice(at).values)

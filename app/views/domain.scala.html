@@ -1,0 +1,9 @@
+@(domain: FudimDomain)
+@main("Domain "+domain.name, Some(domain.name)) {
+    
+  <ul>
+    <li><a href="@routes.Dimensions.index(domain.name)">Dimensions</a></li>
+    <li><a href="@routes.Facts.list(domain.name)">Facts</a></li>
+  </ul>
+    
+}

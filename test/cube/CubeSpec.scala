@@ -5,7 +5,7 @@ import org.specs2.matcher.DataTables
 import org.specs2.specification.Scope
 
 abstract class CubeTck(name: String) extends Specification with DataTables {
-  def makeDimension(name: String, data: List[String]): Dimension
+  def makeDimension(name: String, data: List[String]): Dimension = ListDimension(name, data)
   def makeAge(year: Dimension, data: Map[Point, Int]): Cube[Int]
   def makeSales(color: Dimension, location: Dimension, product: Dimension, data: Map[Point, Int]): Cube[Int]
 
@@ -167,6 +167,26 @@ abstract class CubeTck(name: String) extends Specification with DataTables {
     }
     "have a total of 2638 products sold (when aggregating dense)" in new sales {
       sales.dense.map(_._2).flatten.reduce(_ + _) must_== 2638
+    }
+    "have values 20, 15, 100 for shirts in Bern" in new sales {
+      val slice = sales.slice(product("shirt") + location("Bern"))
+      slice.values.toSet must_== Set(20, 15, 100)
+    }
+    "have sparses 20, 15, 100 for shirts in Bern" in new sales {
+      val p = product("shirt") + location("Bern")
+      val slice = sales.slice(p)
+      slice.sparse.toMap must_== Map(
+        (p + color("red"), 20),
+        (p + color("green"), 15),
+        (p + color("white"), 100))
+    }
+    "have denses Some(20), Some(15), Some(100) for shirts in Bern" in new sales {
+      val p = product("shirt") + location("Bern")
+      val slice = sales.slice(p)
+      slice.dense.toMap must_== Map(
+        (p + color("red"), Some(20)),
+        (p + color("green"), Some(15)),
+        (p + color("white"), Some(100)))
     }
     "have sold 555 white socks in Bern" in new sales {
       val at = Point(product("socks"), location("Bern"), color("white"))
@@ -375,11 +395,80 @@ abstract class CubeTck(name: String) extends Specification with DataTables {
       sales2.dense.map(_._2).flatten.reduce(_ + _) must_== 430
     }
   }
+
+  trait salesString extends sales {
+    val salesString = sales.map(_.toString)
+  }
+  s"$name sales mapped to String" should {
+    "contain 15 values" in new salesString {
+      salesString.values must have size 15
+      salesString.sparse must have size 15
+    }
+    "contain 18 points" in new salesString {
+      salesString.dense must have size 18
+    }
+    "contain 15 defined points" in new salesString {
+      salesString.dense.filter(_._2.isDefined) must have size 15
+    }
+    "contain 3 empty points" in new salesString {
+      salesString.dense.filter(_._2.isEmpty) must have size 3
+    }
+    "have value '555' for white socks in Bern" in new salesString {
+      val at = Point(product("socks"), location("Bern"), color("white"))
+      salesString.get(at) must beSome("555")
+      salesString.isDefinedAt(at) must beTrue
+      salesString(at) must_== "555"
+    }
+    "have value '5' for green shirts in NY" in new salesString {
+      val at = Point(product("shirt"), location("NY"), color("green"))
+      salesString.get(at) must beSome("5")
+      salesString.isDefinedAt(at) must beTrue
+      salesString(at) must_== "5"
+    }
+    "have values '20', '15', '100' for shirts in Bern" in new salesString {
+      val slice = salesString.slice(product("shirt") + location("Bern"))
+      slice.values.toSet must_== Set("20", "15", "100")
+    }
+    "have sparses '20', '15', '100' for shirts in Bern" in new salesString {
+      val p = product("shirt") + location("Bern")
+      val slice = salesString.slice(p)
+      slice.sparse.toMap must_== Map(
+        (p + color("red"), "20"),
+        (p + color("green"), "15"),
+        (p + color("white"), "100"))
+    }
+    "have denses Some('20'), Some('15'), Some('100') for shirts in Bern" in new salesString {
+      val p = product("shirt") + location("Bern")
+      val slice = salesString.slice(p)
+      slice.dense.toMap must_== Map(
+        (p + color("red"), Some("20")),
+        (p + color("green"), Some("15")),
+        (p + color("white"), Some("100")))
+    }
+    "have no data for white sock sales in shanghai" in new salesString {
+      salesString.get(Point(product("socks"), location("Shanghai"), color("white"))) must beNone
+    }
+    "have no aggregated data in products" in new salesString {
+      salesString.get(product.all.head) must beNone
+      salesString.isDefinedAt(product.all.head) must beFalse
+    }
+    "have no aggregated data for Bern/shirt" in new salesString {
+      salesString.get(Point(product("shirt"), location("Bern"))) must beNone
+    }
+    "have product, location and color as dimension" in new salesString {
+      salesString.dimensions must_== Set(product, location, color)
+    }
+    "as slice return empty" in new salesString {
+      salesString.slice must_== Point.empty
+    }
+    "as raw return itself" in new salesString {
+      salesString.raw must_== salesString
+    }
+  }
 }
 
 class MapCubeSpec extends Specification {
   include(new CubeTck("MapCube") {
-    override def makeDimension(name: String, data: List[String]) = ListDimension(name, data: _*)
     override def makeAge(year: Dimension, data: Map[Point, Int]) = MapCube(data)
     override def makeSales(color: Dimension, location: Dimension, product: Dimension, data: Map[Point, Int]) = MapCube(data)
   })

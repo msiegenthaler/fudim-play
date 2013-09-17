@@ -7,88 +7,93 @@ import play.api.data.Forms._
 import cube._
 import models._
 import models.dbcube.DatabaseCube
+import support.DomainAction
+import support.FactAction
+import support.PointDefinition
 
 object Facts extends Controller {
 
-  def list = Action {
-    Ok(views.html.facts(Fact.all, addForm))
+  def list(domainName: String) = DomainAction(domainName) { domain ⇒
+    Ok(views.html.facts(domainName, domain.factRepo.all, addForm))
   }
 
-  def add = Action { implicit request ⇒
+  def add(domainName: String) = DomainAction(domainName).on(domain ⇒ { implicit request ⇒
     addForm.bindFromRequest.fold(
-      errors ⇒ BadRequest(views.html.facts(Fact.all, errors)),
+      errors ⇒ BadRequest(views.html.facts(domainName, domain.factRepo.all, errors)),
       name ⇒ {
-        val fact = Fact.createDatabaseBacked(name, Set.empty, None)
-        Redirect(routes.Facts.view(name))
+        //TODO let the user choose the data-type
+        val fact = domain.factRepo.createDatabaseBacked(name, DataType.string, Set.empty, None)
+        Redirect(routes.Facts.view(domainName, name))
       })
-  }
+  })
 
-  def view(name: String) = Action {
-    Fact.get(name).map { fact ⇒
-      val dims = Dimension.all.filterNot(fact.dimensions.contains)
-      val aggr = Aggregation.unapply(fact.cube).getOrElse(Aggregation.none)
-      Ok(views.html.fact(fact, dims, Aggregation.all, aggrForm.fill(aggr.name)))
+  def view(domainName: String, name: String) = DomainAction(domainName) { domain ⇒
+    domain.factRepo.get(name).map { fact ⇒
+      val dims = domain.dimensionRepo.all.filterNot(fact.dimensions.contains)
+      val aggr = Aggregation.unapply(fact.data).getOrElse(Aggregation.none)
+      Ok(views.html.fact(domainName, fact, dims, fact.dataType.aggregations, aggrForm.fill(aggr.name)))
     }.getOrElse(NotFound)
   }
-  def addDimension(factName: String, dimensionName: String) = Action {
+  def addDimension(domainName: String, factName: String, dimensionName: String) = DomainAction(domainName) { domain ⇒
     val r = for {
-      fact ← Fact.get(factName)
-      dimension ← Dimension.get(dimensionName)
+      fact ← domain.factRepo.get(factName)
+      dimension ← domain.dimensionRepo.get(dimensionName)
       moveTo ← dimension.all.headOption
     } yield {
       fact.addDimension(moveTo)
-      Redirect(routes.Facts.view(factName))
+      Redirect(routes.Facts.view(domainName, factName))
     }
     r.getOrElse(NotFound)
   }
-  def removeDimension(factName: String, dimensionName: String) = Action {
+  def removeDimension(domainName: String, factName: String, dimensionName: String) = DomainAction(domainName) { domain ⇒
     val r = for {
-      fact ← Fact.get(factName)
-      dimension ← Dimension.get(dimensionName)
+      fact ← domain.factRepo.get(factName)
+      dimension ← domain.dimensionRepo.get(dimensionName)
       keepAt ← dimension.all.headOption
     } yield {
       fact.removeDimension(keepAt)
-      Redirect(routes.Facts.view(factName))
+      Redirect(routes.Facts.view(domainName, factName))
     }
     r.getOrElse(NotFound)
   }
+  def modifyDimension(domain: String, fact: String, dimension: String, action: String) = action match {
+    case "PUT" => addDimension(domain, fact, dimension)
+    case "DELETE" => removeDimension(domain, fact, dimension)
+    case _ => Action(BadRequest(s"Unsupported Action $action"))
+  }
 
-  def setAggregation(factName: String) = Action { implicit request ⇒
+  def setAggregation(domainName: String, factName: String) = FactAction(domainName, factName).on(fact ⇒ { implicit request ⇒
+    def changeAggr[T](fact: FudimFact[T], aggrName: String) = {
+      val aggr = fact.dataType.aggregations.find(_.name == aggrName).getOrElse(Aggregation.none)
+      fact.aggregation = aggr
+      Redirect(routes.Facts.view(domainName, factName))
+    }
     aggrForm.bindFromRequest.fold(
-      errors ⇒
-        NotImplemented,
-      aggrName ⇒ {
-        Fact.get(factName).map { fact ⇒
-          val aggr = Aggregation.all.find(_.name == aggrName).getOrElse(Aggregation.none)
-          fact.aggregation = aggr
-          Redirect(routes.Facts.view(factName))
-        }.getOrElse(NotFound)
-      })
-  }
+      errors ⇒ NotImplemented,
+      aggrName ⇒ changeAggr(fact, aggrName))
+  })
 
-  def get(factName: String, at: Point) = Action {
-    val r = for {
-      fact ← Fact.get(factName)
-      value ← fact.cube.get(at)
-    } yield Ok(value)
-    r.getOrElse(NotFound)
+  def get(domainName: String, factName: String, at: PointDefinition) = FactAction(domainName, factName) { fact ⇒
+    fact.rendered.get(at(fact)).map(v ⇒ Ok(v)).getOrElse(NotFound)
   }
-  def save(factName: String, at: Point) = Action { request ⇒
-    request.body.asText.filterNot(_.isEmpty).map { value ⇒
-      Fact.get(factName).map { fact ⇒
-        fact.cube match {
-          case cube: EditableCube[_] ⇒
-            try {
-              cube.set(at, value)
-              Ok(value)
-            } catch {
-              case ValueCannotBeSetException(_) ⇒ cannotSet
-            }
-          case _ ⇒ cannotSet
-        }
-      }.getOrElse(NotFound)
-    }.getOrElse(NotAcceptable)
-  }
+  def save(domainName: String, factName: String, at: PointDefinition) = FactAction(domainName, factName).on(fact ⇒ { request ⇒
+    def setValue[T](fact: FudimFact[T], value: String) = fact.data match {
+      case cube: EditableCube[T] ⇒
+        val tpe = fact.dataType
+        tpe.parse(value).map { v ⇒
+          try {
+            cube.set(at(fact), v)
+            Ok(tpe.render(v))
+          } catch {
+            case ValueCannotBeSetException(_) ⇒ cannotSet
+          }
+        }.getOrElse(NotAcceptable)
+      case _ ⇒ cannotSet
+    }
+    request.body.asText.filterNot(_.isEmpty).
+      map(setValue(fact, _)).
+      getOrElse(NotAcceptable)
+  })
   private def cannotSet = MethodNotAllowed.withHeaders("Allow" -> "GET")
 
   val addForm = Form("name" -> nonEmptyText)

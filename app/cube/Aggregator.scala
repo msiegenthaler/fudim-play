@@ -75,4 +75,13 @@ object Aggregators {
 
   def sumLong = reduce[Long](_ + _)
   def sumInt = reduce[Int](_ + _)
+
+  def avgLong = sparse[Long] { vs =>
+    val (count, sum) = vs.foldLeft((0L,0L))((s, v) => (s._1 + 1, s._2 + v))
+    Some((sum.toDouble / count).round)
+  }
+  def avgInt = sparse[Int] { vs =>
+    val (count, sum) = vs.foldLeft((0,0))((s, v) => (s._1 + 1, s._2 + v))
+    Some((sum.toDouble / count).round.toInt)
+  }
 }

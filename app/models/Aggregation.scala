@@ -18,10 +18,11 @@ object Aggregation {
 
   val sum = Aggregation("sum", Aggregators.sumLong)
   val product = Aggregation("product", Aggregators.fold(1L)(_ * _))
+  val average = Aggregation("average", Aggregators.avgLong)
 
   val concat = Aggregation("concat", Aggregators.fold("")(_ + _))
 
-  val all = List[Aggregation[_]](none, sum, product, concat)
+  val all = List[Aggregation[_]](none, sum, product, average, concat)
 
   def unapply[T](cube: Cube[T]): Option[Aggregation[T]] = cube match {
     case CubeDecorator(_, Aggregator(aggr)) ⇒

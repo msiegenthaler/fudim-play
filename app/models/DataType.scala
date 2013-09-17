@@ -24,7 +24,7 @@ object DataType {
     override def tpe = classOf[Long]
     override def render(value: Long) = value.toString
     override def parse(value: String) = catching(classOf[NumberFormatException]) opt value.toLong
-    override val aggregations = Aggregation.none[Long] :: Aggregation.sum :: Aggregation.product :: Nil
+    override val aggregations = Aggregation.none[Long] :: Aggregation.sum :: Aggregation.product :: Aggregation.average :: Nil
   }
 
   object string extends DataType[String] {

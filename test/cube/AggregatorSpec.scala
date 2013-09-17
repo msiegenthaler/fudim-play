@@ -41,6 +41,21 @@ class AggregatorSpec extends Specification {
     }
   }
 
+  trait avgCube extends productCube {
+    val cube = CubeDecorator(productCube, Aggregators.avgInt)
+  }
+  "aggregation of cube with avg" should {
+    "have value 2 at eins" in new avgCube {
+      cube.get(german.coordOf("eins")) must beSome(2)
+    }
+    "have value 2 at zwei" in new avgCube {
+      cube.get(german.coordOf("zwei")) must beSome(4)
+    }
+    "have value 2 at one" in new avgCube {
+      cube.get(english.coordOf("one")) must beSome(2)
+    }
+  }
+
   trait serializableAggregator extends Scope {
     val aggregator = Aggregators.sumInt
     val aggregatorMapper: JsonMapper[Aggregator[_]] = ObjectJsonMapper("sumInt", aggregator)

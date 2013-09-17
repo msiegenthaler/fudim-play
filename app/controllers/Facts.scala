@@ -56,6 +56,11 @@ object Facts extends Controller {
     }
     r.getOrElse(NotFound)
   }
+  def modifyDimension(domain: String, fact: String, dimension: String, action: String) = action match {
+    case "PUT" => addDimension(domain, fact, dimension)
+    case "DELETE" => removeDimension(domain, fact, dimension)
+    case _ => Action(BadRequest(s"Unsupported Action $action"))
+  }
 
   def setAggregation(domainName: String, factName: String) = FactAction(domainName, factName).on(fact ⇒ { implicit request ⇒
     def changeAggr[T](fact: FudimFact[T], aggrName: String) = {

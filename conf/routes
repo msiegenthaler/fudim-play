@@ -17,8 +17,9 @@ POST    /domain/:domain/dimension/:dim              controllers.Dimensions.addVa
 GET     /domain/:domain/fact                        controllers.Facts.list(domain: String)
 POST    /domain/:domain/fact                        controllers.Facts.add(domain: String)
 GET     /domain/:domain/fact/:fact                  controllers.Facts.view(domain: String, fact: String)
-POST    /domain/:domain/fact/:fact/dimension/add    controllers.Facts.addDimension(domain: String, fact: String, name: String)
-POST    /domain/:domain/fact/:fact/dimension/remove controllers.Facts.removeDimension(domain: String, fact: String, name: String)
+POST    /domain/:domain/fact/:fact/dimension        controllers.Facts.modifyDimension(domain: String, fact: String, name: String, action: String)
+PUT     /domain/:domain/fact/:fact/dimension/:name  controllers.Facts.addDimension(domain: String, fact: String, name: String)
+DELETE  /domain/:domain/fact/:fact/dimension/:name  controllers.Facts.removeDimension(domain: String, fact: String, name: String)
 POST    /domain/:domain/fact/:fact/aggregation      controllers.Facts.setAggregation(domain: String, fact: String)
 
 GET     /domain/:domain/fact/:fact/value            controllers.Facts.get(domain: String, fact: String, pos: PointDefinition)

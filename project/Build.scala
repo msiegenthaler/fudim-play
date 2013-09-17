@@ -15,7 +15,8 @@ object ApplicationBuild extends Build {
     "org.scalaz" %% "scalaz-core" % "7.0.2")
 
   val main = play.Project(appName, appVersion, appDependencies).settings(
-    // Add your own project settings here      
+    scalaVersion := "2.10.2",
+
     routesImport += "cube._",
     routesImport += "models._",
     routesImport += "support.Bindables._",

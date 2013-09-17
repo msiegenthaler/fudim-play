@@ -31,11 +31,5 @@ trait DatabaseDomainRepo extends FudimDomainRepo with DatabaseRepo {
   protected def dimensionRepo(domain: DomainId): FudimDimensionRepo
   protected def factRepo(domain: DomainId): FudimFactRepo
 
-  private case class DatabaseDomain(id: DomainId, name: String, dimensionRepo: FudimDimensionRepo, factRepo: FudimFactRepo) extends FudimDomain {
-    def dimensions = dimensionRepo.all.toSet
-    def dimension(name: String) = dimensionRepo.get(name)
-
-    def facts = factRepo.all.toSet
-    def fact(name: String) = factRepo.get(name)
-  }
+  private case class DatabaseDomain(id: DomainId, name: String, dimensionRepo: FudimDimensionRepo, factRepo: FudimFactRepo) extends FudimDomain
 }

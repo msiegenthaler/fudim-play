@@ -4,7 +4,7 @@ import cube._
 import domain._
 
 trait FudimFact[T] extends RenderFact[T] {
-  def dataType: DataType[T]
+  override def dataType: FudimDataType[T]
 
   override lazy val rendered = data.map(dataType.render)
 
@@ -21,7 +21,7 @@ trait FudimFactRepo {
   def get[T](name: String): Option[FudimFact[_]]
   def all: Iterable[FudimFact[_]]
 
-  def createDatabaseBacked[T](name: String, dataType: DataType[T],
+  def createDatabaseBacked[T](name: String, dataType: FudimDataType[T],
     dimensions: Set[Dimension], aggregator: Option[Aggregator[T]]): FudimFact[T]
 
   def remove(name: String)

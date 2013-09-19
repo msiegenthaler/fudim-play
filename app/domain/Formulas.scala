@@ -8,14 +8,14 @@ import cube._
 object PointFoldFormula {
   type FoldFunction[-A, +B] = Traversable[Option[A]] => Option[B]
 
-  def apply[A, B](f: FoldFunction[A, B], toType: DataType[B])(ofNames: Traversable[String], ofType: DataType[A], over: Traversable[Dimension]): Formula[B] = {
-    val refs = ofNames.map(CubeRef(_, ofType)).toSet
+  def apply[A, B](f: FoldFunction[A, B], toType: DataType[B])(ofNames: Seq[String], ofType: DataType[A], over: Traversable[Dimension]): Formula[B] = {
+    val refs = ofNames.map(CubeRef(_, ofType))
     PointFoldFormulaImpl(f, toType, refs, ofType, over.toSet)
   }
 
   private case class PointFoldFormulaImpl[A, B](f: FoldFunction[A, B], toType: DataType[B],
-                                                refs: Set[CubeRef[A]], ofType: DataType[A], dimensions: Set[Dimension]) extends Formula[B] {
-    override val references = refs.asInstanceOf[Set[CubeRef[_]]]
+                                                refs: Seq[CubeRef[A]], ofType: DataType[A], dimensions: Set[Dimension]) extends Formula[B] {
+    override val references = refs.asInstanceOf[Seq[CubeRef[_]]]
     override def bind(cubes: Cubes) = {
       val cs = refs.map(ref => (ref, cubes.get(ref)))
       val missing = cs.find(_._2.isEmpty)
@@ -23,7 +23,7 @@ object PointFoldFormula {
       val deps = cs.map(_._2.get)
       point => {
         if (point.definesExactly(dimensions)) {
-          val values = deps.toList.map(_.get(point))
+          val values = deps.map(_.get(point))
           f(values)
         } else None
       }
@@ -60,7 +60,7 @@ object PointFoldFormula {
           case Success(ref) => parseRefs(tail, ref :: soFar)
           case Failure(e) => s"ref '$json': $e".fail
         }
-      case Nil => soFar.success
+      case Nil => soFar.reverse.success
     }
 
 
@@ -81,7 +81,7 @@ object PointFoldFormula {
           PointFoldFormulaImpl(
             fun.asInstanceOf[FoldFunction[A, B]],
             dataType.asInstanceOf[DataType[B]],
-            refs.toSet.asInstanceOf[Set[CubeRef[A]]],
+            refs.asInstanceOf[Seq[CubeRef[A]]],
             ofDataType.asInstanceOf[DataType[A]],
             dims.toSet)
         }

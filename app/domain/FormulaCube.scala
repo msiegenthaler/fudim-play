@@ -9,7 +9,7 @@ trait Formula[T] {
   /** The resulting function must be pure and must only depend on data in the referenced cubes. */
   def bind(cubes: Cubes): Point => Option[T]
   def dimensions: Set[Dimension]
-  def references: Set[CubeRef[_]]
+  def references: Iterable[CubeRef[_]]
 }
 
 /** Cube based on a calculation. */

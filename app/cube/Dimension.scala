@@ -41,5 +41,5 @@ trait Dimension {
 
 trait DimensionRepository {
   def all: TraversableOnce[Dimension]
-  def get(name: String): Option[Dimension]
+  def get(name: String): Option[Dimension] = all.find(_.name == name)
 }

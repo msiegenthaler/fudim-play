@@ -10,8 +10,8 @@ trait FudimDimension extends Dimension {
 }
 
 trait FudimDimensionRepo extends DimensionRepository {
-  def get(name: String): Option[FudimDimension]
-  def all: Iterable[FudimDimension]
+  override def get(name: String): Option[FudimDimension] = all.find(_.name == name)
+  override def all: Iterable[FudimDimension]
 
   def create(name: String): FudimDimension
   def remove(name: String): Unit

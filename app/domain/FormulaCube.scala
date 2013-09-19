@@ -1,6 +1,8 @@
 package domain
 
+import play.api.libs.json.Json
 import cube._
+import support.{JsonMapper, JsonMapperRepository}
 
 /** Calculates points based on data in other cubes. */
 trait Formula[T] {
@@ -17,6 +19,22 @@ object FormulaCube {
   def unapply[T](cube: Cube[T]): Option[Formula[T]] = cube match {
     case FormulaCube(formula, _, _, _) => Some(formula)
     case _ => None
+  }
+
+  def json(formulaRepo: JsonMapperRepository[Formula[_]])(cubes: Cubes) = new JsonCubeMapper {
+    import scalaz._
+    import Scalaz._
+    override val id = "formulaCube"
+    override def parser = json ⇒
+      for {
+        formula ← formulaRepo.parse(json \ "formula")
+      } yield apply(formula, cubes)
+    override def serializer = {
+      case FormulaCube(formula, _, _, _) ⇒
+        for {
+          f ← formulaRepo.serialize(formula)
+        } yield Json.obj("formula" -> f)
+    }
   }
 
   private case class FormulaCube[T](formula: Formula[T], bound: Point => Option[T], slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends AbstractCube[T] {

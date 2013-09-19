@@ -4,6 +4,7 @@ import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
 import cube.TestFixtures._
 import cube._
+import support.{JsonMapperRepository, ObjectJsonMapper, JsonMapper}
 
 class FormulaCubeSpec extends Specification {
   trait additionCube extends sumCube with productCube {
@@ -48,10 +49,36 @@ class FormulaCubeSpec extends Specification {
     }
   }
 
+  trait serializableFormula extends additionCube {
+    val formulaRepo = new JsonMapperRepository[Formula[_]] {
+      private val add: JsonMapper[Formula[_]] = ObjectJsonMapper("addition", additionFormula)
+      override val mappers = add :: Nil
+    }
+  }
+  trait serializableCube extends serializableFormula {
+    val cubeRepo = new JsonCubeMapperRepository {
+      private val fcm: JsonCubeMapper = FormulaCube.json(formulaRepo)(cubes)
+      override val mappers = fcm :: Nil
+    }
+  }
   "FormulaCube" should {
     "unapply non-formula cubes to none" in new productCube {
       FormulaCube.unapply(productCube) must beNone
     }
-  }
 
+    "be serializable to json (if formula is serializable)" in new serializableCube {
+      cubeRepo.serialize(additionCube).isSuccess must beTrue
+    }
+    "be reparsable from json (if formula is serializable)" in new serializableCube {
+      val p = for {
+        json ← cubeRepo.serialize(additionCube)
+        c ← cubeRepo.parse(json)
+      } yield c
+      p.isSuccess must beTrue
+      p.toOption.get match {
+        case FormulaCube(a) ⇒
+          a must_== additionFormula
+      }
+    }
+  }
 }

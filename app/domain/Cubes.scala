@@ -1,7 +1,6 @@
 package domain
 
 import cube.Cube
-import scalaz.Validation
 
 case class CubeRef[T](name: String, dataType: DataType[T])
 

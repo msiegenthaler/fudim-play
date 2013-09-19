@@ -9,6 +9,6 @@ trait DataType[T] {
 }
 
 trait DataTypeRepository {
-  def all: List[DataType[_]]
+  def all: TraversableOnce[DataType[_]]
   def get(name: String): Option[DataType[_]]
 }

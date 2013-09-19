@@ -11,6 +11,11 @@ trait FudimDomain extends Domain {
 
   def dimensionRepo: FudimDimensionRepo
   def factRepo: FudimFactRepo
+
+  def dimensions = dimensionRepo.all.toSet
+  def dimension(name: String) = dimensionRepo.get(name)
+  def facts = factRepo.all.toSet
+  def fact(name: String) = factRepo.get(name)
 }
 
 trait FudimDomainRepo {

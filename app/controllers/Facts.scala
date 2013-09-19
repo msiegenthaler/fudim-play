@@ -14,15 +14,15 @@ import support.PointDefinition
 object Facts extends Controller {
 
   def list(domainName: String) = DomainAction(domainName) { domain ⇒
-    Ok(views.html.facts(domainName, domain.factRepo.all, DataType.all, addForm))
+    Ok(views.html.facts(domainName, domain.factRepo.all, FudimDataTypes.all, addForm))
   }
 
   def add(domainName: String) = DomainAction(domainName).on(domain ⇒ { implicit request ⇒
     addForm.bindFromRequest.fold(
-      errors ⇒ BadRequest(views.html.facts(domainName, domain.factRepo.all, DataType.all, errors)),
+      errors ⇒ BadRequest(views.html.facts(domainName, domain.factRepo.all, FudimDataTypes.all, errors)),
       data ⇒ {
         val (name, dataTypeName) = data
-        DataType.get(dataTypeName).map { dataType =>
+        FudimDataTypes.get(dataTypeName).map { dataType =>
           val fact = domain.factRepo.createDatabaseBacked(name, dataType, Set.empty, None)
           Redirect(routes.Facts.view(domain.name, name))
         }.getOrElse(BadRequest(s"Invalid data type $dataTypeName"))

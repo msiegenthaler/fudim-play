@@ -22,6 +22,16 @@ object TestFixtures {
     }
   }
 
+  trait sumCube extends germanEnglish {
+    val sumCube = {
+      val data = for {
+        (cg, vg) ← german.all.zipWithIndex
+        (ce, ve) ← english.all.zipWithIndex
+      } yield (Point(cg, ce), vg + ve + 2)
+      MapCube(data.toMap)
+    }
+  }
+
   trait hasDiffCube extends germanEnglish {
     val hasDiffCube = {
       val data = for {

@@ -1,6 +1,6 @@
 package models
 
-import cube.{ Dimension, Coordinate }
+import cube._
 
 trait FudimDimension extends Dimension {
   /** Add a value to the dimension (at last index). */
@@ -9,9 +9,9 @@ trait FudimDimension extends Dimension {
   def add(value: String, after: Option[Coordinate]): Coordinate
 }
 
-trait FudimDimensionRepo {
-  def get(name: String): Option[FudimDimension]
-  def all: Iterable[FudimDimension]
+trait FudimDimensionRepo extends DimensionRepository {
+  override def get(name: String): Option[FudimDimension] = all.find(_.name == name)
+  override def all: Iterable[FudimDimension]
 
   def create(name: String): FudimDimension
   def remove(name: String): Unit

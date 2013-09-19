@@ -1,4 +1,4 @@
-@(domain: String, facts: Iterable[FudimFact[_]], types: List[DataType[_]], addForm: Form[(String,String)])
+@(domain: String, facts: Iterable[FudimFact[_]], types: List[FudimDataType[_]], addForm: Form[(String,String)])
 
 @import helper._
 @implicitField = @{ FieldConstructor(inlineElementConstructor.f) }

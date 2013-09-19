@@ -6,27 +6,37 @@ import anorm.SqlParser._
 import play.api.Logger
 import play.api.libs.json._
 import cube._
-import models.{ FudimFactRepo, FudimFact, DomainId, DataType, Aggregation }
-import models.dbcube.{ DatabaseCube, DatabaseCubeRepo }
+import domain._
+import models._
+import models.dbcube._
 
 trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
   protected def jsonCubeMapperRepo: JsonCubeMapperRepository
   protected def databaseCubeRepo: DatabaseCubeRepo
-  def domain: DomainId
+  protected def dataTypeRepo = FudimDataTypes
+  def domain: FudimDomain
 
   override def get[T](name: String) = withConnection { implicit c ⇒
-    SQL("select * from fact where domain={domain} and name={name}").on("domain" -> domain.id, "name" -> name).as(fact singleOpt).flatten
+    SQL("select * from fact where domain={domain} and name={name}").on("domain" -> domain.id.id, "name" -> name).as(fact singleOpt).flatten
   }
 
   override def all = withConnection { implicit c ⇒
-    SQL("select * from fact where domain={domain}").on("domain" -> domain.id).as(fact *).flatten
+    SQL("select * from fact where domain={domain}").on("domain" -> domain.id.id).as(fact *).flatten
   }
 
-  override def createDatabaseBacked[T](name: String, dataType: DataType[T], dims: Set[Dimension], aggregator: Option[Aggregator[T]]) = withConnection { implicit c ⇒
+  override def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dims: Set[Dimension], aggregator: Option[Aggregator[T]]) = {
     val rawCube = databaseCubeRepo.create(dims, dataType.tpe)
     val cube: Cube[T] = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
+    createFact(name, dataType, cube)
+  }
+  override def createFormulaBased[T](name: String, dataType: FudimDataType[T], formula: Formula[T], aggregator: Option[Aggregator[T]]) = {
+    val rawCube = FormulaCube(formula, domain.cubes)
+    val cube: Cube[T] = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
+    createFact(name, dataType, cube)
+  }
+  private def createFact[T](name: String, dataType: FudimDataType[T], cube: Cube[T]): FudimFact[T] = withConnection { implicit c ⇒
     SQL("insert into fact(domain, name, type, config) values({domain}, {name}, {type}, {config})").
-      on("domain" -> domain.id, "name" -> name, "config" -> cubeConfig(cube), "type" -> dataType.name).
+      on("domain" -> domain.id.id, "name" -> name, "config" -> cubeConfig(cube), "type" -> dataType.name).
       executeInsert().get
     get(name).
       map(_.asInstanceOf[FudimFact[T]]).
@@ -41,7 +51,7 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
     }
   }
 
-  private class DatabaseFact[T](val id: Long, val name: String, val dataType: DataType[T], private var _cube: Cube[T]) extends FudimFact[T] {
+  private class DatabaseFact[T](val id: Long, val name: String, val dataType: FudimDataType[T], private var _cube: Cube[T]) extends FudimFact[T] {
     override def data = _cube
     def databaseCube = CubeDecorator.undecorateComplete(data) match {
       case d: DatabaseCube[T] ⇒ d
@@ -60,15 +70,23 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
       updateCube(databaseCube.copyAndRemoveDimension(keepAt), aggregation)
   }
   private val fact = {
+    def mkFact(id: Long, name: String, dataType: FudimDataType[_], cube: Cube[_]): FudimFact[dataType.Type] = {
+      type T = dataType.Type
+      (dataType, cube) match {
+        case (dataType: DataType[T], cube: Cube[T]) => new DatabaseFact[T](id, name, dataType, cube)
+        case _ => throw new IllegalStateException("Non matching dataType and cube")
+      }
+    }
+
     import scalaz._
     import Scalaz._
     long("id") ~ str("name") ~ str("type") ~ str("config") map {
       case id ~ name ~ typeName ~ config ⇒
-        val fact = for {
-          dataType ← DataType.get(typeName).toSuccess(s"DataType $typeName is not known")
+        val fact: Validation[String, FudimFact[_]] = for {
+          dataType ← dataTypeRepo.get(typeName).toSuccess(s"DataType $typeName is not known")
           json = Json.parse(config)
           cube ← jsonCubeMapperRepo.parse(json)
-        } yield new DatabaseFact(id, name, dataType.asInstanceOf[DataType[Any]], cube.asInstanceOf[Cube[Any]])
+        } yield mkFact(id, name, dataType, cube)
         fact.leftMap(msg ⇒ Logger.info(s"Could not load fact $name: $msg"))
         fact.toOption
     }

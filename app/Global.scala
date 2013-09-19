@@ -6,7 +6,9 @@ import support.JsonMapper
 import models.playbinding.DomainRepo
 
 object Global extends GlobalSettings {
-  val aggregation = Aggregation.all //so they get registered
+  //so they get registered
+  val aggregation = Aggregation.all
+
   override def onStart(app: Application) {
     if (!InitialData.hasData) InitialData.insert
   }
@@ -35,8 +37,11 @@ object InitialData {
     val ka_mat = kostenart.add("Material")
     val ka_gk = kostenart.add("Gemeinkosten")
 
-    val umsatz = example.factRepo.createDatabaseBacked("Umsatz", DataType.integer, Set(monat, project), Aggregation.sum.aggregator)
-    val kosten = example.factRepo.createDatabaseBacked("Kosten", DataType.integer, Set(monat, project, kostenart), Aggregation.sum.aggregator)
+    val umsatz = example.factRepo.createDatabaseBacked("Umsatz", FudimDataTypes.integer, Set(monat, project), Aggregation.sum.aggregator)
+    val kosten = example.factRepo.createDatabaseBacked("Kosten", FudimDataTypes.integer, Set(monat, project, kostenart), Aggregation.sum.aggregator)
+
+    val gewinnFormula = FudimFormulas.subtract("Umsatz" :: "Kosten" :: Nil, monat :: project :: Nil)
+    val gewinn = example.factRepo.createFormulaBased("Gewinn", FudimDataTypes.integer, gewinnFormula, Aggregation.sum.aggregator)
 
     val rnd = new Random(1)
     for (m ← monat.all) {

@@ -22,7 +22,7 @@ class FormulaCubeSpec extends Specification {
     def additionFormula(of: Traversable[String], over: Traversable[Dimension]) = {
       def sum(vs: Traversable[Option[Int]]): Option[Int] =
         Some(vs.filter(_.isDefined).map(_.get).foldLeft(0)(_ + _))
-      Formulas.pointFold(sum, intType)(of, intType, over)
+      PointFoldFormula(sum, intType)(of, intType, over)
     }
     val additionFormula: Formula[Int] = additionFormula("product" :: "sum" :: Nil, german :: english :: Nil)
     val additionCube = {

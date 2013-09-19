@@ -1,15 +1,17 @@
 package domain
 
-import cube.Dimension
+import cube._
 
-/** Commonly used formulas. */
-object Formulas {
-  /** Combines the values of multiple cubes at the same point with a function. */
-  def pointFold[A, B](f: Traversable[Option[A]] => Option[B], toType: DataType[B])(ofNames: Traversable[String], ofType: DataType[A], over: Traversable[Dimension]): Formula[B] = new Formula[B] {
-    private def dataType = toType
-    private val refs = ofNames.map(CubeRef(_, ofType)).toSet
+/** Combines the values of multiple cubes at the same point with a function. */
+object PointFoldFormula {
+  def apply[A, B](f: Traversable[Option[A]] => Option[B], toType: DataType[B])(ofNames: Traversable[String], ofType: DataType[A], over: Traversable[Dimension]): Formula[B] = {
+    val refs = ofNames.map(CubeRef(_, ofType)).toSet
+    PointFoldFormulaImpl(f, toType, refs, ofType, over.toSet)
+  }
+
+  private case class PointFoldFormulaImpl[A, B](f: Traversable[Option[A]] => Option[B], toType: DataType[B],
+                                                refs: Set[CubeRef[A]], ofType: DataType[A], dimensions: Set[Dimension]) extends Formula[B] {
     override val references = refs.asInstanceOf[Set[CubeRef[_]]]
-    override val dimensions = over.toSet
     override def bind(cubes: Cubes) = {
       val cs = refs.map(ref => (ref, cubes.get(ref)))
       val missing = cs.find(_._2.isEmpty)

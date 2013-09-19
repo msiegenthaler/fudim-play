@@ -1,7 +1,6 @@
 package models
 
 import cube._
-import models.dbcube.DatabaseCube
 import support.JsonMapperRepository
 import support.JsonMapper
 
@@ -11,7 +10,7 @@ object JsonMappers {
   def aggregator = new JsonMapperRepository[Aggregator[_]] {
     override val mappers = aggregatorMappers
   }
-  def registerAggregator(mapper: JsonMapper[Aggregator[_]]) {
+  def registerAggregator(mapper: JsonMapper[Aggregator[_]]) = synchronized {
     aggregatorMappers = aggregatorMappers ::: mapper :: Nil
   }
 

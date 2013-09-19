@@ -11,9 +11,8 @@ trait FudimDataType[T] extends DataType[T] {
 }
 
 object FudimDataTypes extends DataTypeRepository {
-  val all: List[FudimDataType[_]] = integer :: string :: Nil
-
-  def get(name: String) = all.find(_.name == name)
+  override val all: List[FudimDataType[_]] = integer :: string :: Nil
+  override def get(name: String): Option[FudimDataType[_]] = all.find(_.name == name)
 
   object integer extends FudimDataType[Long] {
     override def name = "integer"

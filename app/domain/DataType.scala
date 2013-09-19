@@ -10,5 +10,5 @@ trait DataType[T] {
 
 trait DataTypeRepository {
   def all: TraversableOnce[DataType[_]]
-  def get(name: String): Option[DataType[_]]
+  def get(name: String): Option[DataType[_]] = all.find(_.name == name)
 }

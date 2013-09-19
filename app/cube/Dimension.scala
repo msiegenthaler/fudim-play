@@ -38,3 +38,8 @@ trait Dimension {
 
   override def toString = name
 }
+
+trait DimensionRepository {
+  def all: TraversableOnce[Dimension]
+  def get(name: String): Option[Dimension]
+}

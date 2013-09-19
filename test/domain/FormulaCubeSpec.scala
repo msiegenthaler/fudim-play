@@ -3,7 +3,7 @@ package domain
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
 import cube.TestFixtures._
-import cube.{Cube, Coordinate, Aggregator, Dimension}
+import cube._
 
 class FormulaCubeSpec extends Specification {
   trait additionCube extends sumCube with productCube {
@@ -23,9 +23,9 @@ class FormulaCubeSpec extends Specification {
         Some(vs.filter(_.isDefined).map(_.get).foldLeft(0)(_ + _))
       Formulas.pointFold(sum, intType)(of, intType, over)
     }
+    val additionFormula: Formula[Int] = additionFormula("product" :: "sum" :: Nil, german :: english :: Nil)
     val additionCube = {
-      val formula = additionFormula("product" :: "sum" :: Nil, german :: english :: Nil)
-      FormulaCube(formula, cubes)
+      FormulaCube(additionFormula, cubes)
     }
   }
 
@@ -42,5 +42,16 @@ class FormulaCubeSpec extends Specification {
     "be None at eins" in new additionCube {
       additionCube.get(german.coordOf("eins")) must beNone
     }
+
+    "unaply to the formula" in new additionCube {
+      FormulaCube.unapply(additionCube) must_== Some(additionFormula)
+    }
   }
+
+  "FormulaCube" should {
+    "unapply non-formula cubes to none" in new productCube {
+      FormulaCube.unapply(productCube) must beNone
+    }
+  }
+
 }

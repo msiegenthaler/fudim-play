@@ -14,6 +14,11 @@ trait Formula[T] {
 object FormulaCube {
   def apply[T](formula: Formula[T], cubes: Cubes): Cube[T] = FormulaCube(formula, formula.bind(cubes))
 
+  def unapply[T](cube: Cube[T]): Option[Formula[T]] = cube match {
+    case FormulaCube(formula, _, _, _) => Some(formula)
+    case _ => None
+  }
+
   private case class FormulaCube[T](formula: Formula[T], bound: Point => Option[T], slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends AbstractCube[T] {
     override protected type Self = FormulaCube[T]
     override protected def derive(slice: Point = slice, filters: DimensionFilter = filters) = copy(slice = slice, filters = filters)

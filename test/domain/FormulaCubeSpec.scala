@@ -1,17 +1,12 @@
 package domain
 
 import org.specs2.mutable.Specification
-import org.specs2.specification.Scope
-import cube.TestFixtures._
 import cube._
+import cube.TestFixtures._
 import support.{JsonMapperRepository, ObjectJsonMapper, JsonMapper}
 
 class FormulaCubeSpec extends Specification {
-  trait additionCube extends sumCube with productCube {
-    val intType = new DataType[Int] {
-      override val name = "Int"
-      override val tpe = classOf[Int]
-    }
+  trait additionCube extends sumCube with productCube with TestFixtures.dataTypes {
     val cubes = new Cubes {
       val cs: Map[CubeRef[_], Cube[_]] = Map(
         CubeRef("product", intType) -> productCube,

@@ -13,21 +13,30 @@ import models.dbcube._
 trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
   protected def jsonCubeMapperRepo: JsonCubeMapperRepository
   protected def databaseCubeRepo: DatabaseCubeRepo
-  def domain: DomainId
+  protected def dataTypeRepo = FudimDataTypes
+  def domain: FudimDomain
 
   override def get[T](name: String) = withConnection { implicit c ⇒
-    SQL("select * from fact where domain={domain} and name={name}").on("domain" -> domain.id, "name" -> name).as(fact singleOpt).flatten
+    SQL("select * from fact where domain={domain} and name={name}").on("domain" -> domain.id.id, "name" -> name).as(fact singleOpt).flatten
   }
 
   override def all = withConnection { implicit c ⇒
-    SQL("select * from fact where domain={domain}").on("domain" -> domain.id).as(fact *).flatten
+    SQL("select * from fact where domain={domain}").on("domain" -> domain.id.id).as(fact *).flatten
   }
 
-  override def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dims: Set[Dimension], aggregator: Option[Aggregator[T]]) = withConnection { implicit c ⇒
+  override def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dims: Set[Dimension], aggregator: Option[Aggregator[T]]) = {
     val rawCube = databaseCubeRepo.create(dims, dataType.tpe)
     val cube: Cube[T] = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
+    createFact(name, dataType, cube)
+  }
+  override def createFormulaBased[T](name: String, dataType: FudimDataType[T], formula: Formula[T], aggregator: Option[Aggregator[T]]) = {
+    val rawCube = FormulaCube(formula, domain.cubes)
+    val cube: Cube[T] = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
+    createFact(name, dataType, cube)
+  }
+  private def createFact[T](name: String, dataType: FudimDataType[T], cube: Cube[T]): FudimFact[T] = withConnection { implicit c ⇒
     SQL("insert into fact(domain, name, type, config) values({domain}, {name}, {type}, {config})").
-      on("domain" -> domain.id, "name" -> name, "config" -> cubeConfig(cube), "type" -> dataType.name).
+      on("domain" -> domain.id.id, "name" -> name, "config" -> cubeConfig(cube), "type" -> dataType.name).
       executeInsert().get
     get(name).
       map(_.asInstanceOf[FudimFact[T]]).
@@ -74,7 +83,7 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
     long("id") ~ str("name") ~ str("type") ~ str("config") map {
       case id ~ name ~ typeName ~ config ⇒
         val fact: Validation[String, FudimFact[_]] = for {
-          dataType ← FudimDataTypes.get(typeName).toSuccess(s"DataType $typeName is not known")
+          dataType ← dataTypeRepo.get(typeName).toSuccess(s"DataType $typeName is not known")
           json = Json.parse(config)
           cube ← jsonCubeMapperRepo.parse(json)
         } yield mkFact(id, name, dataType, cube)

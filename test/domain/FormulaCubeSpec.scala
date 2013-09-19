@@ -50,8 +50,8 @@ class FormulaCubeSpec extends Specification {
   }
 
   trait serializableFormula extends additionCube {
-    val formulaRepo = new JsonMapperRepository[Formula[_]] {
-      private val add: JsonMapper[Formula[_]] = ObjectJsonMapper("addition", additionFormula)
+    val formulaRepo = new JsonFormulaMapperRepository {
+      private val add: JsonFormulaMapper = ObjectJsonMapper("addition", additionFormula)
       override val mappers = add :: Nil
     }
   }

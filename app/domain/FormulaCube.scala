@@ -21,7 +21,7 @@ object FormulaCube {
     case _ => None
   }
 
-  def json(formulaRepo: JsonMapperRepository[Formula[_]])(cubes: Cubes) = new JsonCubeMapper {
+  def json(formulaRepo: JsonFormulaMapperRepository)(cubes: Cubes) = new JsonCubeMapper {
     import scalaz._
     import Scalaz._
     override val id = "formulaCube"

@@ -10,7 +10,7 @@ import views.html.defaultpages.notFound
 import support.FactAction
 import support.PointDefinition
 
-object Tables extends Controller {
+object SingleFactTable extends Controller {
   def show(domainName: String, factName: String, d1Name: String, d2Name: String, fixed: PointDefinition = PointDefinition.empty, sum1: Boolean = false, sum2: Boolean = false) = FactAction(domainName, factName) { fact ⇒
     val r = for {
       d1 ← fact.dimensions.find(_.name == d1Name)
@@ -21,7 +21,7 @@ object Tables extends Controller {
         fixed(fact).coordinate(d).map(c ⇒ DimensionSelection(d, (c, d.render(c)))).getOrElse(DimensionUnrestricted(d))
       }.toList)
       val cube = Cube.editable(fact.data)
-      Ok(views.html.table(domainName, fact, fact.rendered, cube.isSettable _, d1, d2, filter, sum1, sum2))
+      Ok(views.html.singleFactTable(domainName, fact, fact.rendered, cube.isSettable _, d1, d2, filter, sum1, sum2))
     }
     r.getOrElse(NotFound)
   }

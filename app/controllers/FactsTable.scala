@@ -17,7 +17,7 @@ object FactsTable extends Controller {
       if (factOpts.contains(None)) NotFound
       else {
         val facts = factOpts.map(_.get)
-        Ok("Check")
+        Ok(views.html.factsTable(domain, dimension, facts))
       }
     }.getOrElse(NotFound)
   }

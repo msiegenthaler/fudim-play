@@ -1,0 +1,7 @@
+@(domain: FudimDomain, dim: FudimDimension, facts: List[FudimFact[_]])
+
+@import helper._
+
+@main(s"Facts Table on ${dim.name}", Some(domain.name)) {
+    <p>Test</p>
+}(Nil)

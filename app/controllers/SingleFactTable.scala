@@ -16,51 +16,17 @@ object SingleFactTable extends Controller {
       d1 ← fact.dimensions.find(_.name == d1Name)
       d2 ← fact.dimensions.find(_.name == d2Name)
     } yield {
-      val filterDims = fact.dimensions - d1 - d2
-      val filter = DimensionsFilter(filterDims.map { d ⇒
-        fixed(fact).coordinate(d).map(c ⇒ DimensionSelection(d, (c, d.render(c)))).getOrElse(DimensionUnrestricted(d))
-      }.toList)
+      val otherDims = fact.dimensions - d1 - d2
+      val point = fixed(fact)
       val cube = Cube.editable(fact.data)
-      Ok(views.html.singleFactTable(domainName, fact, fact.rendered, cube.isSettable _, d1, d2, filter, sum1, sum2))
+
+      def linkFun(d: Dimension)(c: Option[Coordinate]) = {
+        val p = c.fold(point - d)(v => point - d + v)
+        routes.SingleFactTable.show(domainName, fact.name, d1.name, d2.name, p, sum1, sum2).url
+      }
+
+      Ok(views.html.singleFactTable(domainName, fact, fact.rendered, cube.isSettable _, d1, d2, otherDims.toList, point, sum1, sum2, linkFun))
     }
     r.getOrElse(NotFound)
-  }
-}
-
-sealed trait DimensionRestriction {
-  val dimension: Dimension
-  def matches(value: String): Boolean
-  def label: String
-}
-case class DimensionSelection(dimension: Dimension, value: (Coordinate, String)) extends DimensionRestriction {
-  override def matches(v: String) = v == value
-  override def label = value._2
-}
-case class DimensionUnrestricted(dimension: Dimension) extends DimensionRestriction {
-  override def matches(v: String) = true
-  override def label = "<all>"
-}
-
-case class DimensionsFilter(restrictions: List[DimensionRestriction]) {
-  def availableRestrictionsFor(d: Dimension): List[DimensionRestriction] = {
-    val v = d.values.toList
-    v.length match {
-      case 0 ⇒ DimensionUnrestricted(d) :: Nil
-      case 1 ⇒ DimensionSelection(d, v.head) :: Nil
-      case _ ⇒ DimensionUnrestricted(d) :: v.map(DimensionSelection(d, _))
-    }
-  }
-
-  def change(r: DimensionRestriction) = {
-    copy(restrictions = restrictions.filterNot(_.dimension == r.dimension) :+ r)
-  }
-
-  def point: Point = {
-    restrictions.foldLeft(Point.empty) { (p, r) ⇒
-      r match {
-        case DimensionSelection(d, v) ⇒ p + v._1
-        case DimensionUnrestricted(_) ⇒ p
-      }
-    }
   }
 }

@@ -25,11 +25,19 @@ trait DatabaseDomainRepo extends FudimDomainRepo with DatabaseRepo {
   }
 
   private val domain: RowParser[FudimDomain] = long("id").map(DomainId(_)) ~ str("name") map {
-    case id ~ name ⇒ DatabaseDomain(id, name, dimensionRepo(id), factRepo(id))
+    case id ~ name ⇒ new DatabaseDomain(id, name, dimensionRepo(id), factRepo(id))
   }
 
   protected def dimensionRepo(domain: DomainId): FudimDimensionRepo
   protected def factRepo(domain: DomainId): FudimFactRepo
 
-  private case class DatabaseDomain(id: DomainId, name: String, dimensionRepo: FudimDimensionRepo, factRepo: FudimFactRepo) extends FudimDomain
+  private class DatabaseDomain(val id: DomainId, val name: String,
+                               val dimensionRepo: FudimDimensionRepo, val factRepo: FudimFactRepo) extends FudimDomain {
+    override def equals(o: Any) = o match {
+      case o: DatabaseDomain => id == o.id
+      case _ => false
+    }
+    override def hashCode = id.hashCode
+    override def toString = s"DatabaseDomain($id, $name)"
+  }
 }

@@ -3,5 +3,21 @@
 @import helper._
 
 @main(s"Facts Table on ${dim.name}", Some(domain.name)) {
-    <p>Test</p>
+    <table id="facts-table">
+        <thead>
+            <tr>
+                <th class="dimension">@dim.name</th>
+                @facts.map { fact =>
+                  <th class="fact">@fact.name</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @dim.values.map { dimValue =>
+              <tr>
+                  <th>@dimValue._2</th>
+              </tr>
+            }
+        </tbody>
+    </table>
 }(Nil)

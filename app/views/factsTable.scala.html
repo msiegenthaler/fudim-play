@@ -1,8 +1,16 @@
-@(domain: FudimDomain, dim: FudimDimension, facts: List[FudimFact[_]], factData: List[cube.Point => Option[String]])
+@(domain: FudimDomain, dim: cube.Dimension, otherDims: List[cube.Dimension], filterPoint: cube.Point, facts: List[FudimFact[_]], factData: List[cube.Point => Option[String]], linkFun: cube.Dimension => Option[cube.Coordinate] => String)
 
 @import cube._
 
 @main(s"Facts Table on ${dim.name}", Some(domain.name)) {
+    <ul class="unstyled form-horizontal">
+    @otherDims.map { d =>
+        <li>
+            @views.html.dimensionValueSelect(d, filterPoint.coordinate(d), true, linkFun(d))
+        </li>
+    }
+    </ul>
+
     <table id="facts-table" class="table table-striped table-hover table-condensed">
         <thead>
             <tr>
@@ -14,7 +22,7 @@
         </thead>
         <tbody>
         @dim.values.map { dimValue =>
-            @defining(Point(dimValue._1)) { point =>
+            @defining(filterPoint + dimValue._1) { point =>
                 <tr>
                     <th>@dimValue._2</th>
                     @factData.map { f =>
@@ -25,5 +33,4 @@
         }
         </tbody>
     </table>
-    }
-    (Nil)
+}(Nil)

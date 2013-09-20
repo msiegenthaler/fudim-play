@@ -1,14 +1,26 @@
-@(domain: FudimDomain, dim: cube.Dimension, otherDims: List[cube.Dimension], filterPoint: cube.Point, facts: List[FudimFact[_]], factData: List[cube.Point => Option[String]], linkFun: cube.Dimension => Option[cube.Coordinate] => String)
+@(domain: FudimDomain, dim: cube.Dimension, otherDims: List[cube.Dimension], filterPoint: cube.Point, facts: List[FudimFact[_]], factData: List[cube.Point => Option[String]], otherFacts: List[FudimFact[_]], linkFun: cube.Dimension => Option[cube.Coordinate] => String)
 
 @import cube._
+@import support._
 
 @main(s"Facts Table on ${dim.name}", Some(domain.name)) {
   <ul class="unstyled form-horizontal">
-  @otherDims.map { d =>
-    <li>
-      @views.html.dimensionValueSelect(d, filterPoint.coordinate(d), true, linkFun(d))
-    </li>
-  }
+    @otherDims.map { d =>
+      <li>
+        @views.html.dimensionValueSelect(d, filterPoint.coordinate(d), true, linkFun(d))
+      </li>
+    }
+    @otherFacts.map { fact =>
+      <li>
+        <div class="control-group">
+          <div class="controls">
+            <a href="@routes.FactsTable.show(domain.name, dim.name, (facts :+ fact).map(_.name), filterPoint.onlyOn(filterPoint.on.intersect(fact.dimensions)))">
+              Add @fact.name
+            </a>
+          </div>
+        </div>
+      </li>
+    }
   </ul>
 
   <table id="facts-table" class="table table-striped table-hover table-condensed">
@@ -16,7 +28,10 @@
       <tr>
         <th class="dimension">@dim.name</th>
         @facts.map { fact =>
-          <th class="fact">@fact.name</th>
+          <th class="fact">
+            @fact.name
+          <a href="@routes.FactsTable.show(domain.name, dim.name, (facts.filterNot(_ == fact)).map(_.name), filterPoint)">X</a>
+          </th>
         }
       </tr>
     </thead>
@@ -33,4 +48,4 @@
     }
     </tbody>
   </table>
-}(Nil)
+  }(Nil)

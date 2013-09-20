@@ -14,10 +14,11 @@ object FactsTable extends Controller {
 
   def show(domainName: String, dimensionName: String, factNames: List[String], restrictTo: PointDefinition = PointDefinition.empty) = DomainAction(domainName) { domain =>
     domain.dimensionRepo.get(dimensionName).map { dimension =>
-      val factOpts = factNames.map(domain.factRepo.get)
+      val factOpts = factNames.distinct.map(domain.factRepo.get)
       if (factOpts.contains(None)) NotFound
       else {
         val facts = factOpts.map(_.get)
+        val otherFacts = (domain.factRepo.all.toSet -- facts.toSet).filter(_.dimensions.contains(dimension))
         val filterableDims = facts.map(_.dimensions).foldLeft(domain.dimensions - dimension)(_.intersect(_))
         val point = restrictTo(domain)
         if (!point.on.filterNot(filterableDims.contains).isEmpty) BadRequest
@@ -25,9 +26,10 @@ object FactsTable extends Controller {
           val dataFuns = facts.map(f => f.rendered.get _)
           def linkFun(d: Dimension)(c: Option[Coordinate]) = {
             val p = c.fold(point - d)(v => point - d + v)
-            routes.FactsTable.show(domainName, dimensionName, factNames, p).toString
+            routes.FactsTable.show(domainName, dimensionName, facts.map(_.name), p).toString
           }
-          Ok(views.html.factsTable(domain, dimension, filterableDims.toList.sortBy(_.name), point, facts, dataFuns, linkFun))
+          Ok(views.html.factsTable(domain, dimension, filterableDims.toList.sortBy(_.name), point,
+            facts, dataFuns, otherFacts.toList.sortBy(_.name), linkFun))
         }
       }
     }.getOrElse(NotFound)

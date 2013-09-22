@@ -12,7 +12,7 @@ object FactsTable extends Controller {
     }.getOrElse(NotFound)
   }
 
-  def show(domainName: String, dimensionName: String, factNames: List[String], restrictTo: PointDefinition = PointDefinition.empty) = DomainAction(domainName) { domain =>
+  def show(domainName: String, dimensionName: String, factNames: List[String], restrictTo: PointDefinition, invert: Boolean) = DomainAction(domainName) { domain =>
     domain.dimensionRepo.get(dimensionName).map { dimension =>
       val factOpts = factNames.distinct.map(domain.factRepo.get)
       if (factOpts.contains(None)) NotFound
@@ -25,10 +25,10 @@ object FactsTable extends Controller {
         else {
           def linkFun(d: Dimension)(c: Option[Coordinate]) = {
             val p = c.fold(point - d)(v => point - d + v)
-            routes.FactsTable.show(domainName, dimensionName, facts.map(_.name), p).toString
+            routes.FactsTable.show(domainName, dimensionName, facts.map(_.name), p, invert).toString
           }
           Ok(views.html.factsTable(domain, dimension, filterableDims.toList.sortBy(_.name), point,
-            facts, otherFacts.toList.sortBy(_.name), linkFun))
+            facts, otherFacts.toList.sortBy(_.name), linkFun, invert))
         }
       }
     }.getOrElse(NotFound)

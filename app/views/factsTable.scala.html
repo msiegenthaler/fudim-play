@@ -1,4 +1,4 @@
-@(domain: FudimDomain, dim: cube.Dimension, otherDims: List[cube.Dimension], filterPoint: cube.Point, facts: List[FudimFact[_]], otherFacts: List[FudimFact[_]], linkFun: cube.Dimension => Option[cube.Coordinate] => String)
+@(domain: FudimDomain, dim: cube.Dimension, otherDims: List[cube.Dimension], filterPoint: cube.Point, facts: List[FudimFact[_]], otherFacts: List[FudimFact[_]], linkFun: cube.Dimension => Option[cube.Coordinate] => String, invert: Boolean)
 
 @import helper._
 @import cube._
@@ -26,13 +26,14 @@
   </ul>
 
   <table id="facts-table" class="table table-striped table-hover table-condensed" data-point="@serializePoint(filterPoint)" data-dimension="@urlEncode(dim.name)" data-domain="@urlEncode(domain.name)">
+  @if(!invert) {
     <thead>
       <tr>
         <th class="dimension">@dim.name <i class="icon-edit edit-indicator"></i></th>
         @facts.map { fact =>
           <th class="fact" data-fact="@urlEncode(fact.name)">
             @fact.name
-          <a href="@routes.FactsTable.show(domain.name, dim.name, (facts.filterNot(_ == fact)).map(_.name), filterPoint)">X</a>
+            <a href="@routes.FactsTable.show(domain.name, dim.name, (facts.filterNot(_ == fact)).map(_.name), filterPoint)">X</a>
           </th>
         }
       </tr>
@@ -51,5 +52,34 @@
       }
     }
     </tbody>
+  } else {
+    <thead>
+      <tr>
+        <th class="dimension">@dim.name <i class="icon-edit edit-indicator"></i></th>
+        @dim.values.map { dimValue =>
+          <th data-point="@serializePoint(dimValue._1)">@dimValue._2</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+    @facts.map { fact =>
+      <tr>
+        <th class="fact" data-fact="@urlEncode(fact.name)">
+          @fact.name
+          <a href="@routes.FactsTable.show(domain.name, dim.name, (facts.filterNot(_ == fact)).map(_.name), filterPoint)">X</a>
+        </th>
+        @dim.values.map { dimValue =>
+          @defining(filterPoint + dimValue._1) { point =>
+            <td @if(cube.EditableCube.from(fact.data).isSettable(point)) {contentEditable}>
+              @fact.rendered.get(point).getOrElse("")
+            </td>
+          }
+        }
+      </tr>
+    </tbody>
+    }
+  }
   </table>
-  }(List("table.js"))
+
+  <a href="@routes.FactsTable.show(domain.name, dim.name, facts.map(_.name), filterPoint, !invert)">switch orientation</a>
+}(List("table.js"))

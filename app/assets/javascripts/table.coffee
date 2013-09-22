@@ -7,43 +7,41 @@ splitId = (id) ->
   y = id.substring(i+1)
   [x, y]
 
+cellContext = (cell) ->
+  table = cell.closest("table")
+  columnHeader = table.find("thead tr th:nth-child("+(cell.index()+1)+")")
+  row = cell.closest("tr")
+  rowHeader = row.find("th")
+  cell.add(columnHeader).add(rowHeader).add(row).add(table)
+
 pointForCell = (cell) ->
-  v =
-    if (cell.is("[point]"))
-      cell.attr("point")
-    else
-      table = cell.parents("table:first")
-      header = table.find("thead tr th:nth-child("+(cell.index()+1)+")")
-      pfHolders = [cell.parent("tr"), header, table]
-      $.map(pfHolders, (e) -> e.attr("point"))
-  Point.parse(v)
+  Point.parse(cellContext(cell).map(() -> $(this).data("point")).get())
 
 updateDependendValues = (cell) ->
   point = pointForCell(cell)
-  table = cell.parents("table:first")
-  table.find("td.sum[point]").each(() ->
+  table = cell.closest("table")
+  table.find("td.sum[data-point]").each(() ->
     sumCell = $(this)
     if (Point.contains(pointForCell(sumCell), point))
       updateCell(sumCell)
   )
 
 updateCell = (cell) ->
-  table = cell.parents("table:first")
+  table = cell.closest("table")
   point = pointForCell(cell)
   req = jsRoutes.controllers.Facts.get(domainFor(table), factFor(table), point).ajax({ dataType: "text" })
   req.done((v) -> cell.text(v))
 
-domainFor = (table) ->
-  decodeURIComponent(table.attr("domain"))
-factFor = (table) ->
-  decodeURIComponent(table.attr("fact"))
+domainFor = (cell) ->
+  decodeURIComponent(cellContext(cell).data("domain"))
+factFor = (cell) ->
+  decodeURIComponent(cellContext(cell).data("fact"))
 
 # SingleFactTable
 
 $("table#factvalue-table").editableTable((cell, oldValue, newValue, onSuccess, onFail) ->
-  table = cell.parents("table:first")
   point = pointForCell(cell)
-  req = jsRoutes.controllers.Facts.save(domainFor(table), factFor(table), point).ajax({
+  req = jsRoutes.controllers.Facts.save(domainFor(cell), factFor(cell), point).ajax({
     data: newValue
     contentType: "text/plain"
     dataType: "text"

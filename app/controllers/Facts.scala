@@ -89,7 +89,7 @@ object Facts extends Controller {
           } catch {
             case ValueCannotBeSetException(_) ⇒ cannotSet
           }
-        }.getOrElse(NotAcceptable)
+        }.getOrElse(NotAcceptable("Value is not parsable"))
       case _ ⇒ cannotSet
     }
     request.body.asText.filterNot(_.isEmpty).

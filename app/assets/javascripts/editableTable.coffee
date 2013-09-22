@@ -22,7 +22,7 @@ jQuery.fn.extend({
   A table that supports editing its tds that have the attribute 'contentEditable' on it.
   When the user leaves the cell its content is passed to the save function that i.e. submits
   it to the server using an ajax request.
-  Usage: 
+  Usage:
     saveFun = (cell, oldValue, newValue, onSuccess, onFail) ->
       req = #new Ajax request
       req.done((value) -> onSuccess(value))
@@ -35,6 +35,9 @@ jQuery.fn.extend({
     editIndicator = (show) ->
       if (show) then table.addClass("can-edit-cell")
       else table.removeClass("can-edit-cell")
+
+    table.addClass("editable-table")
+    editIndicator(false)
 
     editStart = (cell) ->
       cell.addClass("in-edit")

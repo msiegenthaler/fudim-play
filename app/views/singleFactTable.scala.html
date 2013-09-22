@@ -37,8 +37,8 @@
     <thead>
       <tr>
         <th><i class="icon-edit edit-indicator"></i></th>
-      @d1.values.zipWithIndex.map { x =>
-        <th id="x-@x._2" point="@serializePoint(x._1._1)">@x._1._2</th>
+      @d1.values.map { x =>
+        <th point="@serializePoint(x._1)">@x._2</th>
       }
       @if(sumd2) {
         <th class="sum"></th>
@@ -46,16 +46,16 @@
       </tr>
     </thead>
     <tbody>
-    @d2.values.zipWithIndex.map { y =>
-      <tr>
-        <th id="y-@y._2" point="@serializePoint(y._1._1)">@y._1._2</th>
-      @d1.values.zipWithIndex.map { x =>
-        @defining(filterPoint + x._1._1 + y._1._1) { p =>
-        <td id="c-@x._2-@y._2" @if(isSettable(p)) {contentEditable}>@data.get(p).getOrElse("")</td>
+    @d2.values.map { y =>
+      <tr point="@serializePoint(y._1)">
+        <th>@y._2</th>
+      @d1.values.map { x =>
+        @defining(filterPoint + x._1 + y._1) { p =>
+        <td @if(isSettable(p)) {contentEditable}>@data.get(p).getOrElse("")</td>
        }
       }
       @if(sumd2) {
-        <td class="sum" point="@serializePoint(y._1._1)">@data.get(filterPoint + y._1._1).getOrElse("")</td>
+        <td class="sum" point="@serializePoint(y._1)">@data.get(filterPoint + y._1).getOrElse("")</td>
       }
       </tr>
     }

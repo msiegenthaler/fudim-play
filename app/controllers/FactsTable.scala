@@ -23,13 +23,12 @@ object FactsTable extends Controller {
         val point = restrictTo(domain)
         if (!point.on.filterNot(filterableDims.contains).isEmpty) BadRequest
         else {
-          val dataFuns = facts.map(f => f.rendered.get _)
           def linkFun(d: Dimension)(c: Option[Coordinate]) = {
             val p = c.fold(point - d)(v => point - d + v)
             routes.FactsTable.show(domainName, dimensionName, facts.map(_.name), p).toString
           }
           Ok(views.html.factsTable(domain, dimension, filterableDims.toList.sortBy(_.name), point,
-            facts, dataFuns, otherFacts.toList.sortBy(_.name), linkFun))
+            facts, otherFacts.toList.sortBy(_.name), linkFun))
         }
       }
     }.getOrElse(NotFound)

@@ -1,7 +1,9 @@
-@(domain: FudimDomain, dim: cube.Dimension, otherDims: List[cube.Dimension], filterPoint: cube.Point, facts: List[FudimFact[_]], factData: List[cube.Point => Option[String]], otherFacts: List[FudimFact[_]], linkFun: cube.Dimension => Option[cube.Coordinate] => String)
+@(domain: FudimDomain, dim: cube.Dimension, otherDims: List[cube.Dimension], filterPoint: cube.Point, facts: List[FudimFact[_]], otherFacts: List[FudimFact[_]], linkFun: cube.Dimension => Option[cube.Coordinate] => String)
 
+@import helper._
 @import cube._
 @import support._
+@import JsHelper._
 
 @main(s"Facts Table on ${dim.name}", Some(domain.name)) {
   <ul class="unstyled form-horizontal">
@@ -23,12 +25,12 @@
     }
   </ul>
 
-  <table id="facts-table" class="table table-striped table-hover table-condensed">
+  <table id="facts-table" class="table table-striped table-hover table-condensed" data-point="@serializePoint(filterPoint)" data-dimension="@urlEncode(dim.name)" data-domain="@urlEncode(domain.name)">
     <thead>
       <tr>
-        <th class="dimension">@dim.name</th>
+        <th class="dimension">@dim.name <i class="icon-edit edit-indicator"></i></th>
         @facts.map { fact =>
-          <th class="fact">
+          <th class="fact" data-fact="@urlEncode(fact.name)">
             @fact.name
           <a href="@routes.FactsTable.show(domain.name, dim.name, (facts.filterNot(_ == fact)).map(_.name), filterPoint)">X</a>
           </th>
@@ -36,16 +38,18 @@
       </tr>
     </thead>
     <tbody>
-    @dim.values.map { dimValue =>
-      @defining(filterPoint + dimValue._1) { point =>
-        <tr>
+    @dim.values.zipWithIndex.map { dimValue =>
+      @defining(filterPoint + dimValue._1._1) { point =>
+        <tr data-point="@serializePoint(dimValue._1._1)">
           <th>@dimValue._2</th>
-          @factData.map { f =>
-            <td>@f(point).getOrElse("")</td>
+          @facts.map { fact =>
+            <td @if(cube.EditableCube.from(fact.data).isSettable(point)) {contentEditable}>
+              @fact.rendered.get(point).getOrElse("")
+            </td>
           }
         </tr>
       }
     }
     </tbody>
   </table>
-  }(Nil)
+  }(List("table.js"))

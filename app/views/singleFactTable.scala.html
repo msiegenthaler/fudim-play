@@ -1,0 +1,76 @@
+@(domain: String, fact: FudimFact[_], data: cube.Cube[String], isSettable: cube.Point => Boolean, d1: cube.Dimension, d2: cube.Dimension, otherDims: List[cube.Dimension], filterPoint: cube.Point, sumd1: Boolean, sumd2: Boolean, linkFun: cube.Dimension => Option[cube.Coordinate] => String)
+
+@import helper._
+@import helper.twitterBootstrap._
+@import support.JsHelper._
+@import cube._
+@import Point._
+
+@main("Fact "+fact.name+" ("+d1.name+" / "+d2.name+")", Some(domain)) {
+
+  <ul class="unstyled form-horizontal">
+    @otherDims.map { d =>
+      <li>
+        @views.html.dimensionValueSelect(d, filterPoint.coordinate(d), true, linkFun(d))
+      </li>
+    }
+
+    <li>
+      <div class="control-group">
+        <div class="controls">
+          <label class="checkbox">
+            <input type="checkbox" @if(sumd1){checked} href="@routes.SingleFactTable.show(domain, fact.name, d1.name, d2.name, filterPoint, !sumd1, sumd2)" class="summarize">
+            Summarize @d1.name
+          </label>
+        </div>
+        <div class="controls">
+          <label class="checkbox">
+            <input type="checkbox" @if(sumd2){checked} href="@routes.SingleFactTable.show(domain, fact.name, d1.name, d2.name, filterPoint, sumd1, !sumd2)" class="summarize">
+            Summarize @d2.name
+          </label>
+        </div>
+      </div>
+    </li>
+  </ul>
+
+  <table id="factvalue-table" class="table table-striped table-hover table-condensed" data-point="@serializePoint(filterPoint)" data-fact="@urlEncode(fact.name)" data-domain="@urlEncode(domain)">
+    <thead>
+      <tr>
+        <th><i class="icon-edit edit-indicator"></i></th>
+      @d1.values.map { x =>
+        <th data-point="@serializePoint(x._1)">@x._2</th>
+      }
+      @if(sumd2) {
+        <th class="sum"></th>
+      }
+      </tr>
+    </thead>
+    <tbody>
+    @d2.values.map { y =>
+      <tr data-point="@serializePoint(y._1)">
+        <th>@y._2</th>
+      @d1.values.map { x =>
+        @defining(filterPoint + x._1 + y._1) { p =>
+        <td @if(isSettable(p)) {contentEditable}>@data.get(p).getOrElse("")</td>
+       }
+      }
+      @if(sumd2) {
+        <td class="sum" data-point="@serializePoint(y._1)">@data.get(filterPoint + y._1).getOrElse("")</td>
+      }
+      </tr>
+    }
+    @if(sumd1) {
+      <tr class="sum">
+        <th></th>
+      @d1.values.map { x =>
+         <td class="sum" data-point="@serializePoint(filterPoint + x._1)">@data.get(filterPoint + x._1).getOrElse("")</td>
+      }
+      @if(sumd2) {
+        <td class="sum" data-point="@serializePoint(filterPoint)">@data.get(filterPoint).getOrElse("")</td>
+      }
+      </tr>
+    }
+    </tbody>
+  </table>
+
+}(List("table.js"))

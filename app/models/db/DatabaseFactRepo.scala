@@ -68,6 +68,13 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
       updateCube(databaseCube.copyAndAddDimension(moveTo), aggregation)
     def removeDimension(keepAt: Coordinate) =
       updateCube(databaseCube.copyAndRemoveDimension(keepAt), aggregation)
+
+    override def equals(o: Any) = o match {
+      case d: DatabaseFact[_] => d.id == id
+      case _ => false
+    }
+    override def hashCode = id.hashCode
+    override def toString = s"DatabaseFact($id, $name, ${dataType.name}})"
   }
   private val fact = {
     def mkFact(id: Long, name: String, dataType: FudimDataType[_], cube: Cube[_]): FudimFact[dataType.Type] = {

@@ -18,7 +18,7 @@ object FudimDataTypes extends DataTypeRepository {
     override def name = "integer"
     override def tpe = classOf[Long]
     override def render(value: Long) = value.toString
-    override def parse(value: String) = catching(classOf[NumberFormatException]) opt value.toLong
+    override def parse(value: String) = catching(classOf[NumberFormatException]) opt value.trim.toLong
     override val aggregations = Aggregation.none[Long] :: Aggregation.sum :: Aggregation.product :: Aggregation.average :: Nil
   }
 

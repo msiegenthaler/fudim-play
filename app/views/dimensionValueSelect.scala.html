@@ -1,0 +1,25 @@
+@(dimension: cube.Dimension, current: Option[cube.Coordinate], allowAll: Boolean, linkFun: Option[cube.Coordinate] => String)
+
+<div class="control-group">
+    <label class="control-label" for="@dimension.name">@dimension.name</label>
+    <div class="controls">
+        <div class="btn-group">
+            <button class="btn dropdown-toggle" data-toggle="dropdown">
+                @current.map(c => dimension.render(c)).getOrElse(if(allowAll) "<all>" else "")
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                @if(allowAll) {
+                    <li>
+                        <a href="@linkFun(None)">&lt;all&gt;</a>
+                    </li>
+                }
+                @dimension.values.map { v =>
+                    <li>
+                        <a href="@linkFun(Some(v._1))">@v._2</a>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>

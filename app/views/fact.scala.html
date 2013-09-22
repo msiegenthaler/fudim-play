@@ -34,11 +34,11 @@
 	  <input type="submit" value="Save">
 	}
 
-	<h2>Tables</h2>
+	<h2>Fact Table</h2>
 	<ul>
     @fact.dimensions.flatMap(d1 => fact.dimensions.map((d1, _))).filterNot(v => v._1 == v._2).map { v =>
       <li>
-        <a href="@routes.Tables.show(domain, fact.name, v._1.name, v._2.name)">@v._1.name / @v._2.name</a>
+        <a href="@routes.SingleFactTable.show(domain, fact.name, v._1.name, v._2.name)">@v._1.name / @v._2.name</a>
       </li>
     }
 	</ul>

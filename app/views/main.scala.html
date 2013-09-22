@@ -22,6 +22,7 @@
             <ul class="nav">
               <li><a href="@routes.Application.index">Home</a></li>
               @domain.map { d =>
+                <li><a href="@routes.Domains.get(d)">Domain</a></li>
                 <li><a href="@routes.Dimensions.index(d)">Dimensions</a></li>
                 <li><a href="@routes.Facts.list(d)">Facts</a></li>
               }

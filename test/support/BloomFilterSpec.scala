@@ -66,6 +66,16 @@ class BloomFilterSpec extends Specification {
     "have approx item count of 100+-2" in new hundred {
       filter.approxNumberOfItems must beCloseTo(100d, 2)
     }
+
+    "return true maybeContains 1..100 when using BloomFilterCheck" in new hundred {
+      (1 to 100).map(value).map(BloomFilterCheck(_, filter.config)).map { v =>
+        filter.maybeContains(v) must beTrue
+      }
+    }
+    "have not have more than 120 false positive in 101 to 10000 using BloomFilterCheck" in new hundred {
+      val count = (101 to 100000).map(value).map(BloomFilterCheck(_, filter.config)).filter(filter.maybeContains).size
+      count must beLessThanOrEqualTo(120)
+    }
   }
 
   "BloomFilter that contains [1..10] unioned with [8..15]" should {

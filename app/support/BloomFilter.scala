@@ -39,9 +39,9 @@ case class BloomFilter private(bits: BitSet, config: BloomFilterConfig) {
       bits.contains(hash)
     }
   }
-
-  /** True if the filter does not contain the element (for sure). */
-  def notContains(data: Array[Byte]): Boolean = !maybeContains(data)
+  def maybeContains(candidate: BloomFilterCheck): Boolean = {
+    (candidate.filter.config == config) && candidate.filter.bits.subsetOf(bits)
+  }
 
   def approxNumberOfItems = {
     -(config.capacity.toDouble * Math.log(1d - (bits.size.toDouble / config.capacity))) / config.hashCount
@@ -54,6 +54,16 @@ object BloomFilter {
   def apply(expectedItemCount: Int, falsePositiveProbability: Double): BloomFilter = {
     val config = BloomFilterConfig.forFalsePositives(expectedItemCount, falsePositiveProbability)
     BloomFilter(config)
+  }
+}
+
+/** Allows for faster checking against multiple bloom filters. */
+case class BloomFilterCheck private(private[support] val filter: BloomFilter) {
+  override def toString = s"BloomFilterCandidate(${filter.config})"
+}
+object BloomFilterCheck {
+  def apply(data: Array[Byte], config: BloomFilterConfig): BloomFilterCheck = {
+    BloomFilterCheck(BloomFilter(config) + data)
   }
 }
 

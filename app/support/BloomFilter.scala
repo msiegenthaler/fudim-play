@@ -15,7 +15,19 @@ case class BloomFilter private(bits: BitSet, config: BloomFilterConfig) {
     new BloomFilter(newBits, config)
   }
 
-  def ++(data: TraversableOnce[Array[Byte]]) = data.foldLeft(this)(_ + _)
+  def ++(data: Iterable[Array[Byte]]) = {
+    val newBits = scala.collection.mutable.BitSet.fromBitMask(bits.toBitMask)
+    data.foreach { d =>
+      val hash1 = MurmurHash3.bytesHash(d, 0)
+      val hash2 = MurmurHash3.bytesHash(d, hash1)
+      val capacity = config.capacity
+      (0 until config.hashCount).foreach { i =>
+        newBits += Math.abs((hash1 + i * hash2) % capacity)
+      }
+    }
+    BloomFilter(newBits.toImmutable, config)
+  }
+
   def ++(other: BloomFilter) = union(other)
 
   def union(other: BloomFilter) = {

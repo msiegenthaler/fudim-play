@@ -76,6 +76,12 @@ class BloomFilterSpec extends Specification {
       val count = (101 to 100000).map(value).map(BloomFilterCheck(_, filter.config)).filter(filter.maybeContains).size
       count must beLessThanOrEqualTo(120)
     }
+
+    "is the same as one filled with individual items" in new hundred {
+      val data = (1 to 100).map(value)
+      val f2 = data.foldLeft(BloomFilter(filter.config))(_ + _)
+      f2 must_== filter
+    }
   }
 
   "BloomFilter that contains [1..10] unioned with [8..15]" should {

@@ -8,6 +8,8 @@ trait FudimFact[T] extends RenderFact[T] {
 
   override lazy val rendered = data.map(dataType.render)
 
+  def editor: Option[CubeEditor[T]]
+
   protected def updateCube(aggregation: Aggregation[T]): Unit
 
   def aggregation: Aggregation[T] = data match { case Aggregation(aggr) ⇒ aggr }

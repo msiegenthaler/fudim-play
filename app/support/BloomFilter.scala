@@ -6,25 +6,11 @@ import scala.util.hashing.MurmurHash3
 // Based on the implementation by Ilya Sterin
 
 case class BloomFilter private(bits: BitSet, config: BloomFilterConfig) {
-  def +(data: Array[Byte]): BloomFilter = {
-    // see "Less Hashing, Same Performance" by Adam Kirsch and Michael Mitzenmacher
-    val hash1 = MurmurHash3.bytesHash(data, 0)
-    val hash2 = MurmurHash3.bytesHash(data, hash1)
-    val capacity = config.capacity
-    val newBits = bits ++ (0 until config.hashCount).map(i => Math.abs((hash1 + i * hash2) % capacity))
-    new BloomFilter(newBits, config)
-  }
+  def +(data: Array[Byte]): BloomFilter = this ++ List(data)
 
   def ++(data: Iterable[Array[Byte]]) = {
     val newBits = scala.collection.mutable.BitSet.fromBitMask(bits.toBitMask)
-    data.foreach { d =>
-      val hash1 = MurmurHash3.bytesHash(d, 0)
-      val hash2 = MurmurHash3.bytesHash(d, hash1)
-      val capacity = config.capacity
-      (0 until config.hashCount).foreach { i =>
-        newBits += Math.abs((hash1 + i * hash2) % capacity)
-      }
-    }
+    data.foreach(d => config.foreachHashValue(d, newBits += _))
     BloomFilter(newBits.toImmutable, config)
   }
 
@@ -43,13 +29,7 @@ case class BloomFilter private(bits: BitSet, config: BloomFilterConfig) {
 
   /** True if this filter might contain the element. False if the element is not contained for sure. */
   def maybeContains(data: Array[Byte]): Boolean = {
-    val hash1 = MurmurHash3.bytesHash(data, 0)
-    val hash2 = MurmurHash3.bytesHash(data, hash1)
-    val capacity = config.capacity
-    (0 until config.hashCount).forall { i =>
-      val hash = Math.abs((hash1 + i * hash2) % capacity)
-      bits.contains(hash)
-    }
+    config.forallHashValue(data, bits.contains)
   }
   def maybeContains(other: BloomFilter): Boolean = {
     require(other.config == config, "Non-matching configs")
@@ -105,6 +85,26 @@ case class BloomFilterConfig(/** Number of bits in the filter. */
   /** Probability of false positives [0,1]. */
   def falsePositives(numberOfItemsInFilter: Int) = {
     Math.pow(1 - Math.exp(-hashCount.toDouble * (numberOfItemsInFilter + 0.5) / (capacity - 1)), hashCount)
+  }
+
+  private[support] def foreachHashValue(data: Array[Byte], f: Int => Unit): Unit = {
+    // see "Less Hashing, Same Performance" by Adam Kirsch and Michael Mitzenmacher
+    val hash1 = MurmurHash3.bytesHash(data, 0)
+    val hash2 = MurmurHash3.bytesHash(data, hash1)
+    (0 until hashCount).foreach { i =>
+      val hash = Math.abs((hash1 + i * hash2) % capacity)
+      f(hash)
+    }
+  }
+
+  private[support] def forallHashValue(data: Array[Byte], f: Int => Boolean): Boolean = {
+    // see "Less Hashing, Same Performance" by Adam Kirsch and Michael Mitzenmacher
+    val hash1 = MurmurHash3.bytesHash(data, 0)
+    val hash2 = MurmurHash3.bytesHash(data, hash1)
+    (0 until hashCount).forall { i =>
+      val hash = Math.abs((hash1 + i * hash2) % capacity)
+      f(hash)
+    }
   }
 }
 object BloomFilterConfig {

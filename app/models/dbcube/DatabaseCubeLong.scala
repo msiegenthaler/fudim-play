@@ -1,26 +1,23 @@
 package models.dbcube
 
 import java.sql.Connection
-import anorm._
-import anorm.SqlParser._
-import play.api.db._
-import play.api.Play.current
-import models._
-import cube._
+import anorm.SqlParser.long
+import cube.Dimension
+import support.DatabaseRepo
 
 /** Cube of value type int (64-bit signed). */
-private case class DatabaseCubeLong(repo: DatabaseCubeRepo, id: Long, table: String, dims: Map[Dimension, String], slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends DatabaseCubeBase[Long] {
-  protected override type Self = DatabaseCubeLong
-  override def cubeType = DatabaseCubeLong
-  override def sqlType = "bigint"
-  override def fromDb(name: String) = long(name)
-  override def derive(slice: Point = slice, filters: DimensionFilter = filters) = copy(slice = slice, filters = filters)
-  override def withConnection[A](f: Connection ⇒ A) = DB.withConnection(f)
-}
-
 private object DatabaseCubeLong extends CubeType {
   override val tpeName = "long"
   override val tpeClass = classOf[Long]
-  override def apply(repo: DatabaseCubeRepo)(id: Long, table: String, dims: Map[Dimension, String]) =
-    new DatabaseCubeLong(repo, id, table, dims)
+  override def apply(cubeRepo: DatabaseCubeRepo)(identifier: Long, dbTable: String, dimensionMap: Map[Dimension, String]): DatabaseCube[Long] =
+    new DatabaseCubeBase[Long] {
+      override val id = identifier
+      override val dims = dimensionMap
+      override val table = dbTable
+      override val repo = cubeRepo
+      override def withConnection[A](f: Connection => A): A = cubeRepo.withConnection(f)
+      override def cubeType = DatabaseCubeLong
+      override def sqlType = "bigint"
+      override def fromDb(name: String) = long(name)
+    }
 }

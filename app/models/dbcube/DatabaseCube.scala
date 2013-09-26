@@ -4,31 +4,35 @@ import anorm._
 import anorm.SqlParser._
 import play.api.libs.json._
 import cube._
-import models._
-import support.JsonMapper
+import support.DatabaseRepo
 import java.sql.Connection
 
-trait DatabaseCube[T] extends EditableCube[T] {
-  protected override type Self <: DatabaseCube[T]
+trait DatabaseCube[T] {
   def id: Long
 
-  private[dbcube] def create: Unit
-  private[dbcube] def drop: Unit
+  def cube: Cube[T]
+  def editor: CubeEditor[T]
+
+  protected[dbcube] def cubeType: CubeType
+  protected[dbcube] def table: String
+  protected[dbcube] def dims: Map[Dimension, String]
+  protected[dbcube] def create: Unit
+  protected[dbcube] def drop: Unit
+
 
   /**
    * Creates a copy of this cube with identical data but an additional dimension.
    * Existing data will be assigned the specified coordinate in the new dimension.
    */
-  def copyAndAddDimension(moveTo: Coordinate): Self
+  def copyAndAddDimension(moveTo: Coordinate): DatabaseCube[T]
   /**
    * Creates a copy of this cube with identical data but a removed dimension.
-   *  Only the data at specified coordinate will be kept.
+   * Only the data at specified coordinate will be kept.
    */
-  def copyAndRemoveDimension(keepAt: Coordinate): Self
+  def copyAndRemoveDimension(keepAt: Coordinate): DatabaseCube[T]
 }
 
-trait DatabaseCubeRepo {
-  protected def withConnection[A](f: Connection ⇒ A): A
+trait DatabaseCubeRepo extends DatabaseRepo {
   protected def dimension(name: String): Option[Dimension]
 
   private case class CubeDefinition(id: Long, tpe: String) {
@@ -83,14 +87,15 @@ trait DatabaseCubeRepo {
   private def loadFromDefinition(definition: CubeDefinition)(implicit c: Connection) = {
     val dims = SQL("select id, dimension from databaseCube_dimension where cube={id}").on("id" -> definition.id).
       as(get[Long]("id") ~ get[String]("dimension") *).map {
-        case id ~ name ⇒
-          val d: Dimension = dimension(name).getOrElse(throw new IllegalStateException(s"Could not find dimension $name"))
-          (d, s"dim_$id")
-      }.toMap
+      case id ~ name ⇒
+        val d: Dimension = dimension(name).getOrElse(throw new IllegalStateException(s"Could not find dimension $name"))
+        (d, s"dim_$id")
+    }.toMap
     val cubeType = typeMapping.values.find(_.tpeName == definition.tpe).getOrElse(throw new IllegalArgumentException(s"unsupported cube db-type: ${definition.tpe}"))
     val cube = cubeType(this)(definition.id, definition.tableName, dims)
     (cube, cubeType)
   }
+  override protected[dbcube] def withConnection[A](f: (Connection) => A): A
 
   private val typeMapping: Map[Class[_], CubeType] = {
     val list = DatabaseCubeString :: DatabaseCubeInt :: DatabaseCubeLong :: Nil
@@ -101,10 +106,11 @@ trait DatabaseCubeRepo {
     import scalaz._
     import Scalaz._
     override val id = "databaseCube"
-    override def parser = json ⇒ for {
-      id ← (json \ "id").asOpt[Long].toSuccess("Missing value 'id'")
-      cube ← load(id).toSuccess(s"Could not find cube with id $id in database")
-    } yield cube
+    override def parser = json ⇒
+      for {
+        id ← (json \ "id").asOpt[Long].toSuccess("Missing value 'id'")
+        cube ← load(id).toSuccess(s"Could not find cube with id $id in database")
+      } yield cube.cube
     override def serializer = {
       case cube: DatabaseCube[_] ⇒ Json.obj("id" -> cube.id).success
     }

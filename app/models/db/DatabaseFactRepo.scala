@@ -9,6 +9,7 @@ import cube._
 import domain._
 import models._
 import models.dbcube._
+import support.DatabaseRepo
 
 trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
   protected def jsonCubeMapperRepo: JsonCubeMapperRepository

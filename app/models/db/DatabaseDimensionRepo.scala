@@ -5,6 +5,7 @@ import anorm.SqlParser._
 import util.control.Exception._
 import cube._
 import models.{ DomainId, FudimDimension, FudimDimensionRepo }
+import support.DatabaseRepo
 
 trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory with DatabaseRepo {
   def domain: DomainId

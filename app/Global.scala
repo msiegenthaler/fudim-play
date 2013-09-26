@@ -2,7 +2,6 @@ import scala.util.Random
 import play.api._
 import models._
 import cube._
-import support.JsonMapper
 import models.playbinding.DomainRepo
 
 object Global extends GlobalSettings {
@@ -37,8 +36,10 @@ object InitialData {
     val ka_mat = kostenart.add("Material")
     val ka_gk = kostenart.add("Gemeinkosten")
 
-    val umsatz = example.factRepo.createDatabaseBacked("Umsatz", FudimDataTypes.integer, Set(monat, project), Aggregation.sum.aggregator)
-    val kosten = example.factRepo.createDatabaseBacked("Kosten", FudimDataTypes.integer, Set(monat, project, kostenart), Aggregation.sum.aggregator)
+    val umsatz = example.factRepo.createDatabaseBacked("Umsatz", FudimDataTypes.integer, Set(monat, project), Aggregation.sum.aggregator).
+      editor.getOrElse(throw new IllegalStateException("Umsatz not editable"))
+    val kosten = example.factRepo.createDatabaseBacked("Kosten", FudimDataTypes.integer, Set(monat, project, kostenart), Aggregation.sum.aggregator).
+      editor.getOrElse(throw new IllegalStateException("Kosten not editable"))
 
     val gewinnFormula = FudimFormulas.subtract("Umsatz" :: "Kosten" :: Nil, monat :: project :: Nil)
     val gewinn = example.factRepo.createFormulaBased("Gewinn", FudimDataTypes.integer, gewinnFormula, Aggregation.sum.aggregator)
@@ -47,16 +48,14 @@ object InitialData {
     for (m ← monat.all) {
       for (p ← project.all) {
         val at = m + p
-        umsatz.data.set(at, rnd.nextInt(1000) + 9500)
+        umsatz.set(at, rnd.nextInt(1000) + 9500)
 
         val k = rnd.nextInt(1000) + 8500
-        kosten.data.set(at + ka_ma, (k * 0.7).round)
-        kosten.data.set(at + ka_ext, (k * 0.05).round)
-        kosten.data.set(at + ka_mat, 0)
-        kosten.data.set(at + ka_gk, (k * 0.25).round)
+        kosten.set(at + ka_ma, (k * 0.7).round)
+        kosten.set(at + ka_ext, (k * 0.05).round)
+        kosten.set(at + ka_mat, 0)
+        kosten.set(at + ka_gk, (k * 0.25).round)
       }
     }
   }
-
-  private implicit def c2ec[T](cube: Cube[T]): EditableCube[T] = EditableCube.from(cube)
 }

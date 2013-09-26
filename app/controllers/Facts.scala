@@ -79,21 +79,19 @@ object Facts extends Controller {
     fact.rendered.get(at(fact)).map(v ⇒ Ok(v)).getOrElse(NotFound)
   }
   def save(domainName: String, factName: String, at: PointDefinition) = FactAction(domainName, factName).on(fact ⇒ { request ⇒
-    def setValue[T](fact: FudimFact[T], value: String) = fact.data match {
-      case cube: EditableCube[T] ⇒
-        val tpe = fact.dataType
-        tpe.parse(value).map { v ⇒
-          try {
-            cube.set(at(fact), v)
-            Ok(tpe.render(v))
-          } catch {
-            case ValueCannotBeSetException(_) ⇒ cannotSet
-          }
-        }.getOrElse(NotAcceptable("Value is not parsable"))
-      case _ ⇒ cannotSet
+    def setValue[T](fact: FudimFact[T], value: String) = fact.editor.map { editor =>
+      val tpe = fact.dataType
+      tpe.parse(value).map { v ⇒
+        try {
+          editor.set(at(fact), v)
+          Ok(tpe.render(v))
+        } catch {
+          case ValueCannotBeSetException(_) ⇒ cannotSet
+        }
+      }.getOrElse(NotAcceptable("Value is not parsable"))
     }
     request.body.asText.filterNot(_.isEmpty).
-      map(setValue(fact, _)).
+      map(setValue(fact, _).getOrElse(cannotSet)).
       getOrElse(NotAcceptable)
   })
   private def cannotSet = MethodNotAllowed.withHeaders("Allow" -> "GET")

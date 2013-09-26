@@ -125,7 +125,7 @@ class BloomFilterSpec extends Specification {
   }
 
   "BloomFilter" should {
-    "be fast to calculate batch adds (>1Mio adds / s)" in new xvalues {
+    "be fast to calculate batch adds (>3Mio adds / s)" in new xvalues {
       val config = BloomFilterConfig.forFalsePositives(1000, 0.001d)
       val datas = (1 to 1000).map(value)
       def testPerf(count: Int) = {
@@ -142,9 +142,9 @@ class BloomFilterSpec extends Specification {
       val runs = 4
       val persecond = (1 to runs).map(_ => testPerf(1000)).sum / runs
       println(s"BloomFilter additions per second: $persecond (batches of ${datas.size})")
-      persecond must beGreaterThan(1000000d)
+      persecond must beGreaterThan(3000000d)
     }
-    "be fast to calculate single adds (>100k adds / s)" in new xvalues {
+    "be fast to calculate single adds (>600k adds / s)" in new xvalues {
       val config = BloomFilterConfig.forFalsePositives(1000, 0.001d)
       val datas = (1 to 1000).map(value)
       def testPerf(count: Int) = {
@@ -161,9 +161,9 @@ class BloomFilterSpec extends Specification {
       val runs = 4
       val persecond = (1 to runs).map(_ => testPerf(100)).sum / runs
       println(s"BloomFilter additions per second $persecond (single adds)")
-      persecond must beGreaterThan(100000d)
+      persecond must beGreaterThan(600000d)
     }
-    "be fast to compare (>3Mio compares / s)" in new xvalues {
+    "be fast to compare (>4Mio compares / s)" in new xvalues {
       val config = BloomFilterConfig.forFalsePositives(1000, 0.001d)
       val filter = BloomFilter(config) ++ (1 to 1000).map(value)
       val inputsTrue = (1 to 1000).map(value).toVector
@@ -181,7 +181,7 @@ class BloomFilterSpec extends Specification {
       val runs = 4
       val persecond = (1 to runs).map(_ => testPerf(1000)).sum / runs
       println(s"BloomFilter compares per second $persecond")
-      persecond must beGreaterThan(3000000d)
+      persecond must beGreaterThan(4000000d)
     }
     "be very fast to compare with precalculated checks (>6Mio compares / s)" in new xvalues {
       val config = BloomFilterConfig.forFalsePositives(1000, 0.001d)

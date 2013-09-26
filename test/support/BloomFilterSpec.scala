@@ -123,4 +123,105 @@ class BloomFilterSpec extends Specification {
       count must beLessThanOrEqualTo(5)
     }
   }
+
+  "BloomFilter" should {
+    "be fast to calculate batch adds (>1Mio adds / s)" in new xvalues {
+      val config = BloomFilterConfig.forFalsePositives(1000, 0.001d)
+      val datas = (1 to 1000).map(value)
+      def testPerf(count: Int) = {
+        val t0 = System.nanoTime
+        (1 to count).foreach { i =>
+          val filter = BloomFilter(config) ++ datas
+          //use filter so JIT does not trick us
+          filter.config must_== config
+        }
+        val d = System.nanoTime - t0
+        count.toDouble * datas.size * 1E9 / d
+      }
+      testPerf(1000)
+      val runs = 4
+      val persecond = (1 to runs).map(_ => testPerf(1000)).sum / runs
+      println(s"BloomFilter additions per second: $persecond (batches of ${datas.size})")
+      persecond must beGreaterThan(1000000d)
+    }
+    "be fast to calculate single adds (>100k adds / s)" in new xvalues {
+      val config = BloomFilterConfig.forFalsePositives(1000, 0.001d)
+      val datas = (1 to 1000).map(value)
+      def testPerf(count: Int) = {
+        val t0 = System.nanoTime
+        (1 to count).foreach { i =>
+          val filter = datas.foldLeft(BloomFilter(config))(_ + _)
+          //use filter so JIT does not trick us
+          filter.config must_== config
+        }
+        val d = System.nanoTime - t0
+        count.toDouble * datas.size * 1E9 / d
+      }
+      testPerf(100)
+      val runs = 4
+      val persecond = (1 to runs).map(_ => testPerf(100)).sum / runs
+      println(s"BloomFilter additions per second $persecond (single adds)")
+      persecond must beGreaterThan(100000d)
+    }
+    "be fast to compare (>3Mio compares / s)" in new xvalues {
+      val config = BloomFilterConfig.forFalsePositives(1000, 0.001d)
+      val filter = BloomFilter(config) ++ (1 to 1000).map(value)
+      val inputsTrue = (1 to 1000).map(value).toVector
+      val inputsFalse = (1001 to 2000).map(value).toVector
+      def testPerf(count: Int) = {
+        val t0 = System.nanoTime
+        (1 to count).foreach { i =>
+          inputsTrue.foreach(v => require(filter.maybeContains(v), "Failed assertion"))
+          require(inputsFalse.view.filter(filter.maybeContains).size < 10, "Too many false positives")
+        }
+        val d = System.nanoTime - t0
+        (inputsTrue.size + inputsFalse.size).toDouble * count * 1E9 / d
+      }
+      testPerf(1000)
+      val runs = 4
+      val persecond = (1 to runs).map(_ => testPerf(1000)).sum / runs
+      println(s"BloomFilter compares per second $persecond")
+      persecond must beGreaterThan(3000000d)
+    }
+    "be very fast to compare with precalculated checks (>6Mio compares / s)" in new xvalues {
+      val config = BloomFilterConfig.forFalsePositives(1000, 0.001d)
+      val filter = BloomFilter(config) ++ (1 to 1000).map(value)
+      val inputsTrue = (1 to 1000).map(value).map(BloomFilterCheck(_, config)).toVector
+      val inputsFalse = (1001 to 2000).map(value).map(BloomFilterCheck(_, config)).toVector
+      def testPerf(count: Int) = {
+        val t0 = System.nanoTime
+        (1 to count).foreach { i =>
+          inputsTrue.foreach(v => require(filter.maybeContains(v), "Failed assertion"))
+          require(inputsFalse.view.filter(filter.maybeContains).size < 10, "Too many false positives")
+        }
+        val d = System.nanoTime - t0
+        (inputsTrue.size + inputsFalse.size).toDouble * count * 1E9 / d
+      }
+      testPerf(1000)
+      val runs = 3
+      val persecond = (1 to runs).map(_ => testPerf(1000)).sum / runs
+      println(s"BloomFilterCheck compares per second $persecond")
+      persecond must beGreaterThan(6000000d)
+    }
+    "be ok fast to checks contains to other bloom filter (>300k compares / s)" in new xvalues {
+      val config = BloomFilterConfig.forFalsePositives(1000, 0.001d)
+      val filter = BloomFilter(config) ++ (1 to 1000).map(value)
+      val inputsTrue = (1 to 1000).map(value).map(BloomFilter(config) + _).toVector
+      val inputsFalse = (1001 to 2000).map(value).map(BloomFilter(config) + _).toVector
+      def testPerf(count: Int) = {
+        val t0 = System.nanoTime
+        (1 to count).foreach { i =>
+          inputsTrue.foreach(v => require(filter.maybeContains(v), "Failed assertion"))
+          require(inputsFalse.view.filter(filter.maybeContains).size < 10, "Too many false positives")
+        }
+        val d = System.nanoTime - t0
+        (inputsTrue.size + inputsFalse.size).toDouble * count * 1E9 / d
+      }
+      testPerf(100)
+      val runs = 3
+      val persecond = (1 to runs).map(_ => testPerf(100)).sum / runs
+      println(s"BloomFilter contains with other BloomFilter per second $persecond")
+      persecond must beGreaterThan(300000d)
+    }
+  }
 }

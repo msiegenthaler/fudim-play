@@ -4,7 +4,7 @@ import models._
 import scala.Option.option2Iterable
 
 /** Data in a multi-dimensional space. */
-trait Cube[T] extends PartialFunction[Point, T] {
+trait Cube[+T] extends PartialFunction[Point, T] {
   protected type Self <: Cube[T]
 
   /** Value at the point. The point does not have to be fully defined, the cube might support aggregation of values (else None is returned). */
@@ -36,7 +36,7 @@ trait Cube[T] extends PartialFunction[Point, T] {
 }
 
 /** Cube that decorates another cube. I.e. to add aggragation of values. */
-trait DecoratedCube[T] extends Cube[T] {
+trait DecoratedCube[+T] extends Cube[T] {
   protected override type Self <: DecoratedCube[T]
   type Underlying <: Cube[T]
   val underlying: Underlying
@@ -103,7 +103,7 @@ object EditableCube {
 case class ValueCannotBeSetException(at: Point) extends RuntimeException(s"Cannot set value at $at")
 
 /** Implements the slicing/dicing. */
-trait AbstractCube[T] extends Cube[T] {
+trait AbstractCube[+T] extends Cube[T] {
   override protected type Self <: AbstractCube[T]
 
   override val slice: Point

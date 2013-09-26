@@ -51,8 +51,13 @@ case class BloomFilter private(bits: BitSet, config: BloomFilterConfig) {
       bits.contains(hash)
     }
   }
+  def maybeContains(other: BloomFilter): Boolean = {
+    require(other.config == config, "Non-matching configs")
+    other.bits.subsetOf(bits)
+  }
   def maybeContains(candidate: BloomFilterCheck): Boolean = {
-    (candidate.filter.config == config) && candidate.filter.bits.subsetOf(bits)
+    require(candidate.config == config, "Non-matching configs")
+    candidate.checkBitSet(bits)
   }
 
   def approxNumberOfItems = {
@@ -70,12 +75,25 @@ object BloomFilter {
 }
 
 /** Allows for faster checking against multiple bloom filters. */
-case class BloomFilterCheck private(private[support] val filter: BloomFilter) {
-  override def toString = s"BloomFilterCandidate(${filter.config})"
+case class BloomFilterCheck private(config: BloomFilterConfig, private val values: Traversable[Int]) {
+  private[support] def checkBitSet(bits: BitSet) = values.forall(bits.contains)
+  override def toString = s"BloomFilterCheck(${config})"
 }
 object BloomFilterCheck {
   def apply(data: Array[Byte], config: BloomFilterConfig): BloomFilterCheck = {
-    BloomFilterCheck(BloomFilter(config) + data)
+    BloomFilterCheck(data :: Nil, config)
+  }
+  def apply(datas: TraversableOnce[Array[Byte]], config: BloomFilterConfig): BloomFilterCheck = {
+    val values = scala.collection.mutable.Set.empty[Int]
+    datas.foreach { d =>
+      val hash1 = MurmurHash3.bytesHash(d, 0)
+      val hash2 = MurmurHash3.bytesHash(d, hash1)
+      val capacity = config.capacity
+      (0 until config.hashCount).foreach { i =>
+        values += Math.abs((hash1 + i * hash2) % capacity)
+      }
+    }
+    BloomFilterCheck(config, values.toVector)
   }
 }
 

@@ -48,59 +48,8 @@ object Cube {
     case c: DecoratedCube[T] ⇒ undecorate(c.underlying)
     case c ⇒ c
   }
-
-  /** see EditableCube.from */
-  def editable[T](cube: Cube[T]) = EditableCube.from(cube)
 }
 
-/** Editable date in a multi-dimensional space. */
-trait EditableCube[T] extends Cube[T] {
-  protected type Self <: EditableCube[T]
-
-  /** Whether the value at this point can be set. */
-  def isSettable(at: Point): Boolean
-  /** Set the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
-  def set(at: Point, value: Option[T]): Unit
-  /** Set the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
-  def set(at: Point, value: T): Unit = set(at, Some(value))
-  /** Remove the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
-  def remove(at: Point) = set(at, None)
-
-  /** Set data in this cube. Slice/dice does apply (non-matching are not changed). */
-  def setAll(value: Option[T]): Unit
-  /** Remove all data in this cube. Slice/dice does apply (non-matching are not deleted). */
-  def clear = setAll(None)
-}
-object EditableCube {
-  /**
-   * If the cube is editable it is returned casted.
-   * If it is not editable it is wrapped with a cube that has isSettable=false for all cells. The wrapped thing is a DecoratedCube.
-   */
-  def from[T](cube: Cube[T]): EditableCube[T] = cube match {
-    case cube: EditableCube[T] ⇒ cube
-    case cube ⇒ new PseudoEditableCube(cube)
-  }
-
-  private class PseudoEditableCube[T](val underlying: Cube[T]) extends EditableCube[T] with DecoratedCube[T] {
-    override protected type Self = PseudoEditableCube[T]
-    override type Underlying = Cube[T]
-    private def wrap(c: Cube[T]) = new PseudoEditableCube(c)
-
-    override def get(at: Point) = underlying.get(at)
-    override def dense = underlying.dense
-    override def sparse = underlying.sparse
-    override def slice = underlying.slice
-    override def dimensions = underlying.dimensions
-    override def raw = wrap(underlying.raw)
-    override def slice(to: Point) = wrap(underlying.slice(to))
-    override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = wrap(underlying.dice(dimension, filter))
-    override def isSettable(at: Point) = false
-    override def set(at: Point, value: Option[T]) = throw ValueCannotBeSetException(at)
-    override def setAll(value: Option[T]) = ()
-    override def toString = underlying.toString
-  }
-}
-case class ValueCannotBeSetException(at: Point) extends RuntimeException(s"Cannot set value at $at")
 
 /** Implements the slicing/dicing. */
 trait AbstractCube[T] extends Cube[T] {

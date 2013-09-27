@@ -22,7 +22,7 @@ trait FudimFact[T] extends RenderFact[T] {
 }
 
 trait FudimFactRepo {
-  def get[T](name: String): Option[FudimFact[_]]
+  def get(name: String): Option[FudimFact[_]]
   def all: Iterable[FudimFact[_]]
 
   def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dimensions: Set[Dimension], aggregator: Option[Aggregator[T]]): FudimFact[T]

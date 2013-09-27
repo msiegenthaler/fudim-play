@@ -1,8 +1,8 @@
-package models.dbcube
+package domain.db
 
 import java.sql.Connection
 import org.specs2.mutable._
-import org.specs2.specification.{ Scope, BeforeAfterExample }
+import org.specs2.specification.{Scope, BeforeAfterExample}
 import play.api.Play
 import play.api.Play.current
 import play.api.db.DB
@@ -11,7 +11,6 @@ import domain._
 import anorm.SqlParser._
 import scala.Some
 import play.api.test.FakeApplication
-import domain.db.{DatabaseCubeDataStoreRepo, StoreDataType}
 
 class DatabaseCubeDataStoreSpec extends Specification {
   trait storeDataTypes extends domain.TestFixtures.dataTypes {
@@ -81,7 +80,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
       override def dataTypeRepo = dtr
     }
   }
-  trait oneDimensionalCube extends withplay  {
+  trait oneDimensionalCube extends withplay {
     lazy val monat = ListDimension("Monat", "Jan", "Feb", "Mar")
     def jan = monat.all(0)
     def feb = monat.all(1)

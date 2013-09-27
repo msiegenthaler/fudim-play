@@ -4,8 +4,7 @@ package playbinding
 import cube._
 import domain._
 import db._
-import dbcube.DatabaseCubeRepo
-import models.DomainId
+import dbcube._
 
 object DomainRepo extends DatabaseDomainRepo with PlayDatabaseRepo {
   protected val dataTypes = FudimDataTypes
@@ -23,8 +22,10 @@ object DomainRepo extends DatabaseDomainRepo with PlayDatabaseRepo {
     new DatabaseFactRepo with PlayDatabaseRepo {
       override def domain = DomainRepo.this.get(d).getOrElse(throw new IllegalStateException(s"Domain $d not found"))
       override val databaseCubeRepo = {
-        new DatabaseCubeRepo with PlayDatabaseRepo {
-          override def dimension(name: String) = dimRepo.get(name)
+        new DatabaseCubeDataStoreRepo with PlayDatabaseRepo {
+          override def dimensionRepo = dimRepo
+          override def dataTypeRepo = dataTypes
+          protected def storeTypes = StoreDataTypes.all
         }
       }
       override lazy val jsonCubeMapperRepo = new JsonCubeMapperRepository {

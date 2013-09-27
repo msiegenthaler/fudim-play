@@ -36,13 +36,13 @@ object InitialData {
     val ka_mat = kostenart.add("Material")
     val ka_gk = kostenart.add("Gemeinkosten")
 
-    val umsatz = example.factRepo.createDatabaseBacked("Umsatz", FudimDataTypes.integer, Set(monat, project), Aggregation.sum.aggregator).
+    val umsatz = example.factRepo.createDatabaseBacked("Umsatz", FudimDataTypes.integer, Set(monat, project), Aggregation.sum).
       editor.getOrElse(throw new IllegalStateException("Umsatz not editable"))
-    val kosten = example.factRepo.createDatabaseBacked("Kosten", FudimDataTypes.integer, Set(monat, project, kostenart), Aggregation.sum.aggregator).
+    val kosten = example.factRepo.createDatabaseBacked("Kosten", FudimDataTypes.integer, Set(monat, project, kostenart), Aggregation.sum).
       editor.getOrElse(throw new IllegalStateException("Kosten not editable"))
 
     val gewinnFormula = FudimFormulas.subtract("Umsatz" :: "Kosten" :: Nil, monat :: project :: Nil)
-    val gewinn = example.factRepo.createFormulaBased("Gewinn", FudimDataTypes.integer, gewinnFormula, Aggregation.sum.aggregator)
+    val gewinn = example.factRepo.createFormulaBased("Gewinn", FudimDataTypes.integer, gewinnFormula, Aggregation.sum)
 
     val rnd = new Random(1)
     for (m ← monat.all) {

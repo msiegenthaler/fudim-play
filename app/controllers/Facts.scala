@@ -6,7 +6,7 @@ import play.api.data._
 import play.api.data.Forms._
 import cube._
 import models._
-import models.dbcube.DatabaseCube
+import models.dbcube.DatabaseCubeDataStore
 import support.DomainAction
 import support.FactAction
 import support.PointDefinition
@@ -23,7 +23,7 @@ object Facts extends Controller {
       data ⇒ {
         val (name, dataTypeName) = data
         FudimDataTypes.get(dataTypeName).map { dataType =>
-          val fact = domain.factRepo.createDatabaseBacked(name, dataType, Set.empty, None)
+          val fact = domain.factRepo.createDatabaseBacked(name, dataType, Set.empty, Aggregation.none)
           Redirect(routes.Facts.view(domain.name, name))
         }.getOrElse(BadRequest(s"Invalid data type $dataTypeName"))
       })

@@ -85,17 +85,17 @@ trait DatabaseCubeDataStoreRepo extends DatabaseRepo {
 
   override protected[dbcube] def withConnection[A](f: (Connection) => A): A
 
-  def json = new JsonCubeMapper {
+  def json = new JsonCubeDSMapper {
     import scalaz._
     import Scalaz._
-    override val id = "databaseCube"
+    override val id = "databaseCubeDataStore"
     override def parser = json ⇒
       for {
         id ← (json \ "id").asOpt[Long].toSuccess("Missing value 'id'")
-        cube ← load(id).toSuccess(s"Could not find cube with id $id in database")
-      } yield cube.cube
+        cds ← load(id).toSuccess(s"Could not find CubeDataStore with id $id in database")
+      } yield cds
     override def serializer = {
-      case cube: DatabaseCubeDataStore[_] ⇒ Json.obj("id" -> cube.id).success
+      case cds: DatabaseCubeDataStore[_] ⇒ Json.obj("id" -> cds.id).success
     }
   }
 

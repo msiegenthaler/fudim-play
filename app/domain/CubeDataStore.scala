@@ -12,6 +12,23 @@ trait CubeDataStore[T] {
   def editor: CubeEditor[T]
 }
 
+trait CubeDataStoreRepo {
+  type CDS[T] <: CubeDataStore[T]
+
+  def get(id: Long): Option[CDS[_]]
+
+  def get[T](id: Long, dataType: DataType[T]): Option[CDS[T]] = get(id).map { cds =>
+    if (cds.dataType != dataType)
+      throw new IllegalArgumentException(s"type of cube $id (type ${cds.dataType} does not match expected type $dataType")
+    cds.asInstanceOf[CDS[T]]
+  }
+
+  def create[T](dimensions: Set[Dimension], dataType: DataType[T]): CDS[T]
+
+  def remove(id: Long): Unit
+}
+
+
 trait CopyableCubeDataStore[T] extends CubeDataStore[T] {
   type Self <: CopyableCubeDataStore[T]
 
@@ -23,16 +40,6 @@ trait CopyableCubeDataStore[T] extends CubeDataStore[T] {
   def copy(add: Point = Point.empty, remove: Point = Point.empty): Self
 }
 
-trait CubeDataStoreRepo {
-  def get(id: Long): Option[CubeDataStore[_]]
-
-  def get[T](id: Long, dataType: DataType[T]): Option[CubeDataStore[T]] = get(id).map { cds =>
-    if (cds.dataType != dataType)
-      throw new IllegalArgumentException(s"type of cube $id (type ${cds.dataType} does not match expected type $dataType")
-    cds.asInstanceOf[CubeDataStore[T]]
-  }
-
-  def create[T](dimensions: Set[Dimension], dataType: DataType[T]): CubeDataStore[T]
-
-  def remove(id: Long): Unit
+trait CopyableCubeDataStoreRepo {
+  type CDS[T] <: CopyableCubeDataStore[T]
 }

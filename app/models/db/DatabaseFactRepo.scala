@@ -1,23 +1,23 @@
-package models.db
+package models
+package db
 
-import util.control.Exception._
+import scalaz._
+import Scalaz._
 import anorm._
 import anorm.SqlParser._
-import play.api.Logger
-import play.api.libs.json._
 import cube._
 import domain._
-import models._
-import models.dbcube._
 import support.DatabaseRepo
+import play.api.Logger
+import play.api.libs.json._
 
 trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
-  protected def jsonCubeMapperRepo: JsonCubeMapperRepository
-  protected def databaseCubeRepo: DatabaseCubeRepo
+  protected def domain: FudimDomain
   protected def dataTypeRepo = FudimDataTypes
-  def domain: FudimDomain
+  protected def jsonFormulaRepo: JsonFormulaMapperRepository
+  protected def cubeDataStoreRepo: CopyableCubeDataStoreRepo
 
-  override def get[T](name: String) = withConnection { implicit c ⇒
+  override def get(name: String) = withConnection { implicit c ⇒
     SQL("select * from fact where domain={domain} and name={name}").on("domain" -> domain.id.id, "name" -> name).as(fact singleOpt).flatten
   }
 
@@ -25,90 +25,160 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
     SQL("select * from fact where domain={domain}").on("domain" -> domain.id.id).as(fact *).flatten
   }
 
-  override def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dims: Set[Dimension], aggregator: Option[Aggregator[T]]) = {
-    val rawCube = databaseCubeRepo.create(dims, dataType.tpe)
-    val cube: Cube[T] = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
-    createFact(name, dataType, cube)
+  def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]) = {
+    val backend = DataStoreFactBackend(dataType, dimensions, aggregation)
+    create(name, backend)
   }
-  override def createFormulaBased[T](name: String, dataType: FudimDataType[T], formula: Formula[T], aggregator: Option[Aggregator[T]]) = {
-    val rawCube = FormulaCube(formula, domain.cubes)
-    val cube: Cube[T] = aggregator.map(CubeDecorator(rawCube, _)).getOrElse(rawCube)
-    createFact(name, dataType, cube)
+  def createFormulaBased[T](name: String, dataType: FudimDataType[T], formula: Formula[T], aggregation: Aggregation[T]) = {
+    val backend = FormulaFactBackend(dataType, formula, aggregation)
+    create(name, backend)
   }
-  private def createFact[T](name: String, dataType: FudimDataType[T], cube: Cube[T]): FudimFact[T] = withConnection { implicit c ⇒
-    SQL("insert into fact(domain, name, type, config) values({domain}, {name}, {type}, {config})").
-      on("domain" -> domain.id.id, "name" -> name, "config" -> cubeConfig(cube), "type" -> dataType.name).
+  protected def create[T](name: String, backend: FactBackend[T]): DatabaseFact[T] = withConnection { implicit c =>
+    val config = Json.stringify(backend.config)
+    val id = SQL("insert into fact(domain, name, dataType, factType, config) values({domain}, {name}, {dataType}, {factType}, {config})").
+      on("domain" -> domain.id.id, "name" -> name, "dataType" -> backend.dataType.name, "factType" -> backend.factType, "config" -> config).
       executeInsert().get
-    get(name).
-      map(_.asInstanceOf[FudimFact[T]]).
-      getOrElse(throw new IllegalStateException(s"Creation of fact $name failed, see log"))
+    new DatabaseFact(id, name, backend)
   }
 
-  override def remove(name: String) = {
+  def remove(name: String) = {
     get(name).foreach {
-      case fact: DatabaseFact[_] ⇒
-        databaseCubeRepo.delete(fact.databaseCube)
+      case fact: DatabaseFact[_] =>
+        fact.delete
         SQL("delete from fact where id={id}").on("id" -> fact.id)
     }
   }
 
-  private class DatabaseFact[T](val id: Long, val name: String, val dataType: FudimDataType[T], private var _cube: Cube[T]) extends FudimFact[T] {
-    override def data = _cube
-    def databaseCube = CubeDecorator.undecorateComplete(data) match {
-      case d: DatabaseCube[T] ⇒ d
-      case _ ⇒ throw new IllegalStateException("our cube is not a database cube")
-    }
-    protected def updateCube(databaseCube: DatabaseCube[T], aggr: Aggregation[T]) = {
-      val newCube = aggr.aggregator.map(a ⇒ CubeDecorator(databaseCube, a)).
-        getOrElse(databaseCube)
-      assignCube(name, newCube)
-      _cube = newCube
-    }
-    override protected def updateCube(aggr: Aggregation[T]) = updateCube(databaseCube, aggr)
-    def addDimension(moveTo: Coordinate) =
-      updateCube(databaseCube.copyAndAddDimension(moveTo), aggregation)
-    def removeDimension(keepAt: Coordinate) =
-      updateCube(databaseCube.copyAndRemoveDimension(keepAt), aggregation)
-
-    override def equals(o: Any) = o match {
-      case d: DatabaseFact[_] => d.id == id
-      case _ => false
-    }
-    override def hashCode = id.hashCode
-    override def toString = s"DatabaseFact($id, $name, ${dataType.name}})"
-  }
   private val fact = {
-    def mkFact(id: Long, name: String, dataType: FudimDataType[_], cube: Cube[_]): FudimFact[dataType.Type] = {
-      type T = dataType.Type
-      (dataType, cube) match {
-        case (dataType: DataType[T], cube: Cube[T]) => new DatabaseFact[T](id, name, dataType, cube)
-        case _ => throw new IllegalStateException("Non matching dataType and cube")
-      }
-    }
-
-    import scalaz._
-    import Scalaz._
-    long("id") ~ str("name") ~ str("type") ~ str("config") map {
-      case id ~ name ~ typeName ~ config ⇒
+    long("id") ~ str("name") ~ str("dataType") ~ str("factType") ~ str("config") map {
+      case id ~ name ~ dataTypeName ~ factType ~ config ⇒
         val fact: Validation[String, FudimFact[_]] = for {
-          dataType ← dataTypeRepo.get(typeName).toSuccess(s"DataType $typeName is not known")
+          dataType ← dataTypeRepo.get(dataTypeName).toSuccess(s"DataType $dataTypeName is not known")
           json = Json.parse(config)
-          cube ← jsonCubeMapperRepo.parse(json)
-        } yield mkFact(id, name, dataType, cube)
-        fact.leftMap(msg ⇒ Logger.info(s"Could not load fact $name: $msg"))
+          backend <- {
+            val mk: PartialFunction[String, FactBackend[_]] = {
+              case DataStoreFactBackend.key => DataStoreFactBackend(dataType, json)
+            }
+            mk.lift(factType).toSuccess("Unknown Fact type $factType")
+          }
+        } yield new DatabaseFact(id, name, backend)
+        fact.leftMap(msg ⇒ Logger.warn(s"Could not load fact $name: $msg"))
         fact.toOption
     }
   }
 
-  private def assignCube[T](fact: String, cube: Cube[T]): Unit = withConnection { implicit c ⇒
-    val updated = SQL("update fact set config={config} where name={name}").on("config" -> cubeConfig(cube), "name" -> fact).executeUpdate
-    if (updated != 1) throw new IllegalArgumentException(s"no fact named $fact")
+  protected final class DatabaseFact[T](val id: Long, val name: String, ib: FactBackend[T]) extends FudimFact[T] {
+    private[this] var _backend: FactBackend[T] = ib
+    def backend = synchronized(_backend)
+    def backend_=(nb: FactBackend[T]) = withConnection { implicit c =>
+      val config = Json.stringify(backend.config)
+      val updated = SQL("update fact set config={config} where id={id}").on("config" -> config, "id" -> id).executeUpdate
+      if (updated != 1) throw new IllegalStateException(s"Fact with id $id (named $name) was not found anymore.")
+    }
+
+
+    override def dataType = backend.dataType
+    def data = backend.data
+    def editor = backend.editor
+    def aggregation = backend.aggregation
+    def aggregation_=(aggr: Aggregation[T]) = backend = backend.aggregation(aggregation = aggr)
+    def addDimension(moveTo: Coordinate) = backend = backend.addDimension(moveTo)
+    def removeDimension(keepAt: Coordinate) = backend = backend.removeDimension(keepAt)
+    def delete() = backend.delete()
+
+    override def equals(o: Any) = {
+      if (o.isInstanceOf[DatabaseFact[_]]) o.asInstanceOf[DatabaseFact[_]].id == id
+      else false
+    }
+    override def hashCode = id.hashCode
+    override def toString = s"DatabaseFact(id=$id, name=$name, factType=${backend.factType}, dataType=$dataType)"
   }
 
-  private def cubeConfig(cube: Cube[_]) = {
-    val json = jsonCubeMapperRepo.serialize(cube).
-      leftMap(msg ⇒ Logger.info(s"Could not serialize cube $cube: $msg")).
-      getOrElse(throw new IllegalArgumentException(s"Cube $cube is not serializable"))
-    Json.stringify(json)
+  protected trait FactBackend[T] {
+    def factType: String
+    def config: JsValue
+
+    def dataType: FudimDataType[T]
+    def data: Cube[T]
+    def editor: Option[CubeEditor[T]]
+    def aggregation: Aggregation[T]
+
+    def aggregation(aggregation: Aggregation[T] = aggregation): FactBackend[T]
+    def addDimension(moveTo: Coordinate): FactBackend[T]
+    def removeDimension(keepAt: Coordinate): FactBackend[T]
+    def delete(): Unit = ()
+  }
+
+  private def aggregationFromJson(json: JsValue) = for {
+    aggregationName <- json.asOpt[String].toSuccess("Missing aggregation in config")
+    aggregation <- Aggregation.all.find(_.name == aggregationName).toSuccess(s"Aggregation $aggregationName does not exist")
+  } yield aggregation
+
+  private case class DataStoreFactBackend[T](dataType: FudimDataType[T], cds: CopyableCubeDataStore[T], aggregation: Aggregation[T]) extends FactBackend[T] {
+    override def factType = DataStoreFactBackend.key
+    override val data = aggregation.aggregator match {
+      case Some(aggr) => CubeDecorator(cds.cube, Aggregator(aggr))
+      case None => cds.cube
+    }
+    override val editor = Some(cds.editor)
+
+    override def aggregation(aggregation: Aggregation[T]) = copy(aggregation = aggregation)
+    override def addDimension(moveTo: Coordinate) = {
+      val newCds = cds.copy(moveTo, Point.empty)
+      delete()
+      copy(cds = newCds)
+    }
+    override def removeDimension(keepAt: Coordinate) = {
+      val newCds = cds.copy(Point.empty, keepAt)
+      delete()
+      copy(cds = newCds)
+    }
+    override def delete() = cubeDataStoreRepo.remove(cds.id)
+
+    override def config = {
+      Json.obj(
+        "cubeDataStore-id" -> cds.id,
+        "aggregation" -> aggregation.name
+      )
+    }
+  }
+  private object DataStoreFactBackend {
+    val key = "dataStore"
+    def apply[T](dataType: FudimDataType[T], config: JsValue) = {
+      val backend = for {
+        id <- (config \ "cubeDataStore-id").asOpt[Long].toSuccess("Missing cubeDataStore-id")
+        cds <- cubeDataStoreRepo.get(id, dataType).toSuccess("CubeDataStore not found")
+        aggregation <- aggregationFromJson(config \ "aggregation")
+      } yield new DataStoreFactBackend(dataType, cds, aggregation.asInstanceOf[Aggregation[T]])
+      backend.valueOr(e => throw new IllegalStateException(s"Cannot load cds-fact from config: $e"))
+    }
+    def apply[T](dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]) = {
+      val cds = cubeDataStoreRepo.create(dimensions, dataType)
+      new DataStoreFactBackend(dataType, cds, aggregation)
+    }
+  }
+
+  private case class FormulaFactBackend[T](dataType: FudimDataType[T], formula: Formula[T], aggregation: Aggregation[T]) extends FactBackend[T] {
+    override def factType = FormulaFactBackend.key
+    override val data = FormulaCube(formula, domain.cubes)
+    override def editor = None
+    def aggregation(aggregation: Aggregation[T]) = copy(aggregation = aggregation)
+    def addDimension(moveTo: Coordinate) = throw new UnsupportedOperationException("cannot modify dimenesions")
+    def removeDimension(keepAt: Coordinate) = throw new UnsupportedOperationException("cannot modify dimenesions")
+
+    def config = Json.obj {
+      "formula" -> jsonFormulaRepo.serialize(formula).valueOr(e => throw new IllegalStateException(e))
+      "aggregation" -> aggregation.name
+    }
+  }
+  private object FormulaFactBackend {
+    val key = "formula"
+    def apply[T](dataType: FudimDataType[T], config: JsValue) = {
+      val backend = for {
+        formula <- jsonFormulaRepo.parse(config \ "formula")
+        aggregation <- aggregationFromJson(config \ "aggregation")
+      } yield new FormulaFactBackend(dataType, formula.asInstanceOf[Formula[T]], aggregation.asInstanceOf[Aggregation[T]])
+      backend.valueOr(e => throw new IllegalStateException(s"Cannot load formula-fact from config: $e"))
+    }
   }
 }

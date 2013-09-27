@@ -193,7 +193,6 @@ class DatabaseCubeDataStoreSpec extends Specification {
       cds2.editor.set(ny + mar, Some("Test"))
 
       val cds3 = cds2.copy(Point.empty, bern)
-      println("=== > "+cds3.cube.dense.mkString(", "))
       cds3.cube.get(jan) must beSome("1")
       cds3.cube.get(feb) must beSome("2")
       cds3.cube.get(mar) must beNone
@@ -234,6 +233,5 @@ class DatabaseCubeDataStoreSpec extends Specification {
       cds2.cube.get(mar + bern) must beSome("3")
       cds2.cube.get(mar + ny) must beSome("Test")
     }
-
   }
 }

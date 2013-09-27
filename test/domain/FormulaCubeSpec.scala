@@ -14,7 +14,7 @@ class FormulaCubeSpec extends Specification {
       def refs = cs.keySet
       def get[T](ref: CubeRef[T]) = cs.get(ref).map(_.asInstanceOf[Cube[T]])
     }
-    def additionFormula(of: Traversable[String], over: Traversable[Dimension]) = {
+    def additionFormula(of: Seq[String], over: Traversable[Dimension]) = {
       def sum(vs: Traversable[Option[Int]]): Option[Int] =
         Some(vs.filter(_.isDefined).map(_.get).foldLeft(0)(_ + _))
       PointFoldFormula(sum, intType)(of, intType, over)

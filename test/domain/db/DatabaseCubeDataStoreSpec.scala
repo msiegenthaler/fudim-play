@@ -90,6 +90,13 @@ class DatabaseCubeDataStoreSpec extends Specification {
     def cube = cds.cube
     def editor = cds.editor
   }
+  trait ort extends withplay {
+    lazy val ort = ListDimension("Ort", "Bern", "NY", "Berlin")
+    def bern = ort.all(0)
+    def ny = ort.all(1)
+    def berlin = ort.all(2)
+    dimensions = ort :: dimensions
+  }
 
   "DatabaseCube ListDimensionof type String with one dimension" should {
     "be createble" in new withplay {
@@ -152,5 +159,81 @@ class DatabaseCubeDataStoreSpec extends Specification {
       cds2.id must_== cds.id
       cds2.cube.get(jan) must beSome("X")
     }
+
+    "extendable to Ort-dimension (values moved to Bern)" in new oneDimensionalCube with ort {
+      editor.set(jan, Some("1"))
+      editor.set(feb, Some("2"))
+
+      val cds2 = cds.copy(bern)
+      cds2.dataType must_== cds.dataType
+      cds2.cube.get(jan + bern) must beSome("1")
+      cds2.cube.get(feb + bern) must beSome("2")
+      cds2.cube.get(mar + bern) must beNone
+      cds2.cube.get(jan + ny) must beNone
+      cds2.cube.sparse.size must_== 2
+      cds.cube.get(jan) must beSome("1")
+    }
+    "extendable to Ort-dimension (values moved to NY)" in new oneDimensionalCube with ort {
+      editor.set(jan, Some("1"))
+      editor.set(feb, Some("2"))
+
+      val cds2 = cds.copy(ny)
+      cds2.dataType must_== cds.dataType
+      cds2.cube.get(jan + ny) must beSome("1")
+      cds2.cube.get(feb + ny) must beSome("2")
+      cds2.cube.get(mar + ny) must beNone
+      cds2.cube.get(jan + bern) must beNone
+      cds2.cube.sparse.size must_== 2
+      cds.cube.get(jan) must beSome("1")
+    }
+    "rereducable to one dimension" in new oneDimensionalCube with ort {
+      editor.set(jan, Some("1"))
+      editor.set(feb, Some("2"))
+      val cds2 = cds.copy(bern)
+      cds2.editor.set(ny + mar, Some("Test"))
+
+      val cds3 = cds2.copy(Point.empty, bern)
+      println("=== > "+cds3.cube.dense.mkString(", "))
+      cds3.cube.get(jan) must beSome("1")
+      cds3.cube.get(feb) must beSome("2")
+      cds3.cube.get(mar) must beNone
+      cds2.cube.get(jan + bern) must beSome("1")
+      cds2.cube.get(feb + bern) must beSome("2")
+      cds2.cube.get(mar + bern) must beNone
+      cds2.cube.get(mar + ny) must beSome("Test")
+    }
+    "rereducable to one dimension and take not first coordinate" in new oneDimensionalCube with ort {
+      editor.set(jan, Some("1"))
+      editor.set(feb, Some("2"))
+      val cds2 = cds.copy(bern)
+      cds2.editor.set(ny + mar, Some("Test"))
+
+      val cds3 = cds2.copy(Point.empty, ny)
+      cds3.cube.get(jan) must beNone
+      cds3.cube.get(feb) must beNone
+      cds3.cube.get(mar) must beSome("Test")
+      cds2.cube.get(jan + bern) must beSome("1")
+      cds2.cube.get(feb + bern) must beSome("2")
+      cds2.cube.get(mar + bern) must beNone
+      cds2.cube.get(mar + ny) must beSome("Test")
+    }
+    "rereducable to one dimension and take not first coordinate when values overlap" in new oneDimensionalCube with ort {
+      editor.set(jan, Some("1"))
+      editor.set(feb, Some("2"))
+      editor.set(mar, Some("3"))
+      val cds2 = cds.copy(bern)
+      cds2.editor.set(ny + jan, Some("Bla"))
+      cds2.editor.set(ny + mar, Some("Test"))
+
+      val cds3 = cds2.copy(Point.empty, ny)
+      cds3.cube.get(jan) must beSome("Bla")
+      cds3.cube.get(feb) must beNone
+      cds3.cube.get(mar) must beSome("Test")
+      cds2.cube.get(jan + bern) must beSome("1")
+      cds2.cube.get(feb + bern) must beSome("2")
+      cds2.cube.get(mar + bern) must beSome("3")
+      cds2.cube.get(mar + ny) must beSome("Test")
+    }
+
   }
 }

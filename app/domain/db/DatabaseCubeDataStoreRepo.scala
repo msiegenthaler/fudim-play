@@ -84,10 +84,10 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo with DatabaseR
     val commonDims = from.dims.filter(v => to.dims.contains(v._1))
     val newDims = to.dims.filterNot(v => commonDims.contains(v._1))
     require(pos.defines(newDims.keys))
-    val fixed = newDims.map(_._1).zipWithIndex.map(v => (s"{d${v._2}}", toParameterValue(pos.coordinate(v._1).get))).toSeq
-    val oldFields = ("content" :+ commonDims.map(_._2) ++ fixed.map(_._1)).mkString(",")
-    val newFields = ("content" :+ commonDims.map(d ⇒ to.dims(d._1)) ++ newDims.map(_._2)).mkString(",")
-    SQL(s"INSERT INTO ${from.table} $newFields SELECT $oldFields FROM $to.table").
+    val fixed = newDims.map(_._1).zipWithIndex.map(v => (s"d${v._2}", toParameterValue(pos.coordinate(v._1).get.id))).toSeq
+    val oldFields = (List("content") ++ commonDims.map(_._2) ++ fixed.map(_._1).map("{" + _ + "}")).mkString(",")
+    val newFields = (List("content") ++ commonDims.map(d ⇒ to.dims(d._1)) ++ newDims.map(_._2)).mkString(",")
+    SQL(s"INSERT INTO ${to.table}($newFields) SELECT $oldFields FROM ${from.table}").
       on(fixed: _*).executeUpdate
   }
 

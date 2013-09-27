@@ -72,7 +72,7 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
     private[this] var _backend: FactBackend[T] = ib
     def backend = synchronized(_backend)
     def backend_=(nb: FactBackend[T]) = withConnection { implicit c =>
-      val config = Json.stringify(backend.config)
+      val config = Json.stringify(nb.config)
       val updated = SQL("update fact set config={config} where id={id}").on("config" -> config, "id" -> id).executeUpdate
       if (updated != 1) throw new IllegalStateException(s"Fact with id $id (named $name) was not found anymore.")
     }
@@ -145,7 +145,7 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
     def apply[T](dataType: FudimDataType[T], config: JsValue) = {
       val backend = for {
         id <- (config \ "cubeDataStore-id").asOpt[Long].toSuccess("Missing cubeDataStore-id")
-        cds <- cubeDataStoreRepo.get(id, dataType).toSuccess("CubeDataStore not found")
+        cds <- cubeDataStoreRepo.get(id, dataType).toSuccess(s"CubeDataStore $id not found")
         aggregation <- aggregationFromJson(config \ "aggregation")
       } yield new DataStoreFactBackend(dataType, cds, aggregation.asInstanceOf[Aggregation[T]])
       backend.valueOr(e => throw new IllegalStateException(s"Cannot load cds-fact from config: $e"))

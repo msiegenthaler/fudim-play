@@ -40,6 +40,6 @@ trait CopyableCubeDataStore[T] extends CubeDataStore[T] {
   def copy(add: Point = Point.empty, remove: Point = Point.empty): Self
 }
 
-trait CopyableCubeDataStoreRepo {
+trait CopyableCubeDataStoreRepo extends CubeDataStoreRepo {
   type CDS[T] <: CopyableCubeDataStore[T]
 }

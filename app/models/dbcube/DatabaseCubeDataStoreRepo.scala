@@ -9,7 +9,9 @@ import domain._
 import support.DatabaseRepo
 
 
-trait DatabaseCubeDataStoreRepo extends CubeDataStoreRepo with DatabaseRepo {
+trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo with DatabaseRepo {
+  override type CDS[T] = DatabaseCubeDataStore[T]
+
   protected def dimensionRepo: DimensionRepository
   protected def dataTypeRepo: DataTypeRepository
   protected def storeTypes: Traversable[StoreDataType[_]]

@@ -72,7 +72,7 @@ trait DatabaseCubeDataStoreRepo extends DatabaseRepo {
     }
   }
 
-  private def loadFromDefinition(definition: CubeDefinition)(implicit c: Connection): DatabaseCubeDataStore[_] = {
+  private def loadFromDefinition(definition: CubeDefinition)(implicit c: Connection) = {
     val dimensions = SQL("select id, dimension from databaseCube_dimension where cube={id}").on("id" -> definition.id).
       as(get[Long]("id") ~ get[String]("dimension") *).map {
       case id ~ name ⇒
@@ -103,11 +103,11 @@ trait DatabaseCubeDataStoreRepo extends DatabaseRepo {
     override val id = definition.id
     override val table = definition.tableName
 
-    override def create: Unit = withConnection { implicit c ⇒
+    def create(): Unit = withConnection { implicit c ⇒
       val fields = s"content ${storeType.sqlType}" :: dims.values.map { d ⇒ s"$d integer not null"}.toList
       SQL(s"CREATE TABLE $table (${fields.mkString(",")})").execute
     }
-    override def drop: Unit = withConnection { implicit c ⇒
+    def drop(): Unit = withConnection { implicit c ⇒
       SQL(s"DROP TABLE $table").execute
     }
 
@@ -135,7 +135,9 @@ trait DatabaseCubeDataStoreRepo extends DatabaseRepo {
     }
     protected def cloneWithoutData(dims: Set[Dimension]) = {
       val repo = DatabaseCubeDataStoreRepo.this
-      repo.create(dims, dataType)
+      repo.create(dims, dataType) match {
+        case c: DatabaseCubeDataStoreImpl[T] => c
+      }
     }
 
     private def fromDb: RowParser[T] = storeType.fromDb("content")

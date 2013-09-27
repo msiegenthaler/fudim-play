@@ -8,14 +8,8 @@ import domain.{CubeDataStore, DataType}
 trait DatabaseCubeDataStore[T] extends CubeDataStore[T] {
   def id: Long
 
-  protected[dbcube] def storeType: StoreDataType[T]
+  def storeType: StoreDataType[T]
   override def dataType = storeType.dataType
-  protected[dbcube] def table: String
-  protected[dbcube] def dims: Map[Dimension, String]
-
-  protected[dbcube] def create(): Unit
-  protected[dbcube] def drop(): Unit
-
 
   /**
    * Creates a copy of this cube with identical data but an additional dimension.

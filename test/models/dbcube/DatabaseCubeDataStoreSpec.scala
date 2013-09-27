@@ -6,10 +6,8 @@ import org.specs2.specification.{ Scope, BeforeAfterExample }
 import play.api.Play
 import play.api.Play.current
 import play.api.db.DB
-import play.api.test._
 import cube._
 import domain._
-import models.FudimDataTypes
 import anorm.SqlParser._
 import scala.Some
 import play.api.test.FakeApplication
@@ -100,16 +98,16 @@ class DatabaseCubeDataStoreSpec extends Specification {
       CubeRepo.create(Set(d), stringType)
     }
     "be loadable" in new oneDimensionalCube {
-      CubeRepo.load(cds.id) must beSome
+      CubeRepo.get(cds.id) must beSome
     }
     "be droppable" in new oneDimensionalCube {
-      CubeRepo.delete(cds)
-      CubeRepo.load(cds.id) must beNone
+      CubeRepo.remove(cds.id)
+      CubeRepo.get(cds.id) must beNone
     }
     "be droppable if it has values" in new oneDimensionalCube {
       editor.set(jan, Some("1"))
       editor.set(feb, Some("2"))
-      CubeRepo.delete(cds)
+      CubeRepo.remove(cds.id)
     }
     "be initialized with all None" in new oneDimensionalCube {
       cube.dense.foreach(v ⇒ v._2 must beNone)
@@ -132,7 +130,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
     }
     "be the same when loaded" in new oneDimensionalCube {
       editor.set(jan, Some("X"))
-      val cds2 = CubeRepo.load(cds.id, stringType).get
+      val cds2 = CubeRepo.get(cds.id, stringType).get
       cds2.cube.values.toSet must equalTo(Set("X"))
       cds2.cube.get(jan) must beSome("X")
     }

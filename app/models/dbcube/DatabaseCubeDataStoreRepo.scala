@@ -9,7 +9,7 @@ import domain._
 import support.DatabaseRepo
 
 
-trait DatabaseCubeDataStoreRepo extends DatabaseRepo {
+trait DatabaseCubeDataStoreRepo extends CubeDataStoreRepo with DatabaseRepo {
   protected def dimensionRepo: DimensionRepository
   protected def dataTypeRepo: DataTypeRepository
   protected def storeTypes: Traversable[StoreDataType[_]]
@@ -19,7 +19,7 @@ trait DatabaseCubeDataStoreRepo extends DatabaseRepo {
     def tableName = s"databaseCube_data_$id"
   }
   private val cubeDefinition = {
-    get[Long]("id") ~ get[String]("type") map {
+    long("id") ~ str("type") map {
       case id ~ tpe ⇒ CubeDefinition(id, tpe)
     }
   }
@@ -36,18 +36,13 @@ trait DatabaseCubeDataStoreRepo extends DatabaseRepo {
     private lazy val nameMapping = storeTypes.map(t => (t.dataType.name, t)).toMap[String, StoreDataType[_]]
   }
 
-  def load[T](id: Long, dataType: DataType[T]): Option[DatabaseCubeDataStore[T]] = load(id).map { cds =>
-    if (cds.dataType != dataType)
-      throw new IllegalArgumentException(s"type of cube $id (type ${cds.dataType} does not match expected type $dataType")
-    cds.asInstanceOf[DatabaseCubeDataStore[T]]
-  }
-  def load[T](id: Long): Option[DatabaseCubeDataStore[_]] = withConnection { implicit c ⇒
+  override def get(id: Long): Option[DatabaseCubeDataStore[_]] = withConnection { implicit c ⇒
     SQL("select * from databaseCube where id={id}").on("id" -> id).as(cubeDefinition.singleOpt).map { definition ⇒
       loadFromDefinition(definition)
     }
   }
 
-  def create[T](dims: Set[Dimension], dataType: DataType[T]): DatabaseCubeDataStore[T] = withConnection { implicit c ⇒
+  override def create[T](dims: Set[Dimension], dataType: DataType[T]): DatabaseCubeDataStore[T] = withConnection { implicit c ⇒
     val storeType = Types(dataType)
     val id = SQL("insert into databaseCube(type) values({type})").on("type" -> storeType.name).executeInsert().
       getOrElse(throw new RuntimeException(s"Could not create the cube in the database"))
@@ -63,8 +58,8 @@ trait DatabaseCubeDataStoreRepo extends DatabaseRepo {
     cds
   }
 
-  def delete(cube: DatabaseCubeDataStore[_]) = withConnection { implicit c ⇒
-    SQL("select * from databaseCube where id={id}").on("id" -> cube.id).as(cubeDefinition.singleOpt).foreach { definition ⇒
+  override def remove(id: Long) = withConnection { implicit c ⇒
+    SQL("select * from databaseCube where id={id}").on("id" -> id).as(cubeDefinition.singleOpt).foreach { definition ⇒
       val cds = loadFromDefinition(definition)
       cds.drop()
       SQL("delete from databaseCube_dimension where cube={id}").on("id" -> definition.id).executeUpdate
@@ -74,7 +69,7 @@ trait DatabaseCubeDataStoreRepo extends DatabaseRepo {
 
   private def loadFromDefinition(definition: CubeDefinition)(implicit c: Connection) = {
     val dimensions = SQL("select id, dimension from databaseCube_dimension where cube={id}").on("id" -> definition.id).
-      as(get[Long]("id") ~ get[String]("dimension") *).map {
+      as(long("id") ~ str("dimension") *).map {
       case id ~ name ⇒
         val d: Dimension = dimensionRepo.get(name).getOrElse(throw new IllegalStateException(s"Could not find dimension $name"))
         (d, s"dim_$id")
@@ -87,12 +82,12 @@ trait DatabaseCubeDataStoreRepo extends DatabaseRepo {
 
   def json = new JsonCubeDSMapper {
     import scalaz._
-    import Scalaz._
+    import Scalaz.{ToOptionOpsFromOption, ToValidationV}
     override val id = "databaseCubeDataStore"
     override def parser = json ⇒
       for {
         id ← (json \ "id").asOpt[Long].toSuccess("Missing value 'id'")
-        cds ← load(id).toSuccess(s"Could not find CubeDataStore with id $id in database")
+        cds ← get(id).toSuccess(s"Could not find CubeDataStore with id $id in database")
       } yield cds
     override def serializer = {
       case cds: DatabaseCubeDataStore[_] ⇒ Json.obj("id" -> cds.id).success

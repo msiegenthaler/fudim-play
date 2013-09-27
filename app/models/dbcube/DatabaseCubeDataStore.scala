@@ -6,8 +6,6 @@ import domain.{CubeDataStore, DataType}
 
 
 trait DatabaseCubeDataStore[T] extends CubeDataStore[T] {
-  def id: Long
-
   def storeType: StoreDataType[T]
   override def dataType = storeType.dataType
 

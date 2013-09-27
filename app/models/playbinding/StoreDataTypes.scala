@@ -1,8 +1,8 @@
 package models.playbinding
 
 import anorm.SqlParser._
-import models.dbcube._
-import models.{FudimDataTypes, dbcube}
+import models.FudimDataTypes
+import domain.db.StoreDataType
 
 object StoreDataTypes {
   object string extends StoreDataType[String] {

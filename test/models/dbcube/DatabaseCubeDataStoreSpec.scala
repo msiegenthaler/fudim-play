@@ -11,6 +11,7 @@ import domain._
 import anorm.SqlParser._
 import scala.Some
 import play.api.test.FakeApplication
+import domain.db.{DatabaseCubeDataStoreRepo, StoreDataType}
 
 class DatabaseCubeDataStoreSpec extends Specification {
   trait storeDataTypes extends domain.TestFixtures.dataTypes {

@@ -1,11 +1,11 @@
-package models.dbcube
+package domain
+package db
 
 import java.sql.Connection
 import anorm._
 import anorm.SqlParser._
 import play.api.libs.json._
 import cube._
-import domain._
 import support.DatabaseRepo
 
 
@@ -91,7 +91,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo with DatabaseR
       on(fixed: _*).executeUpdate
   }
 
-  override protected[dbcube] def withConnection[A](f: (Connection) => A): A
+  override protected def withConnection[A](f: (Connection) => A): A
 
   def json = new JsonCubeDSMapper {
     import scalaz._

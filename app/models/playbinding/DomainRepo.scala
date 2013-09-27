@@ -1,9 +1,9 @@
 package models
 package playbinding
 
-import domain._
 import db._
-import dbcube._
+import domain._
+import domain.db._
 
 object DomainRepo extends DatabaseDomainRepo with PlayDatabaseRepo {
   protected val dataTypes = FudimDataTypes

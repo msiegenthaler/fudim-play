@@ -1,7 +1,7 @@
-package models.dbcube
+package domain
+package db
 
 import anorm.{RowParser, ParameterValue}
-import domain.{CopyableCubeDataStore, DataType}
 
 
 trait DatabaseCubeDataStore[T] extends CopyableCubeDataStore[T] {

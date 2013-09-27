@@ -12,6 +12,17 @@ trait CubeDataStore[T] {
   def editor: CubeEditor[T]
 }
 
+trait CopyableCubeDataStore[T] extends CubeDataStore[T] {
+  type Self <: CopyableCubeDataStore[T]
+
+  /** Creates a copy of this cube with identical data.
+    * Dimensions in the 'add' point will be added, the existing data will be added at the specified Coordinates.
+    * Dimension in the 'remove' point will be removed, (only) the data at the specified coordinate will be preserved.
+    * Add and remove must not overlap, all dimensions added must not yet be, all dimensions removes must be in the data.
+    */
+  def copy(add: Point = Point.empty, remove: Point = Point.empty): Self
+}
+
 trait CubeDataStoreRepo {
   def get(id: Long): Option[CubeDataStore[_]]
 

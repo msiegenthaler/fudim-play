@@ -78,6 +78,17 @@ trait DatabaseCubeDataStoreRepo extends CubeDataStoreRepo with DatabaseRepo {
     DatabaseCubeDataStoreImpl(definition, storeType, dimensions)
   }
 
+  protected def copyData[T](from: DatabaseCubeDataStoreImpl[T], to: DatabaseCubeDataStoreImpl[T], pos: Point = Point.empty): Unit = withConnection { implicit c =>
+    val commonDims = from.dims.filter(v => to.dims.contains(v._1))
+    val newDims = to.dims.filterNot(v => commonDims.contains(v._1))
+    require(pos.defines(newDims.keys))
+    val fixed = newDims.map(_._1).zipWithIndex.map(v => (s"{d${v._2}}", toParameterValue(pos.coordinate(v._1).get))).toSeq
+    val oldFields = ("content" :+ commonDims.map(_._2) ++ fixed.map(_._1)).mkString(",")
+    val newFields = ("content" :+ commonDims.map(d ⇒ to.dims(d._1)) ++ newDims.map(_._2)).mkString(",")
+    SQL(s"INSERT INTO ${from.table} $newFields SELECT $oldFields FROM $to.table").
+      on(fixed: _*).executeUpdate
+  }
+
   override protected[dbcube] def withConnection[A](f: (Connection) => A): A
 
   def json = new JsonCubeDSMapper {
@@ -94,9 +105,11 @@ trait DatabaseCubeDataStoreRepo extends CubeDataStoreRepo with DatabaseRepo {
     }
   }
 
+
   private case class DatabaseCubeDataStoreImpl[T](definition: CubeDefinition, storeType: StoreDataType[T], dims: Map[Dimension, String]) extends DatabaseCubeDataStore[T] with CoordinateFactory with DatabaseRepo {
+    override type Self = DatabaseCubeDataStoreImpl[T]
     override val id = definition.id
-    protected val table = definition.tableName
+    val table = definition.tableName
     protected def repo = DatabaseCubeDataStoreRepo.this
     protected override def withConnection[A](f: Connection => A) = repo.withConnection(f)
 
@@ -108,29 +121,17 @@ trait DatabaseCubeDataStoreRepo extends CubeDataStoreRepo with DatabaseRepo {
       SQL(s"DROP TABLE $table").execute
     }
 
-    override def copyAndAddDimension(moveTo: Coordinate) = withConnection { implicit c ⇒
-      val newDimension = moveTo.dimension
-      if (dims.contains(newDimension)) throw new IllegalArgumentException(s"$this already contains dimension $newDimension")
-      val newCube = cloneWithoutData(dims.keySet + newDimension)
-      val newDim = newCube.dims(newDimension)
-      val oldFields = ("content" :: dims.map(_._2).toList).mkString(",")
-      val newFields = ("content" :: dims.map(d ⇒ newCube.dims(d._1)).toList).mkString(",")
-      SQL(s"INSERT INTO ${newCube.table} ($newFields, $newDim) SELECT $oldFields, {d} FROM $table").
-        on("d" -> moveTo.id).executeUpdate
+    override def copy(add: Point = Point.empty, remove: Point = Point.empty) = withConnection { implicit c =>
+      val missing = remove.on.filterNot(dims.keySet.contains)
+      require(missing.isEmpty, s"Dimension ${missing.mkString(",")} does not exist in $this")
+      val already = dims.keySet.intersect(add.on)
+      require(already.isEmpty, s"Dimensions ${already.mkString(",")} do already exist in $this")
+
+      val newCube = cloneStructure(dims.keySet ++ add.on -- remove.on)
+      copyData(this, newCube, add ++ remove)
       newCube
     }
-    override def copyAndRemoveDimension(keepAt: Coordinate) = withConnection { implicit c ⇒
-      val droppedDimension = keepAt.dimension
-      if (!dims.contains(droppedDimension)) throw new IllegalArgumentException(s"$this does not contains dimension $droppedDimension")
-      val newCube = cloneWithoutData(dims.keySet - droppedDimension)
-      val droppedDim = dims(droppedDimension)
-      val oldFields = ("content" :: newCube.dims.map(d ⇒ dims(d._1)).toList).mkString(",")
-      val newFields = ("content" :: newCube.dims.map(_._2).toList).mkString(",")
-      SQL(s"INSERT INTO ${newCube.table} ($newFields) SELECT $oldFields FROM $table WHERE $droppedDim = {d}").
-        on("d" -> keepAt.id).executeUpdate
-      newCube
-    }
-    protected def cloneWithoutData(dims: Set[Dimension]) = {
+    protected def cloneStructure(dims: Set[Dimension]) = {
       repo.create(dims, dataType) match {
         case c: DatabaseCubeDataStoreImpl[T] => c
       }

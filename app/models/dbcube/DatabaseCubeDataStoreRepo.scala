@@ -101,7 +101,9 @@ trait DatabaseCubeDataStoreRepo extends DatabaseRepo {
 
   private case class DatabaseCubeDataStoreImpl[T](definition: CubeDefinition, storeType: StoreDataType[T], dims: Map[Dimension, String]) extends DatabaseCubeDataStore[T] with CoordinateFactory with DatabaseRepo {
     override val id = definition.id
-    override val table = definition.tableName
+    protected val table = definition.tableName
+    protected def repo = DatabaseCubeDataStoreRepo.this
+    protected override def withConnection[A](f: Connection => A) = repo.withConnection(f)
 
     def create(): Unit = withConnection { implicit c ⇒
       val fields = s"content ${storeType.sqlType}" :: dims.values.map { d ⇒ s"$d integer not null"}.toList
@@ -134,7 +136,6 @@ trait DatabaseCubeDataStoreRepo extends DatabaseRepo {
       newCube
     }
     protected def cloneWithoutData(dims: Set[Dimension]) = {
-      val repo = DatabaseCubeDataStoreRepo.this
       repo.create(dims, dataType) match {
         case c: DatabaseCubeDataStoreImpl[T] => c
       }

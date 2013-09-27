@@ -84,11 +84,13 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo with DatabaseR
     val commonDims = from.dims.filter(v => to.dims.contains(v._1))
     val newDims = to.dims.filterNot(v => commonDims.contains(v._1))
     require(pos.defines(newDims.keys))
-    val fixed = newDims.map(_._1).zipWithIndex.map(v => (s"d${v._2}", toParameterValue(pos.coordinate(v._1).get.id))).toSeq
+    val fixed = newDims.map(_._1).zipWithIndex.map(v => (s"f${v._2}", toParameterValue(pos.coordinate(v._1).get.id))).toSeq
     val oldFields = (List("content") ++ commonDims.map(_._2) ++ fixed.map(_._1).map("{" + _ + "}")).mkString(",")
     val newFields = (List("content") ++ commonDims.map(d ⇒ to.dims(d._1)) ++ newDims.map(_._2)).mkString(",")
-    SQL(s"INSERT INTO ${to.table}($newFields) SELECT $oldFields FROM ${from.table}").
-      on(fixed: _*).executeUpdate
+    val restrictOn = pos.onlyOn(from.dims.keySet -- to.dims.keySet).coordinates.map(c => (from.dims(c.dimension), toParameterValue(c.id)))
+    val where = restrictOn.map(v => s"${v._1} = {${v._1}}").mkString(" AND ")
+    SQL(s"INSERT INTO ${to.table}($newFields) SELECT $oldFields FROM ${from.table}" + (if (where.length > 0) s" WHERE $where" else "")).
+      on(fixed ++ restrictOn: _*).executeUpdate
   }
 
   override protected def withConnection[A](f: (Connection) => A): A

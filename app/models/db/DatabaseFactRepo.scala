@@ -58,8 +58,9 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
           backend <- {
             val mk: PartialFunction[String, FactBackend[_]] = {
               case DataStoreFactBackend.key => DataStoreFactBackend(dataType, json)
+              case FormulaFactBackend.key => FormulaFactBackend(dataType, json)
             }
-            mk.lift(factType).toSuccess("Unknown Fact type $factType")
+            mk.lift(factType).toSuccess(s"Unknown fact type $factType")
           }
         } yield new DatabaseFact(id, name, backend)
         fact.leftMap(msg ⇒ Logger.warn(s"Could not load fact $name: $msg"))
@@ -116,10 +117,7 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
 
   private case class DataStoreFactBackend[T](dataType: FudimDataType[T], cds: CopyableCubeDataStore[T], aggregation: Aggregation[T]) extends FactBackend[T] {
     override def factType = DataStoreFactBackend.key
-    override val data = aggregation.aggregator match {
-      case Some(aggr) => CubeDecorator(cds.cube, Aggregator(aggr))
-      case None => cds.cube
-    }
+    override val data = aggregation.aggregator.map(CubeDecorator(cds.cube, _)).getOrElse(cds.cube)
     override val editor = Some(cds.editor)
 
     override def aggregation(aggregation: Aggregation[T]) = copy(aggregation = aggregation)
@@ -160,16 +158,19 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
 
   private case class FormulaFactBackend[T](dataType: FudimDataType[T], formula: Formula[T], aggregation: Aggregation[T]) extends FactBackend[T] {
     override def factType = FormulaFactBackend.key
-    override val data = FormulaCube(formula, domain.cubes)
+    override val data = {
+      val cube = FormulaCube(formula, domain.cubes)
+      aggregation.aggregator.map(CubeDecorator(cube, _)).getOrElse(cube)
+    }
     override def editor = None
     def aggregation(aggregation: Aggregation[T]) = copy(aggregation = aggregation)
     def addDimension(moveTo: Coordinate) = throw new UnsupportedOperationException("cannot modify dimenesions")
     def removeDimension(keepAt: Coordinate) = throw new UnsupportedOperationException("cannot modify dimenesions")
 
-    def config = Json.obj {
-      "formula" -> jsonFormulaRepo.serialize(formula).valueOr(e => throw new IllegalStateException(e))
+    def config = Json.obj(
+      "formula" -> jsonFormulaRepo.serialize(formula).valueOr(e => throw new IllegalStateException(e)),
       "aggregation" -> aggregation.name
-    }
+    )
   }
   private object FormulaFactBackend {
     val key = "formula"

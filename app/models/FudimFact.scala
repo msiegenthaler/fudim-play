@@ -8,21 +8,21 @@ trait FudimFact[T] extends RenderFact[T] {
 
   override lazy val rendered = data.map(dataType.render)
 
-  protected def updateCube(aggregation: Aggregation[T]): Unit
+  def editor: Option[CubeEditor[T]]
 
-  def aggregation: Aggregation[T] = data match { case Aggregation(aggr) ⇒ aggr }
-  def aggregation_=(aggr: Aggregation[T]) = updateCube(aggr)
+  def aggregation: Aggregation[T]
+  def aggregation_=(aggr: Aggregation[T])
 
   def addDimension(moveTo: Coordinate): Unit
   def removeDimension(keepAt: Coordinate): Unit
 }
 
 trait FudimFactRepo {
-  def get[T](name: String): Option[FudimFact[_]]
+  def get(name: String): Option[FudimFact[_]]
   def all: Iterable[FudimFact[_]]
 
-  def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dimensions: Set[Dimension], aggregator: Option[Aggregator[T]]): FudimFact[T]
-  def createFormulaBased[T](name: String, dataType: FudimDataType[T], formula: Formula[T], aggregator: Option[Aggregator[T]]): FudimFact[T]
+  def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]): FudimFact[T]
+  def createFormulaBased[T](name: String, dataType: FudimDataType[T], formula: Formula[T], aggregation: Aggregation[T]): FudimFact[T]
 
   def remove(name: String)
 }

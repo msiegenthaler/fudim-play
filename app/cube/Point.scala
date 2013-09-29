@@ -22,6 +22,11 @@ class Point private(val coordinates: Set[Coordinate]) {
     new Point(coordinates.filterNot(e ⇒ vs.contains(e.dimension)))
   }
 
+  def ++(p: Point): Point = {
+    require(on.intersect((p.on)).isEmpty, s"Points $this and $p overlap")
+    new Point(coordinates ++ p.coordinates)
+  }
+
   def mod(newValue: Coordinate): Point = {
     if (!on.contains(newValue.dimension)) throw new IllegalArgumentException(s"$this does not contain dimension ${newValue.dimension}")
     this - newValue.dimension + newValue

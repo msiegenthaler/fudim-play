@@ -44,7 +44,7 @@
         <tr data-point="@serializePoint(dimValue._1)">
           <th>@dimValue._2</th>
           @facts.map { fact =>
-            <td @if(cube.EditableCube.from(fact.data).isSettable(point)) {contentEditable}>
+            <td @if(fact.editor.map(_.isSettable(point)).getOrElse(false)) {contentEditable}>
               @fact.rendered.get(point).getOrElse("")
             </td>
           }
@@ -70,7 +70,7 @@
         </th>
         @dim.values.map { dimValue =>
           @defining(filterPoint + dimValue._1) { point =>
-            <td @if(cube.EditableCube.from(fact.data).isSettable(point)) {contentEditable}>
+            <td @if(fact.editor.map(_.isSettable(point)).getOrElse(false)) {contentEditable}>
               @fact.rendered.get(point).getOrElse("")
             </td>
           }

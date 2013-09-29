@@ -1,4 +1,4 @@
-package models.db
+package support
 
 import java.sql.Connection
 

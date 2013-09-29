@@ -1,11 +1,9 @@
 package models
 package playbinding
 
-import cube._
-import domain._
 import db._
-import dbcube.DatabaseCubeRepo
-import models.DomainId
+import domain._
+import domain.db._
 
 object DomainRepo extends DatabaseDomainRepo with PlayDatabaseRepo {
   protected val dataTypes = FudimDataTypes
@@ -20,19 +18,15 @@ object DomainRepo extends DatabaseDomainRepo with PlayDatabaseRepo {
     val formulaRepo = new JsonFormulaMapperRepository {
       override val mappers = FudimFormulas.json(dataTypes, dimRepo)
     }
+    val cdsRepo = new DatabaseCubeDataStoreRepo with PlayDatabaseRepo {
+      protected def dimensionRepo = dimRepo
+      protected def dataTypeRepo = dataTypes
+      protected def storeTypes = StoreDataTypes.all
+    }
     new DatabaseFactRepo with PlayDatabaseRepo {
       override def domain = DomainRepo.this.get(d).getOrElse(throw new IllegalStateException(s"Domain $d not found"))
-      override val databaseCubeRepo = {
-        new DatabaseCubeRepo with PlayDatabaseRepo {
-          override def dimension(name: String) = dimRepo.get(name)
-        }
-      }
-      override lazy val jsonCubeMapperRepo = new JsonCubeMapperRepository {
-        override val mappers = databaseCubeRepo.json ::
-          CubeDecorator.json(JsonMappers.decorator, this) ::
-          FormulaCube.json(formulaRepo)(domain.cubes) ::
-          Nil
-      }
+      override protected def jsonFormulaRepo = formulaRepo
+      override protected def cubeDataStoreRepo = cdsRepo
     }
   }
 }

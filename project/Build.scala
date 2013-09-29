@@ -12,10 +12,14 @@ object ApplicationBuild extends Build {
     jdbc,
     "postgresql" % "postgresql" % "9.1-901-1.jdbc4",
     anorm,
-    "org.scalaz" %% "scalaz-core" % "7.0.2")
+    "org.scalaz" %% "scalaz-core" % "7.0.2",
+    "com.github.axel22" %% "scalameter" % "0.4-M2" % "test")
 
   val main = play.Project(appName, appVersion, appDependencies).settings(
     scalaVersion := "2.10.2",
+
+    testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework"),
+    logBuffered := false,
 
     routesImport += "support.PointDefinition",
     routesImport += "support.Bindables._",

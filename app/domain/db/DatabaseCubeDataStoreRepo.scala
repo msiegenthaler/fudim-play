@@ -6,7 +6,7 @@ import anorm._
 import anorm.SqlParser._
 import play.api.libs.json._
 import cube._
-import support.DatabaseRepo
+import base.DatabaseRepo
 
 
 trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo with DatabaseRepo {

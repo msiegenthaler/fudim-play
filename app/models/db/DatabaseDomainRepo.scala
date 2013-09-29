@@ -5,7 +5,7 @@ import java.sql.Connection
 import anorm._
 import anorm.SqlParser._
 import domain._
-import support.DatabaseRepo
+import base.DatabaseRepo
 
 trait DatabaseDomainRepo extends FudimDomainRepo with DatabaseRepo {
   override def all = withConnection { implicit c ⇒

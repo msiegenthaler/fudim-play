@@ -7,9 +7,9 @@ import anorm._
 import anorm.SqlParser._
 import cube._
 import domain._
-import support.DatabaseRepo
 import play.api.Logger
 import play.api.libs.json._
+import base.DatabaseRepo
 
 trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
   protected def domain: FudimDomain

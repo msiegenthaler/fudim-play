@@ -25,7 +25,7 @@ trait DatabaseDomainRepo extends FudimDomainRepo with DatabaseRepo {
     SQL("delete from domain where id={id}").on("id" -> id.id).executeUpdate
   }
 
-  private val domain: RowParser[FudimDomain] = long("id").map(DomainId(_)) ~ str("name") map {
+  private val domain: RowParser[FudimDomain] = long("id").map(DomainId) ~ str("name") map {
     case id ~ name ⇒ new DatabaseDomain(id, name, dimensionRepo(id), factRepo(id))
   }
 

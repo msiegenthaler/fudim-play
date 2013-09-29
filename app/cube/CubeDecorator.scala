@@ -40,7 +40,7 @@ object CubeDecorator {
   /** Unwraps cube decorators. */
   private def unwrap[T](d: CubeDecorator[T]): CubeDecorator[T] = d match {
     case d: WrappedCubeDecorator[T] ⇒ unwrap(d.unwrap)
-    case d ⇒ d
+    case _ ⇒ d
   }
 
   def json(decoratorRepo: JsonCubeDecoratorMapperRepository, cubeRepo: JsonCubeMapperRepository): JsonCubeMapper = new JsonCubeMapper {

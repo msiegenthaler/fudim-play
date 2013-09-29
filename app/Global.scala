@@ -9,13 +9,13 @@ object Global extends GlobalSettings {
   val aggregation = Aggregation.all
 
   override def onStart(app: Application) {
-    if (!InitialData.hasData) InitialData.insert
+    if (!InitialData.hasData) InitialData.insert()
   }
 }
 
 object InitialData {
   def hasData = !DomainRepo.get("example").isEmpty
-  def insert {
+  def insert() {
     val example = DomainRepo.create("example")
 
     val monat = example.dimensionRepo.create("Monat")

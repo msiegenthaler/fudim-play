@@ -2,12 +2,12 @@ package support
 
 import util.control.Exception._
 import play.api.mvc.QueryStringBindable
-import java.net.{ URLEncoder, URLDecoder }
+import java.net.{URLEncoder, URLDecoder}
 import cube._
 import models._
 import domain._
 
-sealed trait PointDefinition extends Function1[Set[Dimension], Point] {
+sealed trait PointDefinition extends (Set[Dimension] => Point) {
   def apply(domain: Domain): Point = apply(domain.dimensions)
   def apply(fact: Fact[_]): Point = apply(fact.dimensions)
   private[support] def raw: Iterable[(String, Long)]

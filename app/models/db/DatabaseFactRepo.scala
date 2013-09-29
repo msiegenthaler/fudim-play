@@ -44,7 +44,7 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
   def remove(name: String) = {
     get(name).foreach {
       case fact: DatabaseFact[_] =>
-        fact.delete
+        fact.delete()
         SQL("delete from fact where id={id}").on("id" -> fact.id)
     }
   }

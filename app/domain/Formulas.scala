@@ -71,7 +71,7 @@ object PointFoldFormula {
         fun <- functionRepo.parse(json \ "foldFunction")
         dimNames <- (json \ "dimensions").asOpt[List[String]].toSuccess("Missing dimensions")
         dims <- parseDimensions(dimNames)
-        of = (json \ "of")
+        of = json \ "of"
         refJsons <- (of \ "refs").asOpt[List[JsValue]].toSuccess("Missing refs")
         refs <- parseRefs(refJsons)
         ofDataType <- parseDataType(of \ "dataType")

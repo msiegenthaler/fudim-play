@@ -23,7 +23,7 @@ class Point private(val coordinates: Set[Coordinate]) {
   }
 
   def ++(p: Point): Point = {
-    require(on.intersect((p.on)).isEmpty, s"Points $this and $p overlap")
+    require(on.intersect(p.on).isEmpty, s"Points $this and $p overlap")
     new Point(coordinates ++ p.coordinates)
   }
 

@@ -15,7 +15,7 @@ trait CubeEditor[-T] {
   /** Set data in this cube. Slice/dice does apply (non-matching are not changed). */
   def multiSet(filter: Point, value: Option[T]): Unit
   /** Remove all data in this cube. Slice/dice does apply (non-matching are not deleted). */
-  def clear = multiSet(Point.empty, None)
+  def clear() = multiSet(Point.empty, None)
 
   def map[A](f: A => T): CubeEditor[A] = {
     val parent = this

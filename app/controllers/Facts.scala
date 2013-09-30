@@ -1,14 +1,12 @@
 package controllers
 
-import play.api._
 import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
 import cube._
 import models._
-import support.DomainAction
-import support.FactAction
-import support.PointDefinition
+import support._
+import models.playbinding.Fudim
 
 object Facts extends Controller {
 
@@ -22,7 +20,9 @@ object Facts extends Controller {
       data ⇒ {
         val (name, dataTypeName) = data
         FudimDataTypes.get(dataTypeName).map { dataType =>
-          val fact = domain.factRepo.createDatabaseBacked(name, dataType, Set.empty, Aggregation.none)
+          Fudim.exec {
+            domain.factRepo.createDatabaseBacked(name, dataType, Set.empty, Aggregation.none)
+          }
           Redirect(routes.Facts.view(domain.name, name))
         }.getOrElse(BadRequest(s"Invalid data type $dataTypeName"))
       })
@@ -41,7 +41,9 @@ object Facts extends Controller {
       dimension ← domain.dimensionRepo.get(dimensionName)
       moveTo ← dimension.all.headOption
     } yield {
-      fact.addDimension(moveTo)
+      Fudim.exec {
+        fact.addDimension(moveTo)
+      }
       Redirect(routes.Facts.view(domainName, factName))
     }
     r.getOrElse(NotFound)
@@ -52,7 +54,9 @@ object Facts extends Controller {
       dimension ← domain.dimensionRepo.get(dimensionName)
       keepAt ← dimension.all.headOption
     } yield {
-      fact.removeDimension(keepAt)
+      Fudim.exec {
+        fact.removeDimension(keepAt)
+      }
       Redirect(routes.Facts.view(domainName, factName))
     }
     r.getOrElse(NotFound)
@@ -66,7 +70,9 @@ object Facts extends Controller {
   def setAggregation(domainName: String, factName: String) = FactAction(domainName, factName).on(fact ⇒ { implicit request ⇒
     def changeAggr[T](fact: FudimFact[T], aggrName: String) = {
       val aggr = fact.dataType.aggregations.find(_.name == aggrName).getOrElse(Aggregation.none)
-      fact.aggregation = aggr
+      Fudim.exec {
+        fact.aggregation = aggr
+      }
       Redirect(routes.Facts.view(domainName, factName))
     }
     aggrForm.bindFromRequest.fold(
@@ -82,7 +88,9 @@ object Facts extends Controller {
       val tpe = fact.dataType
       tpe.parse(value).map { v ⇒
         try {
-          editor.set(at(fact), v)
+          Fudim.exec {
+            editor.set(at(fact), v)
+          }
           Ok(tpe.render(v))
         } catch {
           case ValueCannotBeSetException(_) ⇒ cannotSet

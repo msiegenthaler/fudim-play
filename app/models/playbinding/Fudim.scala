@@ -26,6 +26,7 @@ object Fudim {
         throw e
     } finally {
       threadTx.remove()
+      conn.close()
     }
   }
 
@@ -50,7 +51,11 @@ object Fudim {
         try {
           b(c)
         } finally {
-          c.rollback()
+          try {
+            c.rollback()
+          } finally {
+            c.close()
+          }
         }
       }
     }

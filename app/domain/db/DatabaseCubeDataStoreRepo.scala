@@ -5,13 +5,14 @@ import java.sql.Connection
 import anorm._
 import anorm.SqlParser._
 import play.api.libs.json._
+import base._
 import cube._
-import base.DatabaseRepo
 
 
-trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo with DatabaseRepo {
+trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
   override type CDS[T] = DatabaseCubeDataStore[T]
 
+  protected def db: SqlDatabase
   protected def dimensionRepo: DimensionRepository
   protected def dataTypeRepo: DataTypeRepository
   protected def storeTypes: Traversable[StoreDataType[_]]
@@ -38,13 +39,13 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo with DatabaseR
     private lazy val nameMapping = storeTypes.map(t => (t.dataType.name, t)).toMap[String, StoreDataType[_]]
   }
 
-  override def get(id: Long): Option[DatabaseCubeDataStore[_]] = withConnection { implicit c ⇒
+  override def get(id: Long): Option[DatabaseCubeDataStore[_]] = db.readOnly { implicit c ⇒
     SQL("select * from databaseCube where id={id}").on("id" -> id).as(cubeDefinition.singleOpt).map { definition ⇒
       loadFromDefinition(definition)
     }
   }
 
-  override def create[T](dims: Set[Dimension], dataType: DataType[T]): DatabaseCubeDataStore[T] = withConnection { implicit c ⇒
+  override def create[T](dims: Set[Dimension], dataType: DataType[T]): <>[DatabaseCubeDataStore[T]] = db.transaction { implicit c ⇒
     val storeType = Types(dataType)
     val id = SQL("insert into databaseCube(type) values({type})").on("type" -> storeType.name).executeInsert().
       getOrElse(throw new RuntimeException(s"Could not create the cube in the database"))
@@ -56,14 +57,14 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo with DatabaseR
       (dim, dimId)
     }.toMap
     val cds = DatabaseCubeDataStoreImpl[T](definition, storeType, cdims)
-    cds.create()
+    cds.create
     cds
   }
 
-  override def remove(id: Long) = withConnection { implicit c ⇒
+  override def remove(id: Long) = db.transaction { implicit c ⇒
     SQL("select * from databaseCube where id={id}").on("id" -> id).as(cubeDefinition.singleOpt).foreach { definition ⇒
       val cds = loadFromDefinition(definition)
-      cds.drop()
+      cds.drop
       SQL("delete from databaseCube_dimension where cube={id}").on("id" -> definition.id).executeUpdate
       SQL("delete from databaseCube where id={id}").on("id" -> definition.id).executeUpdate
     }
@@ -80,7 +81,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo with DatabaseR
     DatabaseCubeDataStoreImpl(definition, storeType, dimensions)
   }
 
-  protected def copyData[T](from: DatabaseCubeDataStoreImpl[T], to: DatabaseCubeDataStoreImpl[T], pos: Point = Point.empty): Unit = withConnection { implicit c =>
+  protected def copyData[T](from: DatabaseCubeDataStoreImpl[T], to: DatabaseCubeDataStoreImpl[T], pos: Point = Point.empty)(implicit c: Connection) {
     val commonDims = from.dims.filter(v => to.dims.contains(v._1))
     val newDims = to.dims.filterNot(v => commonDims.contains(v._1))
     require(pos.defines(newDims.keys))
@@ -92,8 +93,6 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo with DatabaseR
     SQL(s"INSERT INTO ${to.table}($newFields) SELECT $oldFields FROM ${from.table}" + (if (where.length > 0) s" WHERE $where" else "")).
       on(fixed ++ restrictOn: _*).executeUpdate
   }
-
-  override protected def withConnection[A](f: (Connection) => A): A
 
   def json = new JsonCubeDSMapper {
     import scalaz._
@@ -110,22 +109,19 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo with DatabaseR
   }
 
 
-  private case class DatabaseCubeDataStoreImpl[T](definition: CubeDefinition, storeType: StoreDataType[T], dims: Map[Dimension, String]) extends DatabaseCubeDataStore[T] with CoordinateFactory with DatabaseRepo {
+  private case class DatabaseCubeDataStoreImpl[T](definition: CubeDefinition, storeType: StoreDataType[T], dims: Map[Dimension, String]) extends DatabaseCubeDataStore[T] with CoordinateFactory {
     override type Self = DatabaseCubeDataStoreImpl[T]
     override val id = definition.id
     val table = definition.tableName
     protected def repo = DatabaseCubeDataStoreRepo.this
-    protected override def withConnection[A](f: Connection => A) = repo.withConnection(f)
 
-    def create(): Unit = withConnection { implicit c ⇒
+    def create(implicit c: Connection) {
       val fields = s"content ${storeType.sqlType}" :: dims.values.map { d ⇒ s"$d integer not null"}.toList
       SQL(s"CREATE TABLE $table (${fields.mkString(",")})").execute
     }
-    def drop(): Unit = withConnection { implicit c ⇒
-      SQL(s"DROP TABLE $table").execute
-    }
+    def drop(implicit c: Connection): Unit = SQL(s"DROP TABLE $table").execute
 
-    override def copy(add: Point = Point.empty, remove: Point = Point.empty) = withConnection { implicit c =>
+    override def copy(add: Point = Point.empty, remove: Point = Point.empty) = db.transaction { implicit c =>
       val missing = remove.on.filterNot(dims.keySet.contains)
       require(missing.isEmpty, s"Dimension ${missing.mkString(",")} does not exist in $this")
       val already = dims.keySet.intersect(add.on)
@@ -186,13 +182,13 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo with DatabaseR
       override def allDimensions = dims.keys.toSet
       override def derive(slice: Point = slice, filters: DimensionFilter = filters) = copy(slice = slice, filters = filters)
 
-      override def get(at: Point) = withConnection { implicit c ⇒
+      override def get(at: Point) = db.readOnly { implicit c ⇒
         if (at.definesExactly(dims.keys) && matches(at)) {
           val (where, ons) = mkWhere(at)
           SQL(s"SELECT content FROM $table WHERE $where").on(ons: _*).as(fromDb.singleOpt)
         } else None
       }
-      override def sparse = withConnection { implicit c ⇒
+      override def sparse = db.readOnly { implicit c ⇒
         val as = (fromDb ~ pointFromDb).*
         val res = if (slice.on.isEmpty) {
           SQL(s"SELECT * FROM $table").as(as)
@@ -210,7 +206,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo with DatabaseR
     override val editor: CubeEditor[T] = TheEditor(id)
     private case class TheEditor(id: Long) extends CubeEditor[T] {
       override def isSettable(at: Point) = at.definesExactly(dims.keys)
-      override def set(at: Point, to: Option[T]) = withConnection { implicit c ⇒
+      override def set(at: Point, to: Option[T]) = db.transaction { implicit c ⇒
         if (isSettable(at)) {
           to match {
             case Some(value) ⇒ if (!update(at, value)) insert(at, value)
@@ -218,7 +214,9 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo with DatabaseR
           }
         } else throw new ValueCannotBeSetException(at)
       }
-      override def multiSet(filter: Point, value: Option[T]) = cube_.slice(filter).allPoints.foreach(set(_, value))
+      override def multiSet(filter: Point, value: Option[T]) = {
+        cube_.slice(filter).allPoints.foldLeft(Transaction.empty)(_ >> set(_, value))
+      }
       override def toString = s"DatabaseCubeEditor($id)"
     }
 

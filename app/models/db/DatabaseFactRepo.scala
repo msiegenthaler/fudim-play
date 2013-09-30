@@ -5,35 +5,35 @@ import scalaz._
 import Scalaz._
 import anorm._
 import anorm.SqlParser._
+import base._
 import cube._
 import domain._
 import play.api.Logger
 import play.api.libs.json._
-import base.DatabaseRepo
 
-trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
+trait DatabaseFactRepo extends FudimFactRepo {
+  protected def db: SqlDatabase
   protected def domain: FudimDomain
   protected def dataTypeRepo = FudimDataTypes
   protected def jsonFormulaRepo: JsonFormulaMapperRepository
   protected def cubeDataStoreRepo: CopyableCubeDataStoreRepo
 
-  override def get(name: String) = withConnection { implicit c ⇒
+  override def get(name: String) = db.readOnly { implicit c ⇒
     SQL("select * from fact where domain={domain} and name={name}").on("domain" -> domain.id.id, "name" -> name).as(fact singleOpt).flatten
   }
 
-  override def all = withConnection { implicit c ⇒
+  override def all = db.readOnly { implicit c ⇒
     SQL("select * from fact where domain={domain}").on("domain" -> domain.id.id).as(fact *).flatten
   }
 
   def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]) = {
-    val backend = DataStoreFactBackend(dataType, dimensions, aggregation)
-    create(name, backend)
+    DataStoreFactBackend(dataType, dimensions, aggregation) >>= create(name)
   }
   def createFormulaBased[T](name: String, dataType: FudimDataType[T], formula: Formula[T], aggregation: Aggregation[T]) = {
     val backend = FormulaFactBackend(dataType, formula, aggregation)
-    create(name, backend)
+    create(name)(backend)
   }
-  protected def create[T](name: String, backend: FactBackend[T]): DatabaseFact[T] = withConnection { implicit c =>
+  protected def create[T](name: String)(backend: FactBackend[T]): <>[DatabaseFact[T]] = db.transaction { implicit c =>
     val config = Json.stringify(backend.config)
     val id = SQL("insert into fact(domain, name, dataType, factType, config) values({domain}, {name}, {dataType}, {factType}, {config})").
       on("domain" -> domain.id.id, "name" -> name, "dataType" -> backend.dataType.name, "factType" -> backend.factType, "config" -> config).
@@ -42,11 +42,12 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
   }
 
   def remove(name: String) = {
-    get(name).foreach {
-      case fact: DatabaseFact[_] =>
-        fact.delete
-        SQL("delete from fact where id={id}").on("id" -> fact.id)
-    }
+    get(name).map {
+      case fact: DatabaseFact[_] => fact.delete >> deleteFact(fact)
+    }.getOrElse(Transaction.empty)
+  }
+  private def deleteFact(fact: DatabaseFact[_]): Tx = db.transaction { implicit c =>
+    SQL("delete from fact where id={id}").on("id" -> fact.id)
   }
 
   private val fact = {
@@ -71,7 +72,7 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
   protected final class DatabaseFact[T](val id: Long, val name: String, ib: FactBackend[T]) extends FudimFact[T] {
     private[this] var _backend: FactBackend[T] = ib
     def backend = synchronized(_backend)
-    def backend_=(nb: FactBackend[T]) = withConnection { implicit c =>
+    def updateBackend(nb: FactBackend[T]): Tx = db.transaction { implicit c =>
       val config = Json.stringify(nb.config)
       val updated = SQL("update fact set config={config} where id={id}").on("config" -> config, "id" -> id).executeUpdate
       if (updated != 1) throw new IllegalStateException(s"Fact with id $id (named $name) was not found anymore.")
@@ -82,10 +83,10 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
     def data = backend.data
     def editor = backend.editor
     def aggregation = backend.aggregation
-    def aggregation_=(aggr: Aggregation[T]) = backend = backend.aggregation(aggregation = aggr)
-    def addDimension(moveTo: Coordinate) = backend = backend.addDimension(moveTo)
-    def removeDimension(keepAt: Coordinate) = backend = backend.removeDimension(keepAt)
-    def delete() = backend.delete()
+    def aggregation_=(aggr: Aggregation[T]) = updateBackend(backend.aggregation(aggregation = aggr))
+    def addDimension(moveTo: Coordinate) = backend.addDimension(moveTo) >>= updateBackend
+    def removeDimension(keepAt: Coordinate) = backend.removeDimension(keepAt) >>= updateBackend
+    def delete = backend.delete
 
     override def equals(o: Any) = {
       if (o.isInstanceOf[DatabaseFact[_]]) o.asInstanceOf[DatabaseFact[_]].id == id
@@ -105,9 +106,9 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
     def aggregation: Aggregation[T]
 
     def aggregation(aggregation: Aggregation[T] = aggregation): FactBackend[T]
-    def addDimension(moveTo: Coordinate): FactBackend[T]
-    def removeDimension(keepAt: Coordinate): FactBackend[T]
-    def delete(): Unit = ()
+    def addDimension(moveTo: Coordinate): <>[FactBackend[T]]
+    def removeDimension(keepAt: Coordinate): <>[FactBackend[T]]
+    def delete: Tx = Transaction.empty
   }
 
   private def aggregationFromJson(json: JsValue) = for {
@@ -122,16 +123,12 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
 
     override def aggregation(aggregation: Aggregation[T]) = copy(aggregation = aggregation)
     override def addDimension(moveTo: Coordinate) = {
-      val newCds = cds.copy(moveTo, Point.empty)
-      delete()
-      copy(cds = newCds)
+      cds.copy(moveTo, Point.empty) <* delete map (ncds => copy(cds = ncds))
     }
     override def removeDimension(keepAt: Coordinate) = {
-      val newCds = cds.copy(Point.empty, keepAt)
-      delete()
-      copy(cds = newCds)
+      cds.copy(Point.empty, keepAt) <* delete map (ncds => copy(cds = ncds))
     }
-    override def delete() = cubeDataStoreRepo.remove(cds.id)
+    override def delete = cubeDataStoreRepo.remove(cds.id)
 
     override def config = {
       Json.obj(
@@ -151,8 +148,8 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
       backend.valueOr(e => throw new IllegalStateException(s"Cannot load cds-fact from config: $e"))
     }
     def apply[T](dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]) = {
-      val cds = cubeDataStoreRepo.create(dimensions, dataType)
-      new DataStoreFactBackend(dataType, cds, aggregation)
+      cubeDataStoreRepo.create(dimensions, dataType).
+        map(new DataStoreFactBackend(dataType, _, aggregation))
     }
   }
 

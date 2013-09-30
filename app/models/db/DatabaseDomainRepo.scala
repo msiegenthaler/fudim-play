@@ -1,27 +1,27 @@
 package models
 package db
 
-import java.sql.Connection
 import anorm._
 import anorm.SqlParser._
-import domain._
-import base.DatabaseRepo
+import base._
 
-trait DatabaseDomainRepo extends FudimDomainRepo with DatabaseRepo {
-  override def all = withConnection { implicit c ⇒
+trait DatabaseDomainRepo extends FudimDomainRepo {
+  protected def db: SqlDatabase
+
+  override def all = db.readOnly { implicit c ⇒
     SQL("select * from domain").as(domain *)
   }
-  def get(name: String) = withConnection { implicit c ⇒
+  def get(name: String) = db.readOnly { implicit c ⇒
     SQL("select * from domain where name={name}").on("name" -> name).as(domain.singleOpt)
   }
-  def get(id: DomainId) = withConnection { implicit c ⇒
+  def get(id: DomainId) = db.readOnly { implicit c ⇒
     SQL("select * from domain where id={id}").on("id" -> id.id).as(domain.singleOpt)
   }
-  def create(name: String) = withConnection { implicit c ⇒
+  def create(name: String) = db.transaction { implicit c ⇒
     SQL("insert into domain(name) values ({name})").on("name" -> name).executeInsert()
     get(name).getOrElse(throw new IllegalStateException(s"Could not insert domain $name"))
   }
-  def remove(id: FudimDomain) = withConnection { implicit c ⇒
+  def remove(id: FudimDomain) = db.transaction { implicit c ⇒
     SQL("delete from domain where id={id}").on("id" -> id.id).executeUpdate
   }
 

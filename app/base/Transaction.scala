@@ -1,12 +1,12 @@
 package base
 
 /** Transaction monad. */
-sealed trait Transaction[A] {
+sealed trait Transaction[+A] {
   import Transaction._
 
   def run(context: TransactionState): A
 
-  def map[B](f: A => B): Transaction[B] = flatMap(f.andThen(pure))
+  def map[B](f: A => B): Transaction[B] = flatMap(v => pure(f(v)))
   def flatMap[B](f: A => Transaction[B]): Transaction[B] = on[B] { context =>
     val a = run(context)
     f(a).run(context)
@@ -14,23 +14,22 @@ sealed trait Transaction[A] {
 
   def >>=[B](f: A => Transaction[B]) = flatMap(f)
   def >>[B](o: Transaction[B]) = flatMap(_ => o)
+  def <*[B](o: Transaction[B]): Transaction[A] = {
+    for {
+      a <- this
+      _ <- o
+    } yield a
+  }
+  def *>[B](o: Transaction[B]) = this >> o
 }
 object Transaction {
-  def apply[A](value: A) = pure(value)
-  def pure[A](value: A) = on(_ => value)
+  def apply[A](value: => A) = pure(value)
+  def pure[A](value: => A) = on(_ => value)
+  def noop = empty
+  def empty: Tx = pure(())
+
   private[base] def on[A](f: TransactionState => A) = new Transaction[A] {
     override def run(context: TransactionState) = f(context)
-  }
-
-  implicit class JoinableTransaction[A](t: Transaction[Transaction[A]]) {
-    def join: Transaction[A] = t.flatMap(identity)
-  }
-  implicit class TraversableToTransaction[A](t: TraversableOnce[Transaction[A]]) {
-    def sequence: Transaction[Seq[A]] = {
-      t.foldLeft(pure(List.empty[A])) { (sf, t) =>
-        t.flatMap(e => sf.map(e :: _))
-      }.map(_.reverse.toSeq)
-    }
   }
 }
 

@@ -37,7 +37,7 @@ object Transaction {
 trait TransactionState
 
 /** A ressource that can take part in a transaction. */
-trait TransactionalRessource[T] {
+trait TransactionalRessource[T <: TransactionState] {
   /** Provides access to the transaction state. */
   protected def execute[A](f: T => A): Transaction[A] = Transaction.on {
     case t: T => f(t)

@@ -22,7 +22,7 @@ trait JsonMapperRepository[O] {
     case o: JsObject ⇒
       for {
         mapper ← o.keys.find(map.keySet.contains).flatMap(map.get).toSuccess(s"No mapper found for $o. Available: ${map.keys}")
-        subjson = (o \ mapper.id)
+        subjson = o \ mapper.id
         res ← mapper.parser(subjson).leftMap(mapper.id + " => " + _)
       } yield res
     case other ⇒ s"Invalid structure, expected json object, but was $other".fail

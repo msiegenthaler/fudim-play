@@ -11,7 +11,7 @@
   <ul class="unstyled form-horizontal">
     @otherDims.map { d =>
       <li>
-        @views.html.dimensionValueSelect(d, filterPoint.coordinate(d), true, linkFun(d))
+        @views.html.dimensionValueSelect(d, filterPoint.coordinate(d), allowAll = true, linkFun(d))
       </li>
     }
 

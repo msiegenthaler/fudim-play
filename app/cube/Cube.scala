@@ -63,7 +63,7 @@ trait AbstractCube[T] extends Cube[T] {
   override def raw = derive(Point.empty, Map.empty)
   override def slice(to: Point) = derive(slice = to)
   override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = {
-    val combFilter = filters.get(dimension).map(f ⇒ ((c: Coordinate) ⇒ f(c) && filter(c))).getOrElse(filter)
+    val combFilter = filters.get(dimension).map(f ⇒ (c: Coordinate) ⇒ f(c) && filter(c)).getOrElse(filter)
     derive(filters = filters + (dimension -> combFilter))
   }
   protected def derive(slice: Point = slice, filters: DimensionFilter = filters): Self

@@ -9,7 +9,7 @@
   <ul class="unstyled form-horizontal">
     @otherDims.map { d =>
       <li>
-        @views.html.dimensionValueSelect(d, filterPoint.coordinate(d), true, linkFun(d))
+        @views.html.dimensionValueSelect(d, filterPoint.coordinate(d), allowAll = true, linkFun(d))
       </li>
     }
     @otherFacts.map { fact =>
@@ -33,7 +33,7 @@
         @facts.map { fact =>
           <th class="fact" data-fact="@urlEncode(fact.name)">
             @fact.name
-            <a href="@routes.FactsTable.show(domain.name, dim.name, (facts.filterNot(_ == fact)).map(_.name), filterPoint)">X</a>
+            <a href="@routes.FactsTable.show(domain.name, dim.name, facts.filterNot(_ == fact).map(_.name), filterPoint)">X</a>
           </th>
         }
       </tr>
@@ -44,7 +44,7 @@
         <tr data-point="@serializePoint(dimValue._1)">
           <th>@dimValue._2</th>
           @facts.map { fact =>
-            <td @if(fact.editor.map(_.isSettable(point)).getOrElse(false)) {contentEditable}>
+            <td @if(fact.editor.exists(_.isSettable(point))) {contentEditable}>
               @fact.rendered.get(point).getOrElse("")
             </td>
           }
@@ -66,11 +66,11 @@
       <tr>
         <th class="fact" data-fact="@urlEncode(fact.name)">
           @fact.name
-          <a href="@routes.FactsTable.show(domain.name, dim.name, (facts.filterNot(_ == fact)).map(_.name), filterPoint)">X</a>
+          <a href="@routes.FactsTable.show(domain.name, dim.name, facts.filterNot(_ == fact).map(_.name), filterPoint)">X</a>
         </th>
         @dim.values.map { dimValue =>
           @defining(filterPoint + dimValue._1) { point =>
-            <td @if(fact.editor.map(_.isSettable(point)).getOrElse(false)) {contentEditable}>
+            <td @if(fact.editor.exists(_.isSettable(point))) {contentEditable}>
               @fact.rendered.get(point).getOrElse("")
             </td>
           }

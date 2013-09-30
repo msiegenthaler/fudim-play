@@ -7,11 +7,11 @@ import support.JsonMapperRepository
 /** Aggregates values. */
 sealed trait Aggregator[T]
 /** Aggregator that only cares for defined values. */
-trait SparseAggregator[T] extends Aggregator[T] with Function1[Traversable[T], Option[T]] {
+trait SparseAggregator[T] extends Aggregator[T] with (Traversable[T] => Option[T]) {
   def apply(v: Traversable[T]): Option[T]
 }
 /** Aggregator that cares for non-defined values. */
-trait DenseAggregator[T] extends Aggregator[T] with Function1[Traversable[Option[T]], Option[T]] {
+trait DenseAggregator[T] extends Aggregator[T] with (Traversable[Option[T]] => Option[T]) {
   def apply(v: Traversable[Option[T]]): Option[T]
 }
 

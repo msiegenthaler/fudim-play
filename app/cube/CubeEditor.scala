@@ -1,19 +1,21 @@
 package cube
 
+import base._
+
 /** Change values for a cube data structure. */
 trait CubeEditor[-T] {
   /** Whether the value at this point can be set. */
   def isSettable(at: Point): Boolean
   /** Set the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
-  def set(at: Point, value: Option[T]): Unit
+  def set(at: Point, value: Option[T]): Tx
 
   /** Set the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
-  def set(at: Point, value: T): Unit = set(at, Some(value))
+  def set(at: Point, value: T): Tx = set(at, Some(value))
   /** Remove the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
   def remove(at: Point) = set(at, None)
 
   /** Set data in this cube. Slice/dice does apply (non-matching are not changed). */
-  def multiSet(filter: Point, value: Option[T]): Unit
+  def multiSet(filter: Point, value: Option[T]): Tx
   /** Remove all data in this cube. Slice/dice does apply (non-matching are not deleted). */
   def clear = multiSet(Point.empty, None)
 
@@ -31,8 +33,8 @@ object CubeEditor {
   def readOnly[T]: CubeEditor[T] = new CubeEditor[T] {
     override def isSettable(at: Point) = false
     /** Set the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
-    override def set(at: Point, value: Option[T]) = throw ValueCannotBeSetException(at)
-    override def multiSet(filter: Point, value: Option[T]) = throw ValueCannotBeSetException(filter)
+    override def set(at: Point, value: Option[T]) = Transaction(throw ValueCannotBeSetException(at))
+    override def multiSet(filter: Point, value: Option[T]) = Transaction(throw ValueCannotBeSetException(filter))
   }
 }
 

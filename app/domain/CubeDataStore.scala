@@ -1,5 +1,6 @@
 package domain
 
+import base._
 import cube._
 
 /** Stores the data for a cube (storage backend). */
@@ -23,9 +24,9 @@ trait CubeDataStoreRepo {
     cds.asInstanceOf[CDS[T]]
   }
 
-  def create[T](dimensions: Set[Dimension], dataType: DataType[T]): CDS[T]
+  def create[T](dimensions: Set[Dimension], dataType: DataType[T]): <>[CDS[T]]
 
-  def remove(id: Long): Unit
+  def remove(id: Long): Tx
 }
 
 
@@ -37,7 +38,7 @@ trait CopyableCubeDataStore[T] extends CubeDataStore[T] {
     * Dimension in the 'remove' point will be removed, (only) the data at the specified coordinate will be preserved.
     * Add and remove must not overlap, all dimensions added must not yet be, all dimensions removes must be in the data.
     */
-  def copy(add: Point = Point.empty, remove: Point = Point.empty): Self
+  def copy(add: Point = Point.empty, remove: Point = Point.empty): <>[Self]
 }
 
 trait CopyableCubeDataStoreRepo extends CubeDataStoreRepo {

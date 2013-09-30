@@ -1,8 +1,7 @@
 package models
 
-import cube._
+import base._
 import domain._
-import db._
 
 case class DomainId(id: Long)
 
@@ -23,6 +22,6 @@ trait FudimDomainRepo {
   def get(name: String): Option[FudimDomain]
   def get(id: DomainId): Option[FudimDomain]
 
-  def create(name: String): FudimDomain
-  def remove(id: FudimDomain): Unit
+  def create(name: String): <>[FudimDomain]
+  def remove(id: FudimDomain): Tx
 }

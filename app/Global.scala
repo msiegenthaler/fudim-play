@@ -11,7 +11,9 @@ object Global extends GlobalSettings {
 
   override def onStart(app: Application) {
     if (!InitialData.hasData) {
-      Fudim(InitialData.insertExample)
+      Fudim.exec {
+        InitialData.insertExample
+      }
     }
   }
 }

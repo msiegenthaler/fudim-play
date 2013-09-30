@@ -11,7 +11,7 @@ object Fudim {
     override def initialValue = None
   }
 
-  def apply[A](tx: Transaction[A]): A = {
+  def exec[A](tx: Transaction[A]): A = {
     val id = ids.incrementAndGet()
     val conn = DB.getConnection(autocommit = false)
     try {

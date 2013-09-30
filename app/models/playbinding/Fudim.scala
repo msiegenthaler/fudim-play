@@ -9,7 +9,7 @@ import base._
 object Fudim {
   def apply[A](tx: Transaction[A]): A = {
     val id = ids.incrementAndGet()
-    val conn = DB.getConnection(s"tx-$id", false)
+    val conn = DB.getConnection(autocommit = false)
     try {
       val state = TxState(id, conn)
       val r = tx.run(state)
@@ -24,7 +24,26 @@ object Fudim {
 
   private val ids = new AtomicLong(1)
 
-  private case class TxState(id: Long, connection: Connection) extends SqlDatabase {
+  private case class TxState(id: Long, connection: Connection) extends TransactionState {
     override def toString = s"tx-$id"
   }
+
+  private[playbinding] object Db extends SqlDatabase {
+    def transaction[A](b: (Connection) => A) = execute {
+      case TxState(id, connection) => b(connection)
+      case _ => throw new AssertionError("Wrong TxState, not a Db.")
+    }
+    def readOnly[A](b: (Connection) => A) = {
+      val c = DB.getConnection(autocommit = false)
+      try {
+        b(c)
+      } finally {
+        c.rollback()
+      }
+    }
+  }
+}
+
+trait FudimResources {
+  protected def db: SqlDatabase = Fudim.Db
 }

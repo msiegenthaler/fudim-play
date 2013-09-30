@@ -1,61 +1,61 @@
 import scala.util.Random
 import play.api._
-import models._
+import base._
 import cube._
-import models.playbinding.DomainRepo
+import models._
+import models.playbinding._
 
 object Global extends GlobalSettings {
   //so they get registered
   val aggregation = Aggregation.all
 
   override def onStart(app: Application) {
-    if (!InitialData.hasData) InitialData.insert
+    if (!InitialData.hasData) {
+      Fudim(InitialData.insertExample)
+    }
   }
 }
 
 object InitialData {
   def hasData = !DomainRepo.get("example").isEmpty
-  def insert {
-    val example = DomainRepo.create("example")
 
-    val monat = example.dimensionRepo.create("Monat")
-    monat.add("Jan")
-    monat.add("Feb")
-    monat.add("Mar")
-    monat.add("Apr")
-    monat.add("Mai")
+  def insertExample: Tx = for {
+    example <- DomainRepo.create("example")
 
-    val project = example.dimensionRepo.create("Projekt")
-    project.add("BZ")
-    project.add("AB")
-    project.add("GG")
+    monat <- example.dimensionRepo.create("Monat")
+    _ <- List("Jan", "Feb", "Mar", "Apr", "Mai").map(monat.add).sequence
 
-    val kostenart = example.dimensionRepo.create("Kostenart")
-    val ka_ma = kostenart.add("Mitarbeiter")
-    val ka_ext = kostenart.add("Externe")
-    val ka_mat = kostenart.add("Material")
-    val ka_gk = kostenart.add("Gemeinkosten")
+    projekt <- example.dimensionRepo.create("Projekt")
+    _ <- List("BZ", "AB", "GG").map(projekt.add).sequence
 
-    val umsatz = example.factRepo.createDatabaseBacked("Umsatz", FudimDataTypes.integer, Set(monat, project), Aggregation.sum).
-      editor.getOrElse(throw new IllegalStateException("Umsatz not editable"))
-    val kosten = example.factRepo.createDatabaseBacked("Kosten", FudimDataTypes.integer, Set(monat, project, kostenart), Aggregation.sum).
-      editor.getOrElse(throw new IllegalStateException("Kosten not editable"))
+    kostenart <- example.dimensionRepo.create("Kostenart")
+    ka_ma <- kostenart.add("Mitarbeiter")
+    ka_ext <- kostenart.add("Externe")
+    ka_mat <- kostenart.add("Material")
+    ka_gk <- kostenart.add("Gemeinkosten")
 
-    val gewinnFormula = FudimFormulas.subtract("Umsatz" :: "Kosten" :: Nil, monat :: project :: Nil)
-    val gewinn = example.factRepo.createFormulaBased("Gewinn", FudimDataTypes.integer, gewinnFormula, Aggregation.sum)
+    umsatzFact <- example.factRepo.createDatabaseBacked("Umsatz", FudimDataTypes.integer, Set(monat, projekt), Aggregation.sum)
+    umsatz = umsatzFact.editor.getOrElse(throw new IllegalStateException("Umsatz not editable"))
+    kostenFact <- example.factRepo.createDatabaseBacked("Kosten", FudimDataTypes.integer, Set(monat, projekt, kostenart), Aggregation.sum)
+    kosten = kostenFact.editor.getOrElse(throw new IllegalStateException("Kosten not editable"))
 
-    val rnd = new Random(1)
-    for (m ← monat.all) {
-      for (p ← project.all) {
-        val at = m + p
-        umsatz.set(at, rnd.nextInt(1000) + 9500)
+    gewinnFormula = FudimFormulas.subtract("Umsatz" :: "Kosten" :: Nil, monat :: projekt :: Nil)
+    gewinnFact <- example.factRepo.createFormulaBased("Gewinn", FudimDataTypes.integer, gewinnFormula, Aggregation.sum)
 
-        val k = rnd.nextInt(1000) + 8500
-        kosten.set(at + ka_ma, (k * 0.7).round)
-        kosten.set(at + ka_ext, (k * 0.05).round)
-        kosten.set(at + ka_mat, 0)
-        kosten.set(at + ka_gk, (k * 0.25).round)
-      }
+    rnd = new Random(1)
+    _ <- {
+      monat.all.map { m =>
+        projekt.all.map { p =>
+          val at = m + p
+          val k = rnd.nextInt(1000) + 8500
+
+          umsatz.set(at, rnd.nextInt(1000) + 9500) >>
+            kosten.set(at + ka_ma, (k * 0.7).round) >>
+            kosten.set(at + ka_ext, (k * 0.05).round) >>
+            kosten.set(at + ka_mat, 0) >>
+            kosten.set(at + ka_gk, (k * 0.25).round)
+        }.sequence
+      }.sequence
     }
-  }
+  } yield ()
 }

@@ -7,11 +7,16 @@ import play.api.Play.current
 import base._
 
 object Fudim {
+  private val threadTx = new ThreadLocal[Option[TxState]] {
+    override def initialValue = None
+  }
+
   def apply[A](tx: Transaction[A]): A = {
     val id = ids.incrementAndGet()
     val conn = DB.getConnection(autocommit = false)
     try {
       val state = TxState(id, conn)
+      threadTx.set(Some(state))
       val r = tx.run(state)
       conn.commit()
       r
@@ -19,6 +24,8 @@ object Fudim {
       case e: Exception =>
         conn.rollback()
         throw e
+    } finally {
+      threadTx.remove()
     }
   }
 
@@ -34,11 +41,17 @@ object Fudim {
       case _ => throw new AssertionError("Wrong TxState, not a Db.")
     }
     def readOnly[A](b: (Connection) => A) = {
-      val c = DB.getConnection(autocommit = false)
-      try {
-        b(c)
-      } finally {
-        c.rollback()
+      //If a transaction is running on the thread, then reuse the tx's connection
+      // else we get deadlocks and other not so nice things.
+      threadTx.get.map { tx =>
+        b(tx.connection)
+      }.getOrElse {
+        val c = DB.getConnection(autocommit = false)
+        try {
+          b(c)
+        } finally {
+          c.rollback()
+        }
       }
     }
   }

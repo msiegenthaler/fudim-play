@@ -81,7 +81,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     DatabaseCubeDataStoreImpl(definition, storeType, dimensions)
   }
 
-  protected def copyData[T](from: DatabaseCubeDataStoreImpl[T], to: DatabaseCubeDataStoreImpl[T], pos: Point = Point.empty)(implicit c: Connection) {
+  protected def copyData[T](from: DatabaseCubeDataStoreImpl[T], to: DatabaseCubeDataStoreImpl[T], pos: Point = Point.empty) = db.transaction { implicit c =>
     val commonDims = from.dims.filter(v => to.dims.contains(v._1))
     val newDims = to.dims.filterNot(v => commonDims.contains(v._1))
     require(pos.defines(newDims.keys))
@@ -121,18 +121,19 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     }
     def drop(implicit c: Connection): Unit = SQL(s"DROP TABLE $table").execute
 
-    override def copy(add: Point = Point.empty, remove: Point = Point.empty) = db.transaction { implicit c =>
+    override def copy(add: Point = Point.empty, remove: Point = Point.empty) = {
       val missing = remove.on.filterNot(dims.keySet.contains)
       require(missing.isEmpty, s"Dimension ${missing.mkString(",")} does not exist in $this")
       val already = dims.keySet.intersect(add.on)
       require(already.isEmpty, s"Dimensions ${already.mkString(",")} do already exist in $this")
 
-      val newCube = cloneStructure(dims.keySet ++ add.on -- remove.on)
-      copyData(this, newCube, add ++ remove)
-      newCube
+      for {
+        newCube <- cloneStructure(dims.keySet ++ add.on -- remove.on)
+          _ <- copyData(this, newCube, add ++ remove)
+      } yield newCube
     }
     protected def cloneStructure(dims: Set[Dimension]) = {
-      repo.create(dims, dataType) match {
+      repo.create(dims, dataType).map {
         case c: DatabaseCubeDataStoreImpl[T] => c
       }
     }

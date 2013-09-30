@@ -37,10 +37,7 @@ object Transaction {
 trait TransactionState
 
 /** A ressource that can take part in a transaction. */
-trait TransactionalRessource[T <: TransactionState] {
+trait TransactionalRessource {
   /** Provides access to the transaction state. */
-  protected def execute[A](f: T => A): Transaction[A] = Transaction.on {
-    case t: T => f(t)
-    case _ => throw new IllegalStateException("Transaction does not support ressource type " + classOf[T].getName)
-  }
+  protected def execute[A](f: TransactionState => A): Transaction[A] = Transaction.on(f)
 }

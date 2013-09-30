@@ -3,6 +3,9 @@ package controllers
 import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
+import scalaz._
+import Scalaz._
+import base.Tx
 import cube._
 import models._
 import support._
@@ -35,32 +38,24 @@ object Facts extends Controller {
       Ok(views.html.fact(domainName, fact, dims, fact.dataType.aggregations, aggrForm.fill(aggr.name)))
     }.getOrElse(NotFound)
   }
-  def addDimension(domainName: String, factName: String, dimensionName: String) = DomainAction(domainName) { domain ⇒
+  def addDimension(domainName: String, factName: String, dimensionName: String) = modFactDim(domainName, factName, dimensionName) { (fact, moveTo) =>
+    fact.addDimension(moveTo)
+  }
+  def removeDimension(domainName: String, factName: String, dimensionName: String) = modFactDim(domainName, factName, dimensionName) { (fact, keepAt) =>
+    fact.removeDimension(keepAt)
+  }
+  private def modFactDim(domainName: String, factName: String, dimensionName: String)(f: (FudimFact[_], Coordinate) => Tx) = DomainAction(domainName) { domain ⇒
     val r = for {
-      fact ← domain.factRepo.get(factName)
-      dimension ← domain.dimensionRepo.get(dimensionName)
-      moveTo ← dimension.all.headOption
+      fact ← domain.factRepo.get(factName).toSuccess(s"Fact $factName not found")
+      dimension ← domain.dimensionRepo.get(dimensionName).toSuccess(s"Dimension $dimensionName not found")
+      coord ← dimension.all.headOption.toSuccess(s"Dimension $dimensionName has no values")
     } yield {
-      Fudim.exec {
-        fact.addDimension(moveTo)
-      }
+      Fudim.exec(f(fact, coord))
       Redirect(routes.Facts.view(domainName, factName))
     }
-    r.getOrElse(NotFound)
+    r.valueOr(e => NotFound(e))
   }
-  def removeDimension(domainName: String, factName: String, dimensionName: String) = DomainAction(domainName) { domain ⇒
-    val r = for {
-      fact ← domain.factRepo.get(factName)
-      dimension ← domain.dimensionRepo.get(dimensionName)
-      keepAt ← dimension.all.headOption
-    } yield {
-      Fudim.exec {
-        fact.removeDimension(keepAt)
-      }
-      Redirect(routes.Facts.view(domainName, factName))
-    }
-    r.getOrElse(NotFound)
-  }
+
   def modifyDimension(domain: String, fact: String, dimension: String, action: String) = action match {
     case "PUT" => addDimension(domain, fact, dimension)
     case "DELETE" => removeDimension(domain, fact, dimension)

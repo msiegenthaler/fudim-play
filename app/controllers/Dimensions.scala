@@ -3,6 +3,7 @@ package controllers
 import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
+import base._
 import support.DomainAction
 import support.DimensionAction
 import models.playbinding.Fudim
@@ -31,7 +32,7 @@ object Dimensions extends Controller {
     addValueForm.bindFromRequest.fold(
       errors ⇒ BadRequest(views.html.dimension(domainName, dimension, dimension.values, errors)),
       value ⇒ {
-        Fudim.exec {
+        Fudim.execTx {
           dimension.add(value)
         }
         Redirect(routes.Dimensions.get(domainName, name))

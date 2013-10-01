@@ -5,9 +5,9 @@ import cube._
 
 trait FudimDimension extends Dimension {
   /** Add a value to the dimension (at last index). */
-  def add(value: String): <>[Coordinate]
+  def add(value: String): Coordinate@tx
   /** Adds a value to the dimension directly after another value (use None to insert as first). */
-  def add(value: String, after: Option[Coordinate]): <>[Coordinate]
+  def add(value: String, after: Option[Coordinate]): Coordinate@tx
 }
 
 trait FudimDimensionRepo extends DimensionRepository {

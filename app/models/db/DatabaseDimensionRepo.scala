@@ -5,9 +5,11 @@ import anorm._
 import anorm.SqlParser._
 import base._
 import cube._
+import support.AnormDb
 
 trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory {
   protected def db: SqlDatabase
+  protected val Db = new AnormDb(db)
   def domain: DomainId
 
   override def get(name: String) = db.readOnly { implicit c ⇒
@@ -42,22 +44,23 @@ trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory {
   private def render(of: DatabaseDimension, at: Coordinate): String = db.readOnly { implicit c ⇒
     SQL("select content from dimension_value where dimension = {dim} and id = {id}").on("dim" -> of.id, "id" -> at.id).as(scalar[String] single)
   }
-  private def addValue(to: DatabaseDimension, v: String) = db.transaction { implicit c ⇒
-    val max = SQL("select max(nr) from dimension_value where dimension = {dim}").on("dim" -> to.id).single(scalar[Long] ?)
-    val id = SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").
-      on("dim" -> to.id, "nr" -> max.map(_ + 1).getOrElse(0), "val" -> v).executeInsert().get
+
+  private def addValue(to: DatabaseDimension, v: String): Coordinate@tx = {
+    val max = Db.single(SQL("select max(nr) from dimension_value where dimension = {dim}").on("dim" -> to.id), scalar[Long] ?)
+    val id = Db.insert(SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").
+      on("dim" -> to.id, "nr" -> max.map(_ + 1).getOrElse(0), "val" -> v)).get
     coordinate(to, id)
   }
-  private def addValue(to: DatabaseDimension, v: String, after: Option[Coordinate]): <>[Coordinate] = db.readOnly { implicit c ⇒
-    SQL("select nr from dimension_value where id = {id}").on("id" -> to.id).as(long("nr") singleOpt) match {
-      case Some(nr) ⇒ db.transaction { implicit c =>
-        SQL("update dimension_value set nr = nr + 1 where dimension = {dim} and nr >= {nr}").on("dim" -> to.id, "nr" -> nr).executeUpdate
-        val id = SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").
-          on("dim" -> to.id, "nr" -> nr, "val" -> v).executeInsert().get
-        coordinate(to, id)
-      }
-      case None ⇒
-        addValue(to, v)
+  private def addValue(to: DatabaseDimension, v: String, after: Option[Coordinate]): Coordinate@tx = {
+    if (!after.isDefined) addValue(to, v)
+    else {
+      val nrOfAfter = Db.select(SQL("select max(nr) from dimension_value where id = {id}").on("id" -> after.get.id), long("nr") singleOpt)
+      val nr = nrOfAfter.map { nr =>
+        Db.update(SQL("update dimension_value set nr = nr + 1 where dimension = {dim} and nr > {nr}").on("dim" -> to.id, "nr" -> nr)).transaction
+      }.getOrElse(Transaction.pure(0)).tx
+      val id = Db.insert(SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").
+        on("dim" -> to.id, "nr" -> nr, "val" -> v)).get
+      coordinate(to, id)
     }
   }
 

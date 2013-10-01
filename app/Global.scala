@@ -25,10 +25,10 @@ object InitialData {
     example <- DomainRepo.create("example")
 
     monat <- example.dimensionRepo.create("Monat")
-    _ <- List("Jan", "Feb", "Mar", "Apr", "Mai").map(monat.add).sequence
+    _ <- List("Jan", "Feb", "Mar", "Apr", "Mai").map(m => monat.add(m).transaction).sequence
 
     projekt <- example.dimensionRepo.create("Projekt")
-    _ <- List("BZ", "AB", "GG").map(projekt.add).sequence
+    _ <- List("BZ", "AB", "GG").map(m => projekt.add(m).transaction).sequence
 
     kostenart <- example.dimensionRepo.create("Kostenart")
     ka_ma <- kostenart.add("Mitarbeiter")

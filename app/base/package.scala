@@ -1,3 +1,5 @@
+import scala.util.continuations._
+
 package object base {
   type Tx = Transaction[Unit]
   type <>[A] = Transaction[A]
@@ -15,5 +17,40 @@ package object base {
   }
   implicit class TraversableToTx(t: TraversableOnce[Tx]) {
     def sequence: Tx = t.foldLeft(Transaction.pure(()))((sf, t) => sf >> t)
+  }
+
+  /** Indicates that the value is the result of a transaction. To evaluate the value a transaction needs to be run. */
+  type tx = cps[Transaction[Any]]
+
+  /** Converts a transaction (monad) into a transactional value (continuation). The transaction is not executed. */
+  def tx[A](transaction: Transaction[A]): A@tx = shift(transaction.flatMap)
+  implicit def transactionToTx[A](transaction: Transaction[A]) = tx(transaction)
+  implicit class TransactionToTx[A](transaction: Transaction[A]) {
+    def tx = transactionToTx(transaction)
+  }
+
+  /** Converts an @tx value to the corresponding Transaction monad. */
+  def transaction[A](body: => A@tx): Transaction[A] = {
+    val ctx = reify[A, Transaction[Any], Transaction[Any]](body)
+    val r = ctx.foreach(v => Transaction.pure(v))
+    r.asInstanceOf[Transaction[A]]
+  }
+  implicit def txToTransaction[A](body: => A@tx) = transaction(body)
+  implicit class TxToTransaction[A](body: => A@tx) {
+    def transaction = txToTransaction(body)
+  }
+
+  /** Lifts the value into a @tx (equivalent to Transaction.pure) */
+  def asTx[A](a: A): A@tx = Transaction.pure(a).tx
+  implicit def valueToTx[A](a: A) = asTx(a)
+  implicit class ValueToTx[A](a: A) {
+    def tx = valueToTx(a)
+  }
+
+  /** Noop @tx value. Useful for things like 'if (cond) doTransaction else noop' */
+  val noop = ().tx
+  implicit def anyTxToUnitTx[A](a: => A@tx): Unit@tx = {
+    a
+    ()
   }
 }

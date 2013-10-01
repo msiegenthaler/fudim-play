@@ -19,16 +19,16 @@ trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory {
   override def all = db.readOnly { implicit c ⇒
     SQL("select * from dimension where domain={domain}").on("domain" -> domain.id).as(dimension *)
   }
-  def create(name: String) = db.transaction { implicit c ⇒
-    SQL("insert into dimension(domain, name) values({domain}, {name})").on("domain" -> domain.id, "name" -> name).executeUpdate
-    get(name).getOrElse(throw new IllegalStateException(s"Insert of dimension $name failed"))
+  def create(name: String) = {
+    Db.insert(SQL("insert into dimension(domain, name) values({domain}, {name})").on("domain" -> domain.id, "name" -> name))
+    get(name).getOrElse(throw new IllegalStateException(s"Insert of dimension $name failed")).tx
   }
-  def remove(name: String) = db.transaction { implicit c ⇒
-    get(name).foreach { d ⇒
-      val id = idOf(d)
-      SQL("delete from dimension where id = {id}").on("id" -> id).executeUpdate
-      SQL("delete from dimension_value where dimension = {id}").on("id" -> id).executeUpdate
+  def remove(name: String) = {
+    def deleteById(id: Long) = {
+      Db.update(SQL("delete from dimension where id = {id}").on("id" -> id))
+      Db.update(SQL("delete from dimension_value where dimension = {id}").on("id" -> id))
     }
+    get(name).map(idOf).map(deleteById(_).transaction).getOrElse(Transaction.noop).tx
   }
 
   private def coordinates(of: DatabaseDimension): List[Coordinate] = db.readOnly { implicit c ⇒

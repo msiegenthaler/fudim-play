@@ -17,7 +17,7 @@ object Dimensions extends Controller {
     addForm.bindFromRequest.fold(
       errors ⇒ BadRequest(views.html.dimensions(domainName, domain.dimensions, errors)),
       name ⇒ {
-        Fudim.exec {
+        Fudim.execTx {
           domain.dimensionRepo.create(name)
         }
         Redirect(routes.Dimensions.index(domainName))

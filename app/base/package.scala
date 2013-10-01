@@ -48,7 +48,7 @@ package object base {
   }
 
   /** Noop @tx value. Useful for things like 'if (cond) doTransaction else noop' */
-  val noop = ().tx
+  def noop = ().tx
   implicit def anyTxToUnitTx[A](a: => A@tx): Unit@tx = {
     a
     ()

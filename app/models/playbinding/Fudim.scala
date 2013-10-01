@@ -29,6 +29,7 @@ object Fudim {
       conn.close()
     }
   }
+  def exec[A](tx: A@tx): A = exec(tx.transaction)
 
   private val ids = new AtomicLong(1)
 

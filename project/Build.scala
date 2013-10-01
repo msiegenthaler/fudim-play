@@ -17,6 +17,10 @@ object ApplicationBuild extends Build {
   val main = play.Project(appName, appVersion, appDependencies).settings(
     scalaVersion := "2.10.2",
 
+    autoCompilerPlugins := true,
+    addCompilerPlugin("org.scala-lang.plugins" % "continuations" % "2.10.2"),
+    scalacOptions += "-P:continuations:enable",
+
     routesImport += "support.PointDefinition",
     routesImport += "support.Bindables._",
     lessEntryPoints <<= baseDirectory(customLessEntryPoints))

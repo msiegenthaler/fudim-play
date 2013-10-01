@@ -18,7 +18,7 @@ object ApplicationBuild extends Build {
     scalaVersion := "2.10.2",
 
     autoCompilerPlugins := true,
-    addCompilerPlugin("org.scala-lang.plugins" % "continuations" % "2.10.2"),
+    libraryDependencies += compilerPlugin("org.scala-lang.plugins" % "continuations" % scalaVersion.value),
     scalacOptions += "-P:continuations:enable",
 
     routesImport += "support.PointDefinition",

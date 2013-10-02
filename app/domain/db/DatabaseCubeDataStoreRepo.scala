@@ -66,14 +66,14 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
   override def remove(id: Long) = {
     val definition = Db.select(SQL("select * from databaseCube where id={id}").on("id" -> id), cubeDefinition.singleOpt)
     definition.mapTx { definition =>
-      val cds = Db(loadFromDefinition(definition)(_))
+      val cds = loadFromDefinition(definition)
       Db.delete(SQL("delete from databaseCube_dimension where cube={id}").on("id" -> definition.id))
       Db.delete(SQL("delete from databaseCube where id={id}").on("id" -> definition.id))
       cds.drop
     }
   }
 
-  private def loadFromDefinition(definition: CubeDefinition)(implicit c: Connection) = {
+  private def loadFromDefinition(definition: CubeDefinition) = db.readOnly { implicit c =>
     val dimensions = SQL("select id, dimension from databaseCube_dimension where cube={id}").on("id" -> definition.id).
       as(long("id") ~ str("dimension") *).map {
       case id ~ name ⇒

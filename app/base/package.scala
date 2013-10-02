@@ -21,13 +21,22 @@ package object base {
 
   /** Provide some methods on TraversableOne, so working with tx is easier. */
   implicit class TxTraversable[+A](l: TraversableOnce[A]) {
-    def mapTx[B](f: A => B@tx): Seq[B]@tx = l.map(f(_).transaction).sequence.tx
+    def mapTx[B](f: A => B@tx): Seq[B]@tx = l.map(f(_).m).sequence.tx
+    def foreachTx[B](f: A => B@tx): Unit@tx = mapTx(f)
   }
   /** Provide some methods on Option, so working with tx is easier. */
   implicit class TxOption[+A](o: Option[A]) {
     def mapTx[B](f: A => B@tx): Option[B]@tx = {
-      if (o.isDefined) Some(f(o.get)).transaction
+      if (o.isDefined) Some(f(o.get)).m
       else Transaction.pure(None)
+    }.tx
+    def foreachTx[B](f: A => B@tx): Unit@tx = {
+      if (o.isDefined) f(o.get)
+      else noop
+    }
+    def getOrElseTx[B >: A](default: => B@tx): B@tx = {
+      if (o.isDefined) Transaction.pure(o.get)
+      else default.m
     }.tx
   }
 

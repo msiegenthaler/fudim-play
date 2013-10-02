@@ -51,6 +51,7 @@ package object base {
   implicit def txToTransaction[A](body: => A@tx) = transaction(body)
   implicit class TxToTransaction[A](body: => A@tx) {
     def transaction = txToTransaction(body)
+    def m = transaction
   }
 
   /** Lifts the value into a @tx (equivalent to Transaction.pure) */

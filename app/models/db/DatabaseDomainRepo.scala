@@ -7,24 +7,24 @@ import base._
 import support.AnormDb
 
 trait DatabaseDomainRepo extends FudimDomainRepo {
-  protected def db: SqlDatabase
-  protected val Db = new AnormDb(db)
+  protected def database: SqlDatabase
+  protected val db = new AnormDb(database)
 
   override def all = {
-    Db.notx.select(SQL("select * from domain"), domain *)
+    db.notx.select(SQL("select * from domain"), domain *)
   }
   def get(name: String) = {
-    Db.notx.select(SQL("select * from domain where name={name}").on("name" -> name), domain.singleOpt)
+    db.notx.select(SQL("select * from domain where name={name}").on("name" -> name), domain.singleOpt)
   }
   def get(id: DomainId) = {
-    Db.notx.select(SQL("select * from domain where id={id}").on("id" -> id.id), domain.singleOpt)
+    db.notx.select(SQL("select * from domain where id={id}").on("id" -> id.id), domain.singleOpt)
   }
   def create(name: String) = {
-    Db.insert(SQL("insert into domain(name) values ({name})").on("name" -> name))
+    db.insert(SQL("insert into domain(name) values ({name})").on("name" -> name))
     get(name).getOrElse(throw new IllegalStateException(s"Could not insert domain $name"))
   }
   def remove(id: FudimDomain) = {
-    Db.delete(SQL("delete from domain where id={id}").on("id" -> id.id))
+    db.delete(SQL("delete from domain where id={id}").on("id" -> id.id))
   }
 
   private val domain: RowParser[FudimDomain] = long("id").map(DomainId) ~ str("name") map {

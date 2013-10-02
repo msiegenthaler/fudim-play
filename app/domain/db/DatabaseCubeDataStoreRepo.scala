@@ -13,8 +13,8 @@ import support.AnormDb
 trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
   override type CDS[T] = DatabaseCubeDataStore[T]
 
-  protected def db: SqlDatabase
-  protected val Db = new AnormDb(db)
+  protected def database: SqlDatabase
+  protected val db = new AnormDb(database)
   protected def dimensionRepo: DimensionRepository
   protected def dataTypeRepo: DataTypeRepository
   protected def storeTypes: Traversable[StoreDataType[_]]
@@ -42,19 +42,19 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
   }
 
   override def get(id: Long): Option[CDS[_]] = {
-    Db.notx.select(SQL("select * from databaseCube where id={id}").on("id" -> id), cubeDefinition.singleOpt).
+    db.notx.select(SQL("select * from databaseCube where id={id}").on("id" -> id), cubeDefinition.singleOpt).
       map(loadFromDefinition)
   }
 
   override def create[T](dims: Set[Dimension], dataType: DataType[T]): DatabaseCubeDataStore[T]@tx = {
     val storeType = Types(dataType)
-    val id = Db.insert(SQL("insert into databaseCube(type) values({type})").on("type" -> storeType.name)).
+    val id = db.insert(SQL("insert into databaseCube(type) values({type})").on("type" -> storeType.name)).
       getOrElse(throw new RuntimeException(s"Could not create the cube in the database"))
     val definition = CubeDefinition(id, storeType.name)
 
 
     val cdims = dims.mapTx { dim ⇒
-      val dimId = Db.insert(SQL("insert into databaseCube_dimension(cube, dimension) values ({cube}, {dimension})").on("cube" -> id, "dimension" -> dim.name)).get
+      val dimId = db.insert(SQL("insert into databaseCube_dimension(cube, dimension) values ({cube}, {dimension})").on("cube" -> id, "dimension" -> dim.name)).get
       (dim, "dim_" + dimId)
     }.toMap
     val cds = DatabaseCubeDataStoreImpl[T](definition, storeType, cdims)
@@ -63,17 +63,17 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
   }
 
   override def remove(id: Long) = {
-    val definition = Db.select(SQL("select * from databaseCube where id={id}").on("id" -> id), cubeDefinition.singleOpt)
+    val definition = db.select(SQL("select * from databaseCube where id={id}").on("id" -> id), cubeDefinition.singleOpt)
     definition.mapTx { definition =>
       val cds = loadFromDefinition(definition)
-      Db.delete(SQL("delete from databaseCube_dimension where cube={id}").on("id" -> definition.id))
-      Db.delete(SQL("delete from databaseCube where id={id}").on("id" -> definition.id))
+      db.delete(SQL("delete from databaseCube_dimension where cube={id}").on("id" -> definition.id))
+      db.delete(SQL("delete from databaseCube where id={id}").on("id" -> definition.id))
       cds.drop
     }
   }
 
   private def loadFromDefinition(definition: CubeDefinition): DatabaseCubeDataStoreImpl[_] = {
-    val dimensions = Db.notx.select(
+    val dimensions = db.notx.select(
       SQL("select id, dimension from databaseCube_dimension where cube={id}").on("id" -> definition.id),
       long("id") ~ str("dimension") *).map {
       case id ~ name ⇒
@@ -93,7 +93,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     val newFields = (List("content") ++ commonDims.map(d ⇒ to.dims(d._1)) ++ newDims.map(_._2)).mkString(",")
     val restrictOn = pos.onlyOn(from.dims.keySet -- to.dims.keySet).coordinates.map(c => (from.dims(c.dimension), toParameterValue(c.id)))
     val where = restrictOn.map(v => s"${v._1} = {${v._1}}").mkString(" AND ")
-    Db.insert(SQL(s"INSERT INTO ${to.table}($newFields) SELECT $oldFields FROM ${from.table}" + (if (where.length > 0) s" WHERE $where" else "")).
+    db.insert(SQL(s"INSERT INTO ${to.table}($newFields) SELECT $oldFields FROM ${from.table}" + (if (where.length > 0) s" WHERE $where" else "")).
       on(fixed ++ restrictOn: _*))
   }
 
@@ -120,9 +120,9 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
 
     def create: Unit@tx = {
       val fields = s"content ${storeType.sqlType}" :: dims.values.map { d ⇒ s"$d integer not null"}.toList
-      Db.execute(SQL(s"CREATE TABLE $table (${fields.mkString(",")})"))
+      db.execute(SQL(s"CREATE TABLE $table (${fields.mkString(",")})"))
     }
-    def drop: Unit@tx = Db.execute(SQL(s"DROP TABLE $table"))
+    def drop: Unit@tx = db.execute(SQL(s"DROP TABLE $table"))
 
     override def copy(add: Point = Point.empty, remove: Point = Point.empty) = {
       val missing = remove.on.filterNot(dims.keySet.contains)
@@ -158,13 +158,13 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       val fields = p.on.map(dims.apply)
       val values = fields.map(f ⇒ s"{$f}")
       val ons = p.coordinates.map(e ⇒ (dims(e.dimension), coordToDb(e))).toSeq :+ ("content" -> storeType.toDb(value))
-      Db.insert(
+      db.insert(
         SQL(s"INSERT INTO $table(content,${fields.mkString(",")}) VALUES ({content},${values.mkString(",")})").on(ons: _*))
     }
     private def update(at: Point, value: T): Boolean@tx = {
       val (where, ons) = mkWhere(at)
       val ons2 = ons :+ ("content" -> storeType.toDb(value))
-      val cnt = Db.update(SQL(s"UPDATE $table SET content={content} WHERE $where").on(ons2: _*))
+      val cnt = db.update(SQL(s"UPDATE $table SET content={content} WHERE $where").on(ons2: _*))
       cnt match {
         case 1 ⇒ true
         case 0 ⇒ false
@@ -173,7 +173,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     }
     private def delete(at: Point): Unit@tx = {
       val (where, ons) = mkWhere(at)
-      Db.delete(SQL(s"DELETE FROM $table WHERE $where").on(ons: _*))
+      db.delete(SQL(s"DELETE FROM $table WHERE $where").on(ons: _*))
     }
 
 
@@ -188,16 +188,16 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       override def get(at: Point) = {
         if (at.definesExactly(dims.keys) && matches(at)) {
           val (where, ons) = mkWhere(at)
-          Db.notx.select(SQL(s"SELECT content FROM $table WHERE $where").on(ons: _*), fromDb.singleOpt)
+          db.notx.select(SQL(s"SELECT content FROM $table WHERE $where").on(ons: _*), fromDb.singleOpt)
         } else None
       }
       override def sparse = {
         val as = (fromDb ~ pointFromDb).*
         val res = if (slice.on.isEmpty) {
-          Db.notx.select(SQL(s"SELECT * FROM $table"), as)
+          db.notx.select(SQL(s"SELECT * FROM $table"), as)
         } else {
           val (where, ons) = mkWhere(slice)
-          Db.notx.select(SQL(s"SELECT * FROM $table WHERE $where").on(ons: _*), as)
+          db.notx.select(SQL(s"SELECT * FROM $table WHERE $where").on(ons: _*), as)
         }
         res.filter(e ⇒ matches(e._2)).map { case value ~ point ⇒ (point, value)}
       }

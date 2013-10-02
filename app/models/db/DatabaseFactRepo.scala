@@ -13,8 +13,8 @@ import play.api.libs.json._
 import support.AnormDb
 
 trait DatabaseFactRepo extends FudimFactRepo {
-  protected def db: SqlDatabase
-  protected val Db = new AnormDb(db)
+  protected def database: SqlDatabase
+  protected val db = new AnormDb(database)
   protected def domain: FudimDomain
   protected def dataTypeRepo = FudimDataTypes
   protected def jsonFormulaRepo: JsonFormulaMapperRepository
@@ -22,13 +22,13 @@ trait DatabaseFactRepo extends FudimFactRepo {
 
   override def get(name: String) = getInternal(name)
   protected def getInternal(name: String): Option[DatabaseFact[_]] = {
-    Db.notx.select(
+    db.notx.select(
       SQL("select * from fact where domain={domain} and name={name}").on("domain" -> domain.id.id, "name" -> name),
       fact singleOpt).flatten
   }
 
   override def all = {
-    Db.notx.select(
+    db.notx.select(
       SQL("select * from fact where domain={domain}").on("domain" -> domain.id.id),
       fact *).flatten
   }
@@ -43,7 +43,7 @@ trait DatabaseFactRepo extends FudimFactRepo {
   }
   protected def create[T](name: String, backend: FactBackend[T]): DatabaseFact[T]@tx = {
     val config = Json.stringify(backend.config)
-    val id = Db.insert(SQL("insert into fact(domain, name, dataType, factType, config) values({domain}, {name}, {dataType}, {factType}, {config})").
+    val id = db.insert(SQL("insert into fact(domain, name, dataType, factType, config) values({domain}, {name}, {dataType}, {factType}, {config})").
       on("domain" -> domain.id.id, "name" -> name, "dataType" -> backend.dataType.name, "factType" -> backend.factType, "config" -> config)).get
     new DatabaseFact(id, name, backend)
   }
@@ -52,7 +52,7 @@ trait DatabaseFactRepo extends FudimFactRepo {
     val fact = getInternal(name).tx
     fact.mapTx { fact =>
       fact.delete()
-      Db.delete(SQL("delete from fact where id={id}").on("id" -> fact.id))
+      db.delete(SQL("delete from fact where id={id}").on("id" -> fact.id))
     }.getOrElse(Transaction.empty)
   }
 
@@ -80,7 +80,7 @@ trait DatabaseFactRepo extends FudimFactRepo {
     def backend = synchronized(_backend)
     def updateBackend(nb: FactBackend[T]): Unit@tx = {
       val config = Json.stringify(nb.config)
-      Db.update(SQL("update fact set config={config} where id={id}").on("config" -> config, "id" -> id))
+      db.update(SQL("update fact set config={config} where id={id}").on("config" -> config, "id" -> id))
     }
 
 

@@ -68,5 +68,5 @@ object Fudim {
 }
 
 trait FudimResources {
-  protected def db: SqlDatabase = Fudim.Db
+  protected def database: SqlDatabase = Fudim.Db
 }

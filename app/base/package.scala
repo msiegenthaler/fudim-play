@@ -19,6 +19,19 @@ package object base {
     def sequence: Tx = t.foldLeft(Transaction.pure(()))((sf, t) => sf >> t)
   }
 
+  /** Provide some methods on TraversableOne, so working with tx is easier. */
+  implicit class TxTraversable[+A](l: TraversableOnce[A]) {
+    def mapTx[B](f: A => B@tx): Seq[B]@tx = l.map(f(_).transaction).sequence.tx
+  }
+  /** Provide some methods on Option, so working with tx is easier. */
+  implicit class TxOption[+A](o: Option[A]) {
+    def mapTx[B](f: A => B@tx): Option[B]@tx = {
+      if (o.isDefined) Some(f(o.get)).transaction
+      else Transaction.pure(None)
+    }.tx
+  }
+
+
   /** Indicates that the value is the result of a transaction. To evaluate the value a transaction needs to be run. */
   type tx = cps[Transaction[Any]]
 

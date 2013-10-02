@@ -43,6 +43,7 @@ object Fudim {
   private[playbinding] object Db extends SqlDatabase {
     def inTransaction[A](b: (Connection) => A) = execute {
       case TxState(id, connection) => b(connection)
+      case ReadOnlyTxState(connection) => b(connection)
       case _ => throw new AssertionError("Wrong TxState, not a Db.")
     }
     def readOnly[A](tx: Transaction[A]) = threadTx.get match {

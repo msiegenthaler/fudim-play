@@ -67,8 +67,8 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     val definition = Db.select(SQL("select * from databaseCube where id={id}").on("id" -> id), cubeDefinition.singleOpt)
     definition.mapTx { definition =>
       val cds = Db(loadFromDefinition(definition)(_))
-      Db.update(SQL("delete from databaseCube_dimension where cube={id}").on("id" -> definition.id))
-      Db.update(SQL("delete from databaseCube where id={id}").on("id" -> definition.id))
+      Db.delete(SQL("delete from databaseCube_dimension where cube={id}").on("id" -> definition.id))
+      Db.delete(SQL("delete from databaseCube where id={id}").on("id" -> definition.id))
       cds.drop
     }
   }

@@ -13,5 +13,6 @@ class AnormDb(db: SqlDatabase) {
   def select[A](sql: Sql, parser: ResultSetParser[A]) = apply(sql.as(parser)(_))
   def insert[A](sql: Sql, parser: ResultSetParser[A] = scalar[Long].singleOpt) = apply(sql.executeInsert(parser)(_))
   def update(sql: Sql) = apply(sql.executeUpdate()(_))
+  def delete(sql: Sql) = update(sql)
   def execute(sql: Sql) = apply(sql.execute()(_))
 }

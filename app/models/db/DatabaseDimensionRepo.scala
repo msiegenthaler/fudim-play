@@ -25,8 +25,8 @@ trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory {
   }
   def remove(name: String) = {
     get(name).map(idOf).mapTx { id =>
-      Db.update(SQL("delete from dimension where id = {id}").on("id" -> id))
-      Db.update(SQL("delete from dimension_value where dimension = {id}").on("id" -> id))
+      Db.delete(SQL("delete from dimension where id = {id}").on("id" -> id))
+      Db.delete(SQL("delete from dimension_value where dimension = {id}").on("id" -> id))
     }.getOrElse(())
   }
 

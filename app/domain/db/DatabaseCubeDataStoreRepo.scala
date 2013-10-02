@@ -7,12 +7,14 @@ import anorm.SqlParser._
 import play.api.libs.json._
 import base._
 import cube._
+import support.AnormDb
 
 
 trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
   override type CDS[T] = DatabaseCubeDataStore[T]
 
   protected def db: SqlDatabase
+  protected val Db = new AnormDb(db)
   protected def dimensionRepo: DimensionRepository
   protected def dataTypeRepo: DataTypeRepository
   protected def storeTypes: Traversable[StoreDataType[_]]
@@ -45,28 +47,29 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     }
   }
 
-  override def create[T](dims: Set[Dimension], dataType: DataType[T]): <>[DatabaseCubeDataStore[T]] = db.transaction { implicit c ⇒
+  override def create[T](dims: Set[Dimension], dataType: DataType[T]): DatabaseCubeDataStore[T]@tx = {
     val storeType = Types(dataType)
-    val id = SQL("insert into databaseCube(type) values({type})").on("type" -> storeType.name).executeInsert().
+    val id = Db.insert(SQL("insert into databaseCube(type) values({type})").on("type" -> storeType.name)).
       getOrElse(throw new RuntimeException(s"Could not create the cube in the database"))
     val definition = CubeDefinition(id, storeType.name)
 
-    val cdims = dims.map { dim ⇒
-      val dimId = SQL("insert into databaseCube_dimension(cube, dimension) values ({cube}, {dimension})").
-        on("cube" -> id, "dimension" -> dim.name).executeInsert().map("dim_" + _).get
-      (dim, dimId)
+
+    val cdims = dims.mapTx { dim ⇒
+      val dimId = Db.insert(SQL("insert into databaseCube_dimension(cube, dimension) values ({cube}, {dimension})").on("cube" -> id, "dimension" -> dim.name)).get
+      (dim, "dim_" + dimId)
     }.toMap
     val cds = DatabaseCubeDataStoreImpl[T](definition, storeType, cdims)
     cds.create
     cds
   }
 
-  override def remove(id: Long) = db.transaction { implicit c ⇒
-    SQL("select * from databaseCube where id={id}").on("id" -> id).as(cubeDefinition.singleOpt).foreach { definition ⇒
-      val cds = loadFromDefinition(definition)
+  override def remove(id: Long) = {
+    val definition = Db.select(SQL("select * from databaseCube where id={id}").on("id" -> id), cubeDefinition.singleOpt)
+    definition.mapTx { definition =>
+      val cds = Db(loadFromDefinition(definition)(_))
+      Db.update(SQL("delete from databaseCube_dimension where cube={id}").on("id" -> definition.id))
+      Db.update(SQL("delete from databaseCube where id={id}").on("id" -> definition.id))
       cds.drop
-      SQL("delete from databaseCube_dimension where cube={id}").on("id" -> definition.id).executeUpdate
-      SQL("delete from databaseCube where id={id}").on("id" -> definition.id).executeUpdate
     }
   }
 
@@ -115,11 +118,11 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     val table = definition.tableName
     protected def repo = DatabaseCubeDataStoreRepo.this
 
-    def create(implicit c: Connection) {
+    def create: Unit@tx = {
       val fields = s"content ${storeType.sqlType}" :: dims.values.map { d ⇒ s"$d integer not null"}.toList
-      SQL(s"CREATE TABLE $table (${fields.mkString(",")})").execute
+      Db.execute(SQL(s"CREATE TABLE $table (${fields.mkString(",")})"))
     }
-    def drop(implicit c: Connection): Unit = SQL(s"DROP TABLE $table").execute
+    def drop: Unit@tx = Db.execute(SQL(s"DROP TABLE $table"))
 
     override def copy(add: Point = Point.empty, remove: Point = Point.empty) = {
       val missing = remove.on.filterNot(dims.keySet.contains)
@@ -129,7 +132,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
 
       for {
         newCube <- cloneStructure(dims.keySet ++ add.on -- remove.on)
-          _ <- copyData(this, newCube, add ++ remove)
+        _ <- copyData(this, newCube, add ++ remove)
       } yield newCube
     }
     protected def cloneStructure(dims: Set[Dimension]) = {

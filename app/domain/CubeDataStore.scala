@@ -24,9 +24,9 @@ trait CubeDataStoreRepo {
     cds.asInstanceOf[CDS[T]]
   }
 
-  def create[T](dimensions: Set[Dimension], dataType: DataType[T]): <>[CDS[T]]
+  def create[T](dimensions: Set[Dimension], dataType: DataType[T]): CDS[T]@tx
 
-  def remove(id: Long): Tx
+  def remove(id: Long): Unit@tx
 }
 
 

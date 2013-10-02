@@ -24,11 +24,10 @@ trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory {
     get(name).getOrElse(throw new IllegalStateException(s"Insert of dimension $name failed")).tx
   }
   def remove(name: String) = {
-    def deleteById(id: Long) = {
+    get(name).map(idOf).mapTx { id =>
       Db.update(SQL("delete from dimension where id = {id}").on("id" -> id))
       Db.update(SQL("delete from dimension_value where dimension = {id}").on("id" -> id))
-    }
-    get(name).map(idOf).map(deleteById(_).transaction).getOrElse(Transaction.noop).tx
+    }.getOrElse(())
   }
 
   private def coordinates(of: DatabaseDimension): List[Coordinate] = db.readOnly { implicit c ⇒

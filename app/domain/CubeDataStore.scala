@@ -38,7 +38,7 @@ trait CopyableCubeDataStore[T] extends CubeDataStore[T] {
     * Dimension in the 'remove' point will be removed, (only) the data at the specified coordinate will be preserved.
     * Add and remove must not overlap, all dimensions added must not yet be, all dimensions removes must be in the data.
     */
-  def copy(add: Point = Point.empty, remove: Point = Point.empty): <>[Self]
+  def copy(add: Point = Point.empty, remove: Point = Point.empty): Self@tx
 }
 
 trait CopyableCubeDataStoreRepo extends CubeDataStoreRepo {

@@ -130,15 +130,13 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       val already = dims.keySet.intersect(add.on)
       require(already.isEmpty, s"Dimensions ${already.mkString(",")} do already exist in $this")
 
-      for {
-        newCube <- cloneStructure(dims.keySet ++ add.on -- remove.on)
-        _ <- copyData(this, newCube, add ++ remove)
-      } yield newCube
+      val newCube = cloneStructure(dims.keySet ++ add.on -- remove.on)
+      copyData(this, newCube, add ++ remove)
+      newCube
     }
-    protected def cloneStructure(dims: Set[Dimension]) = {
-      repo.create(dims, dataType).map {
-        case c: DatabaseCubeDataStoreImpl[T] => c
-      }
+    protected def cloneStructure(dims: Set[Dimension]): Self@tx = {
+      val res = repo.create(dims, dataType)
+      res.asInstanceOf[Self]
     }
 
     private def fromDb: RowParser[T] = storeType.fromDb("content")

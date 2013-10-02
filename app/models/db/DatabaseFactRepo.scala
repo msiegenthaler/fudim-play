@@ -74,10 +74,9 @@ trait DatabaseFactRepo extends FudimFactRepo {
   protected final class DatabaseFact[T](val id: Long, val name: String, ib: FactBackend[T]) extends FudimFact[T] {
     private[this] var _backend: FactBackend[T] = ib
     def backend = synchronized(_backend)
-    def updateBackend(nb: FactBackend[T]): Tx = db.transaction { implicit c =>
+    def updateBackend(nb: FactBackend[T]): Unit@tx = {
       val config = Json.stringify(nb.config)
-      val updated = SQL("update fact set config={config} where id={id}").on("config" -> config, "id" -> id).executeUpdate
-      if (updated != 1) throw new IllegalStateException(s"Fact with id $id (named $name) was not found anymore.")
+      Db.update(SQL("update fact set config={config} where id={id}").on("config" -> config, "id" -> id))
     }
 
 
@@ -86,8 +85,8 @@ trait DatabaseFactRepo extends FudimFactRepo {
     def editor = backend.editor
     def aggregation = backend.aggregation
     def aggregation_=(aggr: Aggregation[T]) = updateBackend(backend.aggregation(aggregation = aggr))
-    def addDimension(moveTo: Coordinate) = backend.addDimension(moveTo) >>= updateBackend
-    def removeDimension(keepAt: Coordinate) = backend.removeDimension(keepAt) >>= updateBackend
+    def addDimension(moveTo: Coordinate) = updateBackend(backend.addDimension(moveTo))
+    def removeDimension(keepAt: Coordinate) = updateBackend(backend.removeDimension(keepAt))
     def delete() = backend.delete
 
     override def equals(o: Any) = {
@@ -108,9 +107,9 @@ trait DatabaseFactRepo extends FudimFactRepo {
     def aggregation: Aggregation[T]
 
     def aggregation(aggregation: Aggregation[T] = aggregation): FactBackend[T]
-    def addDimension(moveTo: Coordinate): <>[FactBackend[T]]
-    def removeDimension(keepAt: Coordinate): <>[FactBackend[T]]
-    def delete: Tx = Transaction.empty
+    def addDimension(moveTo: Coordinate): FactBackend[T]@tx
+    def removeDimension(keepAt: Coordinate): FactBackend[T]@tx
+    def delete(): Unit@tx = noop
   }
 
   private def aggregationFromJson(json: JsValue) = for {
@@ -125,12 +124,16 @@ trait DatabaseFactRepo extends FudimFactRepo {
 
     override def aggregation(aggregation: Aggregation[T]) = copy(aggregation = aggregation)
     override def addDimension(moveTo: Coordinate) = {
-      cds.copy(moveTo, Point.empty) <* delete map (ncds => copy(cds = ncds))
+      val ncds = cds.copy(moveTo, Point.empty)
+      delete()
+      copy(cds = ncds)
     }
     override def removeDimension(keepAt: Coordinate) = {
-      cds.copy(Point.empty, keepAt) <* delete map (ncds => copy(cds = ncds))
+      val ncds = cds.copy(Point.empty, keepAt)
+      delete()
+      copy(cds = ncds)
     }
-    override def delete = cubeDataStoreRepo.remove(cds.id)
+    override def delete() = cubeDataStoreRepo.remove(cds.id)
 
     override def config = {
       Json.obj(

@@ -5,7 +5,7 @@ import play.api.data._
 import play.api.data.Forms._
 import scalaz._
 import Scalaz._
-import base.Tx
+import base._
 import cube._
 import models._
 import support._
@@ -23,7 +23,7 @@ object Facts extends Controller {
       data ⇒ {
         val (name, dataTypeName) = data
         FudimDataTypes.get(dataTypeName).map { dataType =>
-          Fudim.exec {
+          Fudim.execTx {
             domain.factRepo.createDatabaseBacked(name, dataType, Set.empty, Aggregation.none)
           }
           Redirect(routes.Facts.view(domain.name, name))
@@ -44,13 +44,13 @@ object Facts extends Controller {
   def removeDimension(domainName: String, factName: String, dimensionName: String) = modFactDim(domainName, factName, dimensionName) { (fact, keepAt) =>
     fact.removeDimension(keepAt)
   }
-  private def modFactDim(domainName: String, factName: String, dimensionName: String)(f: (FudimFact[_], Coordinate) => Tx) = DomainAction(domainName) { domain ⇒
+  private def modFactDim(domainName: String, factName: String, dimensionName: String)(f: (FudimFact[_], Coordinate) => Unit@tx) = DomainAction(domainName) { domain ⇒
     val r = for {
       fact ← domain.factRepo.get(factName).toSuccess(s"Fact $factName not found")
       dimension ← domain.dimensionRepo.get(dimensionName).toSuccess(s"Dimension $dimensionName not found")
       coord ← dimension.all.headOption.toSuccess(s"Dimension $dimensionName has no values")
     } yield {
-      Fudim.exec(f(fact, coord))
+      Fudim.execTx(f(fact, coord))
       Redirect(routes.Facts.view(domainName, factName))
     }
     r.valueOr(e => NotFound(e))
@@ -65,7 +65,7 @@ object Facts extends Controller {
   def setAggregation(domainName: String, factName: String) = FactAction(domainName, factName).on(fact ⇒ { implicit request ⇒
     def changeAggr[T](fact: FudimFact[T], aggrName: String) = {
       val aggr = fact.dataType.aggregations.find(_.name == aggrName).getOrElse(Aggregation.none)
-      Fudim.exec {
+      Fudim.execTx {
         fact.aggregation = aggr
       }
       Redirect(routes.Facts.view(domainName, factName))

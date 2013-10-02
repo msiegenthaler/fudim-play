@@ -10,15 +10,18 @@ import cube._
 import domain._
 import play.api.Logger
 import play.api.libs.json._
+import support.AnormDb
 
 trait DatabaseFactRepo extends FudimFactRepo {
   protected def db: SqlDatabase
+  protected val Db = new AnormDb(db)
   protected def domain: FudimDomain
   protected def dataTypeRepo = FudimDataTypes
   protected def jsonFormulaRepo: JsonFormulaMapperRepository
   protected def cubeDataStoreRepo: CopyableCubeDataStoreRepo
 
-  override def get(name: String) = db.readOnly { implicit c ⇒
+  override def get(name: String) = getInternal(name)
+  protected def getInternal(name: String): Option[DatabaseFact[_]] = db.readOnly { implicit c ⇒
     SQL("select * from fact where domain={domain} and name={name}").on("domain" -> domain.id.id, "name" -> name).as(fact singleOpt).flatten
   }
 
@@ -27,33 +30,32 @@ trait DatabaseFactRepo extends FudimFactRepo {
   }
 
   def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]) = {
-    DataStoreFactBackend(dataType, dimensions, aggregation) >>= create(name)
+    val backend = DataStoreFactBackend(dataType, dimensions, aggregation)
+    create(name, backend)
   }
   def createFormulaBased[T](name: String, dataType: FudimDataType[T], formula: Formula[T], aggregation: Aggregation[T]) = {
     val backend = FormulaFactBackend(dataType, formula, aggregation)
-    create(name)(backend)
+    create(name, backend)
   }
-  protected def create[T](name: String)(backend: FactBackend[T]): <>[DatabaseFact[T]] = db.transaction { implicit c =>
+  protected def create[T](name: String, backend: FactBackend[T]): DatabaseFact[T]@tx = {
     val config = Json.stringify(backend.config)
-    val id = SQL("insert into fact(domain, name, dataType, factType, config) values({domain}, {name}, {dataType}, {factType}, {config})").
-      on("domain" -> domain.id.id, "name" -> name, "dataType" -> backend.dataType.name, "factType" -> backend.factType, "config" -> config).
-      executeInsert().get
+    val id = Db.insert(SQL("insert into fact(domain, name, dataType, factType, config) values({domain}, {name}, {dataType}, {factType}, {config})").
+      on("domain" -> domain.id.id, "name" -> name, "dataType" -> backend.dataType.name, "factType" -> backend.factType, "config" -> config)).get
     new DatabaseFact(id, name, backend)
   }
 
   def remove(name: String) = {
-    get(name).map {
-      case fact: DatabaseFact[_] => fact.delete >> deleteFact(fact)
+    val fact = getInternal(name).tx
+    fact.mapTx { fact =>
+      fact.delete()
+      Db.delete(SQL("delete from fact where id={id}").on("id" -> fact.id))
     }.getOrElse(Transaction.empty)
-  }
-  private def deleteFact(fact: DatabaseFact[_]): Tx = db.transaction { implicit c =>
-    SQL("delete from fact where id={id}").on("id" -> fact.id)
   }
 
   private val fact = {
     long("id") ~ str("name") ~ str("dataType") ~ str("factType") ~ str("config") map {
       case id ~ name ~ dataTypeName ~ factType ~ config ⇒
-        val fact: Validation[String, FudimFact[_]] = for {
+        val fact: Validation[String, DatabaseFact[_]] = for {
           dataType ← dataTypeRepo.get(dataTypeName).toSuccess(s"DataType $dataTypeName is not known")
           json = Json.parse(config)
           backend <- {
@@ -86,7 +88,7 @@ trait DatabaseFactRepo extends FudimFactRepo {
     def aggregation_=(aggr: Aggregation[T]) = updateBackend(backend.aggregation(aggregation = aggr))
     def addDimension(moveTo: Coordinate) = backend.addDimension(moveTo) >>= updateBackend
     def removeDimension(keepAt: Coordinate) = backend.removeDimension(keepAt) >>= updateBackend
-    def delete = backend.delete
+    def delete() = backend.delete
 
     override def equals(o: Any) = {
       if (o.isInstanceOf[DatabaseFact[_]]) o.asInstanceOf[DatabaseFact[_]].id == id
@@ -148,8 +150,8 @@ trait DatabaseFactRepo extends FudimFactRepo {
       backend.valueOr(e => throw new IllegalStateException(s"Cannot load cds-fact from config: $e"))
     }
     def apply[T](dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]) = {
-      cubeDataStoreRepo.create(dimensions, dataType).
-        map(new DataStoreFactBackend(dataType, _, aggregation))
+      val cds = cubeDataStoreRepo.create(dimensions, dataType)
+      new DataStoreFactBackend(dataType, cds, aggregation)
     }
   }
 

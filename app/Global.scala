@@ -11,7 +11,7 @@ object Global extends GlobalSettings {
 
   override def onStart(app: Application) {
     if (!InitialData.hasData) {
-      Fudim.exec {
+      Fudim.execTx {
         InitialData.insertExample
       }
     }
@@ -21,43 +21,44 @@ object Global extends GlobalSettings {
 object InitialData {
   def hasData = !DomainRepo.get("example").isEmpty
 
-  def insertExample: Tx = for {
-    example <- DomainRepo.create("example")
+  def insertExample: Unit@tx = {
+    Logger.info("Generating example data..")
+    val example = DomainRepo.create("example")
 
-    monat <- example.dimensionRepo.create("Monat")
-    _ <- List("Jan", "Feb", "Mar", "Apr", "Mai").map(m => monat.add(m).transaction).sequence
+    val monat = example.dimensionRepo.create("Monat")
+    List("Jan", "Feb", "Mar", "Apr", "Mai").
+      foreachTx(monat.add)
 
-    projekt <- example.dimensionRepo.create("Projekt")
-    _ <- List("BZ", "AB", "GG").map(m => projekt.add(m).transaction).sequence
+    val projekt = example.dimensionRepo.create("Projekt")
+    List("BZ", "AB", "GG").foreachTx(projekt.add)
 
-    kostenart <- example.dimensionRepo.create("Kostenart")
-    ka_ma <- kostenart.add("Mitarbeiter")
-    ka_ext <- kostenart.add("Externe")
-    ka_mat <- kostenart.add("Material")
-    ka_gk <- kostenart.add("Gemeinkosten")
+    val kostenart = example.dimensionRepo.create("Kostenart")
+    val ka_ma = kostenart.add("Mitarbeiter")
+    val ka_ext = kostenart.add("Externe")
+    val ka_mat = kostenart.add("Material")
+    val ka_gk = kostenart.add("Gemeinkosten")
 
-    umsatzFact <- example.factRepo.createDatabaseBacked("Umsatz", FudimDataTypes.integer, Set(monat, projekt), Aggregation.sum)
-    umsatz = umsatzFact.editor.getOrElse(throw new IllegalStateException("Umsatz not editable"))
-    kostenFact <- example.factRepo.createDatabaseBacked("Kosten", FudimDataTypes.integer, Set(monat, projekt, kostenart), Aggregation.sum)
-    kosten = kostenFact.editor.getOrElse(throw new IllegalStateException("Kosten not editable"))
+    val umsatzFact = example.factRepo.createDatabaseBacked("Umsatz", FudimDataTypes.integer, Set(monat, projekt), Aggregation.sum)
+    val umsatz = umsatzFact.editor.get
+    val kostenFact = example.factRepo.createDatabaseBacked("Kosten", FudimDataTypes.integer, Set(monat, projekt, kostenart), Aggregation.sum)
+    val kosten = kostenFact.editor.get
 
-    gewinnFormula = FudimFormulas.subtract("Umsatz" :: "Kosten" :: Nil, monat :: projekt :: Nil)
-    gewinnFact <- example.factRepo.createFormulaBased("Gewinn", FudimDataTypes.integer, gewinnFormula, Aggregation.sum)
+    val gewinnFormula = FudimFormulas.subtract("Umsatz" :: "Kosten" :: Nil, monat :: projekt :: Nil)
+    val gewinnFact = example.factRepo.createFormulaBased("Gewinn", FudimDataTypes.integer, gewinnFormula, Aggregation.sum)
 
-    rnd = new Random(1)
-    _ <- {
-      monat.all.foreachTx { m =>
-        projekt.all.foreachTx { p =>
-          val at = m + p
-          val k = rnd.nextInt(1000) + 8500
+    val rnd = new Random(1)
+    monat.all.foreachTx { m =>
+      projekt.all.foreachTx { p =>
+        val at = m + p
+        val k = rnd.nextInt(1000) + 8500
 
-          umsatz.set(at, rnd.nextInt(1000) + 9500)
-          kosten.set(at + ka_ma, (k * 0.7).round)
-          kosten.set(at + ka_ext, (k * 0.05).round)
-          kosten.set(at + ka_mat, 0)
-          kosten.set(at + ka_gk, (k * 0.25).round)
-        }
+        umsatz.set(at, rnd.nextInt(1000) + 9500)
+        kosten.set(at + ka_ma, (k * 0.7).round)
+        kosten.set(at + ka_ext, (k * 0.05).round)
+        kosten.set(at + ka_mat, 0)
+        kosten.set(at + ka_gk, (k * 0.25).round)
       }
     }
-  } yield ()
+    Logger.info("Generated example data.")
+  }
 }

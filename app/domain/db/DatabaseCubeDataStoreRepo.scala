@@ -84,7 +84,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     DatabaseCubeDataStoreImpl(definition, storeType, dimensions)
   }
 
-  protected def copyData[T](from: DatabaseCubeDataStoreImpl[T], to: DatabaseCubeDataStoreImpl[T], pos: Point = Point.empty) = db.transaction { implicit c =>
+  protected def copyData[T](from: DatabaseCubeDataStoreImpl[T], to: DatabaseCubeDataStoreImpl[T], pos: Point = Point.empty): Unit@tx = {
     val commonDims = from.dims.filter(v => to.dims.contains(v._1))
     val newDims = to.dims.filterNot(v => commonDims.contains(v._1))
     require(pos.defines(newDims.keys))
@@ -93,8 +93,8 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     val newFields = (List("content") ++ commonDims.map(d ⇒ to.dims(d._1)) ++ newDims.map(_._2)).mkString(",")
     val restrictOn = pos.onlyOn(from.dims.keySet -- to.dims.keySet).coordinates.map(c => (from.dims(c.dimension), toParameterValue(c.id)))
     val where = restrictOn.map(v => s"${v._1} = {${v._1}}").mkString(" AND ")
-    SQL(s"INSERT INTO ${to.table}($newFields) SELECT $oldFields FROM ${from.table}" + (if (where.length > 0) s" WHERE $where" else "")).
-      on(fixed ++ restrictOn: _*).executeUpdate
+    Db.insert(SQL(s"INSERT INTO ${to.table}($newFields) SELECT $oldFields FROM ${from.table}" + (if (where.length > 0) s" WHERE $where" else "")).
+      on(fixed ++ restrictOn: _*))
   }
 
   def json = new JsonCubeDSMapper {

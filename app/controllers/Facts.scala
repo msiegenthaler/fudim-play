@@ -83,7 +83,7 @@ object Facts extends Controller {
       val tpe = fact.dataType
       tpe.parse(value).map { v ⇒
         try {
-          Fudim.exec {
+          Fudim.execTx {
             editor.set(at(fact), v)
           }
           Ok(tpe.render(v))

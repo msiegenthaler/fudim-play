@@ -156,25 +156,26 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       }
     }
 
-    private def insert(p: Point, value: T)(implicit c: Connection): Unit = {
+    private def insert(p: Point, value: T): Unit@tx = {
       val fields = p.on.map(dims.apply)
       val values = fields.map(f ⇒ s"{$f}")
       val ons = p.coordinates.map(e ⇒ (dims(e.dimension), coordToDb(e))).toSeq :+ ("content" -> storeType.toDb(value))
-      SQL(s"INSERT INTO $table(content,${fields.mkString(",")}) VALUES ({content},${values.mkString(",")})").
-        on(ons: _*).execute
+      Db.insert(
+        SQL(s"INSERT INTO $table(content,${fields.mkString(",")}) VALUES ({content},${values.mkString(",")})").on(ons: _*))
     }
-    private def update(at: Point, value: T)(implicit c: Connection): Boolean = {
+    private def update(at: Point, value: T): Boolean@tx = {
       val (where, ons) = mkWhere(at)
       val ons2 = ons :+ ("content" -> storeType.toDb(value))
-      SQL(s"UPDATE $table SET content={content} WHERE $where").on(ons2: _*).executeUpdate match {
+      val cnt = Db.update(SQL(s"UPDATE $table SET content={content} WHERE $where").on(ons2: _*))
+      cnt match {
         case 1 ⇒ true
         case 0 ⇒ false
         case nr ⇒ throw new IllegalStateException(s"Too many rows affected by DatabaseCubeUpdate on $table ($nr rows)")
       }
     }
-    private def delete(at: Point)(implicit c: Connection): Unit = {
+    private def delete(at: Point): Unit@tx = {
       val (where, ons) = mkWhere(at)
-      SQL(s"DELETE FROM $table WHERE $where").on(ons: _*).executeUpdate
+      Db.delete(SQL(s"DELETE FROM $table WHERE $where").on(ons: _*))
     }
 
 
@@ -210,16 +211,21 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     override val editor: CubeEditor[T] = TheEditor(id)
     private case class TheEditor(id: Long) extends CubeEditor[T] {
       override def isSettable(at: Point) = at.definesExactly(dims.keys)
-      override def set(at: Point, to: Option[T]) = db.transaction { implicit c ⇒
+      override def set(at: Point, to: Option[T]) = {
         if (isSettable(at)) {
-          to match {
-            case Some(value) ⇒ if (!update(at, value)) insert(at, value)
-            case None ⇒ delete(at)
+          if (to.isDefined) to.foreachTx { value =>
+            if (!update(at, value)) insert(at, value)
+            else noop
+          } else {
+            delete(at)
           }
-        } else throw new ValueCannotBeSetException(at)
+        } else {
+          noop
+          throw new ValueCannotBeSetException(at)
+        }
       }
       override def multiSet(filter: Point, value: Option[T]) = {
-        cube_.slice(filter).allPoints.foldLeft(Transaction.empty)(_ >> set(_, value))
+        cube_.slice(filter).allPoints.foreachTx(set(_, value))
       }
       override def toString = s"DatabaseCubeEditor($id)"
     }

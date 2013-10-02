@@ -46,18 +46,18 @@ object InitialData {
 
     rnd = new Random(1)
     _ <- {
-      monat.all.map { m =>
-        projekt.all.map { p =>
+      monat.all.foreachTx { m =>
+        projekt.all.foreachTx { p =>
           val at = m + p
           val k = rnd.nextInt(1000) + 8500
 
-          umsatz.set(at, rnd.nextInt(1000) + 9500) >>
-            kosten.set(at + ka_ma, (k * 0.7).round) >>
-            kosten.set(at + ka_ext, (k * 0.05).round) >>
-            kosten.set(at + ka_mat, 0) >>
-            kosten.set(at + ka_gk, (k * 0.25).round)
-        }.sequence
-      }.sequence
+          umsatz.set(at, rnd.nextInt(1000) + 9500)
+          kosten.set(at + ka_ma, (k * 0.7).round)
+          kosten.set(at + ka_ext, (k * 0.05).round)
+          kosten.set(at + ka_mat, 0)
+          kosten.set(at + ka_gk, (k * 0.25).round)
+        }
+      }
     }
   } yield ()
 }

@@ -19,7 +19,7 @@ object Domains extends Controller {
     addForm.bindFromRequest.fold(
       errors ⇒ BadRequest(views.html.domains(DomainRepo.all, errors)),
       name ⇒ {
-        Fudim.exec {
+        Fudim.execTx {
           DomainRepo.create(name)
         }
         Redirect(routes.Domains.index)

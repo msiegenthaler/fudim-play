@@ -4,9 +4,11 @@ package db
 import anorm._
 import anorm.SqlParser._
 import base._
+import support.AnormDb
 
 trait DatabaseDomainRepo extends FudimDomainRepo {
   protected def db: SqlDatabase
+  protected val Db = new AnormDb(db)
 
   override def all = db.readOnly { implicit c ⇒
     SQL("select * from domain").as(domain *)
@@ -17,12 +19,12 @@ trait DatabaseDomainRepo extends FudimDomainRepo {
   def get(id: DomainId) = db.readOnly { implicit c ⇒
     SQL("select * from domain where id={id}").on("id" -> id.id).as(domain.singleOpt)
   }
-  def create(name: String) = db.transaction { implicit c ⇒
-    SQL("insert into domain(name) values ({name})").on("name" -> name).executeInsert()
+  def create(name: String) = {
+    Db.insert(SQL("insert into domain(name) values ({name})").on("name" -> name))
     get(name).getOrElse(throw new IllegalStateException(s"Could not insert domain $name"))
   }
-  def remove(id: FudimDomain) = db.transaction { implicit c ⇒
-    SQL("delete from domain where id={id}").on("id" -> id.id).executeUpdate
+  def remove(id: FudimDomain) = {
+    Db.delete(SQL("delete from domain where id={id}").on("id" -> id.id))
   }
 
   private val domain: RowParser[FudimDomain] = long("id").map(DomainId) ~ str("name") map {

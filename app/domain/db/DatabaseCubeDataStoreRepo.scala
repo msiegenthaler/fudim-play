@@ -41,10 +41,9 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     private lazy val nameMapping = storeTypes.map(t => (t.dataType.name, t)).toMap[String, StoreDataType[_]]
   }
 
-  override def get(id: Long): Option[DatabaseCubeDataStore[_]] = db.readOnly { implicit c ⇒
-    SQL("select * from databaseCube where id={id}").on("id" -> id).as(cubeDefinition.singleOpt).map { definition ⇒
-      loadFromDefinition(definition)
-    }
+  override def get(id: Long): Option[CDS[_]] = {
+    Db.notx.select(SQL("select * from databaseCube where id={id}").on("id" -> id), cubeDefinition.singleOpt).
+      map(loadFromDefinition)
   }
 
   override def create[T](dims: Set[Dimension], dataType: DataType[T]): DatabaseCubeDataStore[T]@tx = {
@@ -73,9 +72,10 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     }
   }
 
-  private def loadFromDefinition(definition: CubeDefinition) = db.readOnly { implicit c =>
-    val dimensions = SQL("select id, dimension from databaseCube_dimension where cube={id}").on("id" -> definition.id).
-      as(long("id") ~ str("dimension") *).map {
+  private def loadFromDefinition(definition: CubeDefinition): DatabaseCubeDataStoreImpl[_] = {
+    val dimensions = Db.notx.select(
+      SQL("select id, dimension from databaseCube_dimension where cube={id}").on("id" -> definition.id),
+      long("id") ~ str("dimension") *).map {
       case id ~ name ⇒
         val d: Dimension = dimensionRepo.get(name).getOrElse(throw new IllegalStateException(s"Could not find dimension $name"))
         (d, s"dim_$id")
@@ -185,19 +185,19 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       override def allDimensions = dims.keys.toSet
       override def derive(slice: Point = slice, filters: DimensionFilter = filters) = copy(slice = slice, filters = filters)
 
-      override def get(at: Point) = db.readOnly { implicit c ⇒
+      override def get(at: Point) = {
         if (at.definesExactly(dims.keys) && matches(at)) {
           val (where, ons) = mkWhere(at)
-          SQL(s"SELECT content FROM $table WHERE $where").on(ons: _*).as(fromDb.singleOpt)
+          Db.notx.select(SQL(s"SELECT content FROM $table WHERE $where").on(ons: _*), fromDb.singleOpt)
         } else None
       }
-      override def sparse = db.readOnly { implicit c ⇒
+      override def sparse = {
         val as = (fromDb ~ pointFromDb).*
         val res = if (slice.on.isEmpty) {
-          SQL(s"SELECT * FROM $table").as(as)
+          Db.notx.select(SQL(s"SELECT * FROM $table"), as)
         } else {
           val (where, ons) = mkWhere(slice)
-          SQL(s"SELECT * FROM $table WHERE $where").on(ons: _*).as(as)
+          Db.notx.select(SQL(s"SELECT * FROM $table WHERE $where").on(ons: _*), as)
         }
         res.filter(e ⇒ matches(e._2)).map { case value ~ point ⇒ (point, value)}
       }

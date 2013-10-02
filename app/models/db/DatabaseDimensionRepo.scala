@@ -12,12 +12,15 @@ trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory {
   protected val Db = new AnormDb(db)
   def domain: DomainId
 
-  override def get(name: String) = db.readOnly { implicit c ⇒
-    SQL("select * from dimension where domain={domain} and name={name}").on("domain" -> domain.id, "name" -> name).as(dimension.singleOpt)
+  override def get(name: String) = {
+    Db.notx.select(
+      SQL("select * from dimension where domain={domain} and name={name}").on("domain" -> domain.id, "name" -> name),
+      dimension.singleOpt)
   }
 
-  override def all = db.readOnly { implicit c ⇒
-    SQL("select * from dimension where domain={domain}").on("domain" -> domain.id).as(dimension *)
+  override def all = {
+    Db.notx.select(SQL("select * from dimension where domain={domain}").on("domain" -> domain.id),
+      dimension *)
   }
   def create(name: String) = {
     Db.insert(SQL("insert into dimension(domain, name) values({domain}, {name})").on("domain" -> domain.id, "name" -> name))
@@ -30,18 +33,20 @@ trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory {
     }.getOrElse(())
   }
 
-  private def coordinates(of: DatabaseDimension): List[Coordinate] = db.readOnly { implicit c ⇒
-    SQL("select id from dimension_value where dimension = {dim} order by nr").on("dim" -> of.id).
-      as(long("id").map(e ⇒ coordinate(of, e)) *)
+  private def coordinates(of: DatabaseDimension): List[Coordinate] = {
+    Db.notx.select(
+      SQL("select id from dimension_value where dimension = {dim} order by nr").on("dim" -> of.id),
+      long("id").map(e ⇒ coordinate(of, e)) *)
   }
-  private def values(of: DatabaseDimension): List[(Coordinate, String)] = db.readOnly { implicit c ⇒
-    SQL("select id, content from dimension_value where dimension = {dim} order by nr").on("dim" -> of.id).
-      as(long("id") ~ str("content") map {
-      case id ~ content ⇒ (coordinate(of, id), content)
-    } *)
+  private def values(of: DatabaseDimension): List[(Coordinate, String)] = {
+    Db.notx.select(SQL("select id, content from dimension_value where dimension = {dim} order by nr").on("dim" -> of.id),
+      long("id") ~ str("content") map {
+        case id ~ content ⇒ (coordinate(of, id), content)
+      } *)
   }
-  private def render(of: DatabaseDimension, at: Coordinate): String = db.readOnly { implicit c ⇒
-    SQL("select content from dimension_value where dimension = {dim} and id = {id}").on("dim" -> of.id, "id" -> at.id).as(scalar[String] single)
+  private def render(of: DatabaseDimension, at: Coordinate): String = {
+    Db.notx.select(SQL("select content from dimension_value where dimension = {dim} and id = {id}").on("dim" -> of.id, "id" -> at.id),
+      scalar[String] single)
   }
 
   private def addValue(to: DatabaseDimension, v: String): Coordinate@tx = {

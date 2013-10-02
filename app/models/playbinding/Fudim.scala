@@ -36,21 +36,26 @@ object Fudim {
   private case class TxState(id: Long, connection: Connection) extends TransactionState {
     override def toString = s"tx-$id"
   }
+  private case class ReadOnlyTxState(connection: Connection) extends TransactionState {
+    override def toString = "readonly"
+  }
 
   private[playbinding] object Db extends SqlDatabase {
-    def transaction[A](b: (Connection) => A) = execute {
+    def inTransaction[A](b: (Connection) => A) = execute {
       case TxState(id, connection) => b(connection)
       case _ => throw new AssertionError("Wrong TxState, not a Db.")
     }
-    def readOnly[A](b: (Connection) => A) = {
+    def readOnly[A](tx: Transaction[A]) = threadTx.get match {
       //If a transaction is running on the thread, then reuse the tx's connection
       // else we get deadlocks and other not so nice things.
-      threadTx.get.map { tx =>
-        b(tx.connection)
-      }.getOrElse {
+      case Some(runningTx) =>
+        tx.run(runningTx)
+      //No running tx on this thread.
+      case nonRunningTx =>
         val c = DB.getConnection(autocommit = false)
         try {
-          b(c)
+          val state = new ReadOnlyTxState(c)
+          tx.run(state)
         } finally {
           try {
             c.rollback()
@@ -58,7 +63,6 @@ object Fudim {
             c.close()
           }
         }
-      }
     }
   }
 }

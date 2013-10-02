@@ -21,12 +21,16 @@ trait DatabaseFactRepo extends FudimFactRepo {
   protected def cubeDataStoreRepo: CopyableCubeDataStoreRepo
 
   override def get(name: String) = getInternal(name)
-  protected def getInternal(name: String): Option[DatabaseFact[_]] = db.readOnly { implicit c ⇒
-    SQL("select * from fact where domain={domain} and name={name}").on("domain" -> domain.id.id, "name" -> name).as(fact singleOpt).flatten
+  protected def getInternal(name: String): Option[DatabaseFact[_]] = {
+    Db.notx.select(
+      SQL("select * from fact where domain={domain} and name={name}").on("domain" -> domain.id.id, "name" -> name),
+      fact singleOpt).flatten
   }
 
-  override def all = db.readOnly { implicit c ⇒
-    SQL("select * from fact where domain={domain}").on("domain" -> domain.id.id).as(fact *).flatten
+  override def all = {
+    Db.notx.select(
+      SQL("select * from fact where domain={domain}").on("domain" -> domain.id.id),
+      fact *).flatten
   }
 
   def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]) = {

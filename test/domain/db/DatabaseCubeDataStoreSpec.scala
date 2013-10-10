@@ -1,18 +1,14 @@
 package domain.db
 
-import java.sql.Connection
 import org.specs2.mutable._
 import org.specs2.specification.{Scope, BeforeAfterExample}
-import play.api.Play
-import play.api.Play.current
-import play.api.db.DB
 import base._
 import cube._
 import domain._
 import models.playbinding._
 import anorm.SqlParser._
 import scala.Some
-import play.api.test.FakeApplication
+import support.withModel
 
 class DatabaseCubeDataStoreSpec extends Specification {
   trait storeDataTypes extends domain.TestFixtures.dataTypes {
@@ -35,13 +31,10 @@ class DatabaseCubeDataStoreSpec extends Specification {
     def dtr = dataTypeRepo
   }
 
-  include(new CubeTck("DatabaseCube") with BeforeAfterExample with storeDataTypes {
-    override def before = Play.start(FakeApplication())
-    override def after = Play.stop
-
-    override def makeAge(year: Dimension, data: Map[Point, Int]) = Fudim.execTx(dbCubeForData(intType, data))
+  include(new CubeTck("DatabaseCube") with withModel with BeforeAfterExample with storeDataTypes {
+    override def makeAge(year: Dimension, data: Map[Point, Int]) = execTx(dbCubeForData(intType, data))
     override def makeSales(color: Dimension, location: Dimension, product: Dimension, data: Map[Point, Int]) =
-      Fudim.execTx(dbCubeForData(intType, data))
+      execTx(dbCubeForData(intType, data))
 
     override def makeDimension(name: String, data: List[String]) = {
       val d = super.makeDimension(name, data)
@@ -68,10 +61,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
     }
   })
 
-  trait withplay extends Scope with BeforeAfter with storeDataTypes {
-    override def before = Play.start(FakeApplication())
-    override def after = Play.stop
-
+  trait withplay extends withModel with storeDataTypes {
     var dimensions: List[Dimension] = Nil
     object CubeRepo extends DatabaseCubeDataStoreRepo with FudimResources {
       override def dimensionRepo = new DimensionRepository {
@@ -87,7 +77,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
     def feb = monat.all(1)
     def mar = monat.all(2)
     dimensions = monat :: dimensions
-    lazy val cds = Fudim.execTx(CubeRepo.create(Set(monat), stringType))
+    lazy val cds = execTx(CubeRepo.create(Set(monat), stringType))
     def cube = cds.cube
     def editor = cds.editor
   }
@@ -101,7 +91,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
 
   "DatabaseCube ListDimensionof type String with one dimension" should {
     "be createble" in new withplay {
-      Fudim.execTx {
+      execTx {
         val d = ListDimension("TestDimension", "1", "2", "3")
         dimensions = d :: dimensions
         CubeRepo.create(Set(d), stringType)
@@ -111,13 +101,13 @@ class DatabaseCubeDataStoreSpec extends Specification {
       CubeRepo.get(cds.id) must beSome
     }
     "be droppable" in new oneDimensionalCube {
-      Fudim.execTx {
+      execTx {
         CubeRepo.remove(cds.id)
         CubeRepo.get(cds.id) must beNone
       }
     }
     "be droppable if it has values" in new oneDimensionalCube {
-      Fudim.execTx {
+      execTx {
         editor.set(jan, Some("1"))
         editor.set(feb, Some("2"))
         CubeRepo.remove(cds.id)
@@ -127,20 +117,20 @@ class DatabaseCubeDataStoreSpec extends Specification {
       cube.dense.foreach(v ⇒ v._2 must beNone)
     }
     "return the set value" in new oneDimensionalCube {
-      Fudim.execTx {
+      execTx {
         editor.set(jan, Some("1"))
         cube.get(jan) must equalTo(Some("1"))
       }
     }
     "have all the value in all fields if set with setAll" in new oneDimensionalCube {
-      Fudim.execTx {
+      execTx {
         editor.multiSet(Point.empty, Some("X"))
         cube.dense.foreach(v ⇒ v._2 must beSome("X"))
         monat.all.foreach(p ⇒ cube.get(p) must beSome("X"))
       }
     }
     "have sparse values only for set fields" in new oneDimensionalCube {
-      Fudim.execTx {
+      execTx {
         editor.set(jan, Some("X"))
         editor.set(mar, Some("Y"))
         cube.values.toSet must equalTo(Set("X", "Y"))
@@ -149,7 +139,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
       }
     }
     "be the same when loaded" in new oneDimensionalCube {
-      Fudim.execTx {
+      execTx {
         editor.set(jan, Some("X"))
         val cds2 = CubeRepo.get(cds.id, stringType).get
         cds2.cube.values.toSet must equalTo(Set("X"))
@@ -163,7 +153,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
       ser(cds).isSuccess must beTrue
     }
     "reparse from json" in new oneDimensionalCube {
-      Fudim.execTx {
+      execTx {
         editor.set(jan, Some("X"))
         val p = for {
           json ← CubeRepo.json.serializer(cds)
@@ -178,7 +168,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
     }
 
     "extendable to Ort-dimension (values moved to Bern)" in new oneDimensionalCube with ort {
-      Fudim.execTx {
+      execTx {
         editor.set(jan, Some("1"))
         editor.set(feb, Some("2"))
 
@@ -193,7 +183,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
       }
     }
     "extendable to Ort-dimension (values moved to NY)" in new oneDimensionalCube with ort {
-      Fudim.execTx {
+      execTx {
         editor.set(jan, Some("1"))
         editor.set(feb, Some("2"))
 
@@ -208,7 +198,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
       }
     }
     "rereducable to one dimension" in new oneDimensionalCube with ort {
-      Fudim.execTx {
+      execTx {
         editor.set(jan, Some("1"))
         editor.set(feb, Some("2"))
         val cds2 = cds.copy(bern)
@@ -225,7 +215,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
       }
     }
     "rereducable to one dimension and take not first coordinate" in new oneDimensionalCube with ort {
-      Fudim.execTx {
+      execTx {
         editor.set(jan, Some("1"))
         editor.set(feb, Some("2"))
         val cds2 = cds.copy(bern)
@@ -242,7 +232,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
       }
     }
     "rereducable to one dimension and take not first coordinate when values overlap" in new oneDimensionalCube with ort {
-      Fudim.execTx {
+      execTx {
         editor.set(jan, Some("1"))
         editor.set(feb, Some("2"))
         editor.set(mar, Some("3"))

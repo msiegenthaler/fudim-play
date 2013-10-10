@@ -1,23 +1,15 @@
 package models.db
 
-import org.specs2.mutable.{BeforeAfter, Specification}
-import org.specs2.specification.Scope
-import play.api.test.{FakeRequest, FakeApplication}
-import play.api.Play
-import base._
+import org.specs2.mutable.Specification
+import support._
 import models.playbinding.{Fudim, FudimResources}
 import models.FudimVersion
 import org.joda.time.{DateTime, Duration}
 
 class DatabaseVersionRepoSpec extends Specification {
-
-  trait repo extends Scope with BeforeAfter {
-    override def before = Play.start(FakeApplication())
-    override def after = Play.stop
-
+  trait repo extends withModel {
     def repo = new DatabaseVersionRepo with FudimResources
-    def exec[A](b: => A@tx): A = Fudim.execTx(b)
-    def create() = exec(repo.create())
+    def create() = execTx(repo.create())
   }
 
   "DatabaseVersionRepo" should {

@@ -4,12 +4,13 @@ package base
 sealed trait Transaction[+A] {
   import Transaction._
 
-  def run(context: TransactionState): A
+  def run(context: TransactionState): (TransactionState, A)
 
   def map[B](f: A => B): Transaction[B] = flatMap(v => pure(f(v)))
-  def flatMap[B](f: A => Transaction[B]): Transaction[B] = on[B] { context =>
-    val a = run(context)
-    f(a).run(context)
+  def flatMap[B](f: A => Transaction[B]): Transaction[B] = on[B] {
+    state1 =>
+      val (state2, a) = run(state1)
+      f(a).run(state2)
   }
 
   def >>=[B](f: A => Transaction[B]) = flatMap(f)
@@ -24,11 +25,11 @@ sealed trait Transaction[+A] {
 }
 object Transaction {
   def apply[A](value: => A) = pure(value)
-  def pure[A](value: => A) = on(_ => value)
+  def pure[A](value: => A) = on((_, value))
   def noop = empty
   def empty: Tx = pure(())
 
-  private[base] def on[A](f: TransactionState => A) = new Transaction[A] {
+  private[base] def on[A](f: TransactionState => (TransactionState, A)) = new Transaction[A] {
     override def run(context: TransactionState) = f(context)
   }
 }
@@ -38,5 +39,5 @@ trait TransactionState
 /** A ressource that can take part in a transaction. */
 trait TransactionalRessource {
   /** Provides access to the transaction state. */
-  protected def execute[A](f: TransactionState => A): Transaction[A] = Transaction.on(f)
+  protected def execute[A](f: TransactionState => (TransactionState, A)): Transaction[A] = Transaction.on(f)
 }

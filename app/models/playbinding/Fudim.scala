@@ -12,12 +12,11 @@ object Fudim {
   }
 
   def exec[A](tx: Transaction[A]): A = {
-    val id = ids.incrementAndGet()
     val conn = DB.getConnection(autocommit = false)
     try {
-      val state = TxState(id, conn)
+      val state = TxState.full(conn)
       threadTx.set(Some(state))
-      val r = tx.run(state)
+      val (_, r) = tx.run(state)
       conn.commit()
       r
     } catch {
@@ -31,32 +30,36 @@ object Fudim {
   }
   def execTx[A](tx: => A@tx): A = exec(tx.transaction)
 
-  private val ids = new AtomicLong(1)
 
-  private case class TxState(id: Long, connection: Connection) extends TransactionState {
-    override def toString = s"tx-$id"
+  private case class TxState private(id: Long, isReadOnly: Boolean, connection: Connection) extends TransactionState {
+    override def toString = {
+      if (isReadOnly) s"ro-tx-$id"
+      else s"tx-$id"
+    }
   }
-  private case class ReadOnlyTxState(connection: Connection) extends TransactionState {
-    override def toString = "readonly"
+  private object TxState {
+    private val ids = new AtomicLong(0)
+    def full(c: Connection) = TxState(ids.incrementAndGet(), false, c)
+    def readOnly(c: Connection) = TxState(ids.incrementAndGet(), true, c)
   }
+
 
   private[playbinding] object Db extends SqlDatabase {
     def inTransaction[A](b: (Connection) => A) = execute {
-      case TxState(id, connection) => b(connection)
-      case ReadOnlyTxState(connection) => b(connection)
-      case _ => throw new AssertionError("Wrong TxState, not a Db.")
+      case s@TxState(id, _, connection) => (s, b(connection))
+      case _ => throw new AssertionError("Unsupported TransactionState: Does not implement Db")
     }
     def readOnly[A](tx: Transaction[A]) = threadTx.get match {
       //If a transaction is running on the thread, then reuse the tx's connection
       // else we get deadlocks and other not so nice things.
       case Some(runningTx) =>
-        tx.run(runningTx)
+        tx.run(runningTx)._2
       //No running tx on this thread.
       case nonRunningTx =>
         val c = DB.getConnection(autocommit = false)
         try {
-          val state = new ReadOnlyTxState(c)
-          tx.run(state)
+          val state = TxState.readOnly(c)
+          tx.run(state)._2
         } finally {
           try {
             c.rollback()

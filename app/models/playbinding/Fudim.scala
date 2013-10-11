@@ -18,7 +18,7 @@ object Fudim {
       threadTx.set(Some(state))
       val (_, r) = tx.run(state)
       conn.commit()
-      r
+      r.fold(throw _, identity)
     } catch {
       case e: Exception =>
         conn.rollback()
@@ -53,13 +53,13 @@ object Fudim {
       //If a transaction is running on the thread, then reuse the tx's connection
       // else we get deadlocks and other not so nice things.
       case Some(runningTx) =>
-        tx.run(runningTx)._2
+        tx.run(runningTx)._2.fold(throw _, identity)
       //No running tx on this thread.
       case nonRunningTx =>
         val c = DB.getConnection(autocommit = false)
         try {
           val state = TxState.readOnly(c)
-          tx.run(state)._2
+          tx.run(state)._2.fold(throw _, identity)
         } finally {
           try {
             c.rollback()

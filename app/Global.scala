@@ -22,7 +22,7 @@ object InitialData {
   def hasData = !DomainRepo.get("example").isEmpty
 
   def insertExample: Unit@tx = {
-    Logger.info("Generating example data..")
+    Logger.trace("Generating example data..")
     val example = DomainRepo.create("example")
 
     val monat = example.dimensionRepo.create("Monat")
@@ -59,6 +59,6 @@ object InitialData {
         kosten.set(at + ka_gk, (k * 0.25).round)
       }
     }
-    Logger.info("Generated example data.")
+    Logger.trace("Generated example data.")
   }
 }

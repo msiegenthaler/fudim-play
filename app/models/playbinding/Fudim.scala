@@ -1,69 +1,97 @@
 package models.playbinding
 
+import scala.util.control.Exception._
 import java.util.concurrent.atomic.AtomicLong
 import java.sql.Connection
 import play.api.db._
 import play.api.Play.current
 import base._
+import play.api.Logger
 
 object Fudim {
-  private val threadTx = new ThreadLocal[Option[TxState]] {
-    override def initialValue = None
-  }
-
   def exec[A](tx: Transaction[A]): A = {
-    val id = ids.incrementAndGet()
-    val conn = DB.getConnection(autocommit = false)
-    try {
-      val state = TxState(id, conn)
-      threadTx.set(Some(state))
-      val r = tx.run(state)
-      conn.commit()
-      r
-    } catch {
-      case e: Exception =>
-        conn.rollback()
-        throw e
-    } finally {
-      threadTx.remove()
-      conn.close()
-    }
+    val state = TxState.full
+    val decTx = tx <* Db.commit
+    val (s, r) = decTx.run(state)
+    cleanupTx(s)
+    r.fold(throw _, identity)
   }
   def execTx[A](tx: => A@tx): A = exec(tx.transaction)
 
-  private val ids = new AtomicLong(1)
+  def execReadOnly[A](tx: Transaction[A]): A = {
+    val (s, result) = (tx <* Db.rollback).run(TxState.readOnly)
+    cleanupTx(s)
+    result.fold(throw _, identity)
+  }
+  def execReadOnlyTx[A](tx: => A@tx): A = execReadOnly(tx.transaction)
 
-  private case class TxState(id: Long, connection: Connection) extends TransactionState {
-    override def toString = s"tx-$id"
+  /** Executed after the transaction. */
+  private def cleanupTx(s: TransactionState) = Db.cleanupTx(s)
+
+  private case class TxState private(id: Long, isReadOnly: Boolean, connection: Option[Connection]) extends TransactionState {
+    override def toString = {
+      if (isReadOnly) s"ro-tx-$id"
+      else s"tx-$id"
+    }
   }
-  private case class ReadOnlyTxState(connection: Connection) extends TransactionState {
-    override def toString = "readonly"
+  private object TxState {
+    private val ids = new AtomicLong(0)
+    def full = TxState(ids.incrementAndGet(), false, None)
+    def readOnly = TxState(ids.incrementAndGet(), true, None)
   }
+
 
   private[playbinding] object Db extends SqlDatabase {
-    def inTransaction[A](b: (Connection) => A) = execute {
-      case TxState(id, connection) => b(connection)
-      case ReadOnlyTxState(connection) => b(connection)
-      case _ => throw new AssertionError("Wrong TxState, not a Db.")
+    private[this] val connStack = new ThreadLocal[List[(Long, Connection)]] {
+      override protected def initialValue = Nil
+      def register(sid: Long, c: Connection) = set((sid -> c) :: get.filterNot(_._1 == sid))
+      def cleanup(sid: Long) = set(get.filterNot(_._1 == sid))
+      def top = get.headOption.map(_._2)
     }
-    def readOnly[A](tx: Transaction[A]) = threadTx.get match {
-      //If a transaction is running on the thread, then reuse the tx's connection
-      // else we get deadlocks and other not so nice things.
-      case Some(runningTx) =>
-        tx.run(runningTx)
-      //No running tx on this thread.
-      case nonRunningTx =>
-        val c = DB.getConnection(autocommit = false)
-        try {
-          val state = new ReadOnlyTxState(c)
-          tx.run(state)
-        } finally {
-          try {
-            c.rollback()
-          } finally {
-            c.close()
+
+    override def inTransaction[A](b: Connection => A) = execute {
+      case s@TxState(_, _, Some(conn)) =>
+        (s, b(conn))
+      case s@TxState(_, false, None) =>
+        Logger.trace(s"Opening a new DB connection for transaction $s")
+        val conn = DB.getConnection(autocommit = false)
+        connStack.register(s.id, conn)
+        (s.copy(connection = Some(conn)), b(conn))
+      case s@TxState(_, true, None) =>
+        val conn = {
+          //If a transaction is running on the thread, then reuse the tx's connection
+          // else we get deadlocks and other not so nice things.
+          connStack.top.map { c =>
+            Logger.trace(s"Reusing DB connection of running tx for $s")
+            ReadOnlyConnection(c)
+          }.getOrElse {
+            Logger.trace(s"Opening a new read-only DB connection for transaction $s")
+            val c = DB.getConnection(autocommit = false)
+            c.setReadOnly(true)
+            c
           }
         }
+        (s.copy(connection = Some(conn)), b(conn))
+      case _ => throw new AssertionError("Unsupported TransactionState: Does not implement Db")
+    }
+
+    override def readOnly[A](tx: Transaction[A]) = Fudim.execReadOnly(tx)
+
+    private[Fudim] def rollback = withExistingConnection(_.rollback())
+    private[Fudim] def commit = withExistingConnection(_.commit())
+    private def withExistingConnection[A](f: Connection => A) = execute {
+      case s@TxState(_, _, Some(conn)) =>
+        f(conn)
+        (s, ())
+      case s@TxState(_, _, None) => (s, ())
+    }
+
+    private[Fudim] def cleanupTx(s: TransactionState) = s match {
+      case TxState(id, _, conn) => conn.foreach { conn =>
+        connStack.cleanup(id)
+        ignoring(classOf[Exception])(conn.rollback)
+        ignoring(classOf[Exception])(conn.close)
+      }
     }
   }
 }

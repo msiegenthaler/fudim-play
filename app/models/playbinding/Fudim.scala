@@ -49,14 +49,22 @@ object Fudim {
       def top = get.headOption.map(_._2)
     }
 
+    private def run[A](f: Connection => A, c: Connection): Either[Exception, A] = {
+      try {
+        Right(f(c))
+      }
+      catch {
+        case e: Exception => Left(e)
+      }
+    }
     override def inTransaction[A](b: Connection => A) = execute {
       case s@TxState(_, _, Some(conn)) =>
-        (s, b(conn))
+        (s, run(b, conn))
       case s@TxState(_, false, None) =>
         Logger.trace(s"Opening a new DB connection for transaction $s")
         val conn = DB.getConnection(autocommit = false)
         connStack.register(s.id, conn)
-        (s.copy(connection = Some(conn)), b(conn))
+        (s.copy(connection = Some(conn)), run(b, conn))
       case s@TxState(_, true, None) =>
         val conn = {
           //If a transaction is running on the thread, then reuse the tx's connection
@@ -71,7 +79,7 @@ object Fudim {
             c
           }
         }
-        (s.copy(connection = Some(conn)), b(conn))
+        (s.copy(connection = Some(conn)), run(b, conn))
       case _ => throw new AssertionError("Unsupported TransactionState: Does not implement Db")
     }
 
@@ -79,18 +87,16 @@ object Fudim {
 
     private[Fudim] def rollback = withExistingConnection(_.rollback())
     private[Fudim] def commit = withExistingConnection(_.commit())
-    private def withExistingConnection[A](f: Connection => A) = execute {
-      case s@TxState(_, _, Some(conn)) =>
-        f(conn)
-        (s, ())
-      case s@TxState(_, _, None) => (s, ())
+    private def withExistingConnection[A](f: Connection => A) = executeSafe {
+      case s@TxState(_, _, Some(conn)) => f(conn); ()
+      case s@TxState(_, _, None) => ()
     }
 
     private[Fudim] def cleanupTx(s: TransactionState) = s match {
       case TxState(id, _, conn) => conn.foreach { conn =>
         connStack.cleanup(id)
-        ignoring(classOf[Exception])(conn.rollback)
-        ignoring(classOf[Exception])(conn.close)
+        ignoring(classOf[Exception])(conn.rollback())
+        ignoring(classOf[Exception])(conn.close())
       }
     }
   }

@@ -8,29 +8,26 @@ class TransactionSpec extends Specification {
     object Res extends TransactionalRessource {
       private[this] var state: Int = 0
       def value = state
-      def get = execute { s =>
-        (s, state)
-      }
-      def set(v: Int) = execute { s =>
+      def get = executeSafe { _ => state }
+      def set(v: Int) = executeSafe { _ =>
         state = v
-        (s, v)
+        v
       }
-      def increment = execute { s =>
+      def increment = executeSafe { _ =>
         val nv = state + 1
         state = nv
-        (s, nv)
+        nv
       }
       def setStateToThis = execute {
-        case Txs(v) => (Txs(state), ())
+        case Txs(v) => (Txs(state), Right(()))
       }
       def setThisToState = execute {
         case Txs(v) =>
           state = v
-          (Txs(v), ())
+          (Txs(v), Right(()))
       }
-      def throwException = execute { s =>
-        throw MyException()
-      }
+      def throwException = executeSafe { _ => throw MyException() }
+      def throwException2 = execute { _ => (Txs(666), Left(MyException())) }
     }
     case class MyException() extends Exception
 
@@ -47,11 +44,17 @@ class TransactionSpec extends Specification {
   }
 
   "Transaction" should {
-    "catch exceptions that occur in ressources and return them as Left()" in new txs {
+    "catch exceptions that occur in ressources.executeSafe and return them as Left()" in new txs {
       val tx = Res.throwException
       val (s, v) = tx.run(Txs())
       v must_== Left(MyException())
       s must_== Txs()
+    }
+    "catch exceptions that occur in ressources.execute and return them as Left()" in new txs {
+      val tx = Res.throwException2
+      val (s, v) = tx.run(Txs())
+      v must_== Left(MyException())
+      s must_== Txs(666)
     }
     "be executable more than once" in new txs {
       val tx = Res.increment >> Res.increment
@@ -126,13 +129,19 @@ class TransactionSpec extends Specification {
       v must_== 10
     }
 
-    "short circuit on exception (not execute the following Txs)" in new txs {
+    "short circuit on 'safe' exception (not execute the following Txs)" in new txs {
       val tx = Res.set(6) >> Res.throwException >> Res.increment
       val (_, v) = tx.run(Txs())
       v must_== Left(MyException())
       Res.value must_== 6
     }
-    "return the state before the exception" in new txs {
+    "short circuit on exception (not execute the following Txs)" in new txs {
+      val tx = Res.set(6) >> Res.throwException2 >> Res.increment
+      val (_, v) = tx.run(Txs())
+      v must_== Left(MyException())
+      Res.value must_== 6
+    }
+    "return the state before the exception on safe ressources" in new txs {
       val tx = Res.set(6) >> Res.setStateToThis >> Res.throwException >> Res.increment >> Res.setStateToThis
       val (Txs(s), _) = tx.run(Txs())
       s must_== 6
@@ -140,6 +149,15 @@ class TransactionSpec extends Specification {
       val tx2 = Res.set(2) >> Res.increment >> Res.setStateToThis >> Res.throwException >> Res.increment >> Res.setStateToThis
       val (Txs(s2), _) = tx2.run(Txs())
       s2 must_== 3
+    }
+    "return the exception-state on ressources.execute" in new txs {
+      val tx = Res.set(6) >> Res.setStateToThis >> Res.throwException2 >> Res.increment >> Res.setStateToThis
+      val (Txs(s), _) = tx.run(Txs())
+      s must_== 666
+
+      val tx2 = Res.set(2) >> Res.increment >> Res.setStateToThis >> Res.throwException2 >> Res.increment >> Res.setStateToThis
+      val (Txs(s2), _) = tx2.run(Txs())
+      s2 must_== 666
     }
   }
 

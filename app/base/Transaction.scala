@@ -49,6 +49,8 @@ trait TransactionState
 
 /** A ressource that can take part in a transaction. */
 trait TransactionalRessource {
+  /** Provides access to the transaction state and allows to transform it. */
+  protected def execute[A](f: TransactionState => (TransactionState, Either[Exception, A])): Transaction[A] = Transaction.onEither(f)
   /** Provides access to the transaction state. */
-  protected def execute[A](f: TransactionState => (TransactionState, A)): Transaction[A] = Transaction.on(f)
+  protected def executeSafe[A](f: TransactionState => A): Transaction[A] = Transaction.on(s => (s, f(s)))
 }

@@ -13,6 +13,7 @@ CREATE TABLE domain (
   id integer not null default nextval('domain_id_seq'),
   name varchar(1024) not null
 );
+CREATE UNIQUE INDEX domain_name ON domain(name);
 
 CREATE SEQUENCE dimension_id_seq;
 CREATE TABLE dimension (
@@ -73,6 +74,7 @@ DROP SEQUENCE dimension_id_seq;
 DROP TABLE dimension;
 
 DROP SEQUENCE domain_id_seq;
+DROP INDEX domain_name;
 DROP TABLE domain;
 
 DROP SEQUENCE version_id_seq;

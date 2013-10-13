@@ -38,7 +38,7 @@ class DatabaseDomainRepoSpec extends Specification {
     }
     "throw an exception on duplicate name" in new repo {
       val d1 = exec(repo.create("Test"))
-      //      exec(repo.create("Test")) must throwA[IllegalStateException]
+      exec(repo.create("Test")) must throwA[IllegalStateException]
     }
   }
   "DatabaseDomainRepo.remove" should {

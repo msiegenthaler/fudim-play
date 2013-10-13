@@ -20,8 +20,12 @@ trait DatabaseDomainRepo extends FudimDomainRepo {
     db.notx.select(SQL("select * from domain where id={id}").on("id" -> id.id), domain.singleOpt)
   }
   def create(name: String) = {
-    db.insert(SQL("insert into domain(name) values ({name})").on("name" -> name))
-    get(name).getOrElse(throw new IllegalStateException(s"Could not insert domain $name"))
+    get(name).map { _ =>
+      throw new IllegalStateException(s"Domain $name already exists.")
+    }.getOrElseTx {
+      db.insert(SQL("insert into domain(name) values ({name})").on("name" -> name))
+      get(name).getOrElse(throw new IllegalStateException(s"Could not insert domain $name"))
+    }
   }
   def remove(domain: FudimDomain) = {
     db.delete(SQL("delete from domain where id={id}").on("id" -> domain.id.id))

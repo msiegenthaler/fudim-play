@@ -23,8 +23,8 @@ trait DatabaseDomainRepo extends FudimDomainRepo {
     db.insert(SQL("insert into domain(name) values ({name})").on("name" -> name))
     get(name).getOrElse(throw new IllegalStateException(s"Could not insert domain $name"))
   }
-  def remove(id: FudimDomain) = {
-    db.delete(SQL("delete from domain where id={id}").on("id" -> id.id))
+  def remove(domain: FudimDomain) = {
+    db.delete(SQL("delete from domain where id={id}").on("id" -> domain.id.id))
   }
 
   private val domain: RowParser[FudimDomain] = long("id").map(DomainId) ~ str("name") map {

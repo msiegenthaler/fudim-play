@@ -2,6 +2,12 @@
 
 # --- !Ups
 
+CREATE SEQUENCE version_id_seq;
+CREATE TABLE version (
+  id bigint not null default nextval('version_id_seq'),
+  ts timestamp not null default now()
+);
+
 CREATE SEQUENCE domain_id_seq;
 CREATE TABLE domain (
   id integer not null default nextval('domain_id_seq'),
@@ -68,3 +74,6 @@ DROP TABLE dimension;
 
 DROP SEQUENCE domain_id_seq;
 DROP TABLE domain;
+
+DROP SEQUENCE version_id_seq;
+DROP TABLE version;

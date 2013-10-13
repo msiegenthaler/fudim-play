@@ -93,8 +93,8 @@ object Fudim {
     private[Fudim] def cleanupTx(s: TransactionState) = s match {
       case TxState(id, _, conn) => conn.foreach { conn =>
         connStack.cleanup(id)
-        catching(classOf[Exception]).andFinally(conn.rollback)
-        catching(classOf[Exception]).andFinally(conn.close)
+        ignoring(classOf[Exception])(conn.rollback)
+        ignoring(classOf[Exception])(conn.close)
       }
     }
   }

@@ -1,13 +1,10 @@
 package controllers
 
-import play.api._
 import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
-import models._
 import support.DomainAction
-import support.DimensionAction
-import models.playbinding.DomainRepo
+import models.playbinding.{Fudim, DomainRepo}
 
 object Domains extends Controller {
   def index = Action {
@@ -22,7 +19,9 @@ object Domains extends Controller {
     addForm.bindFromRequest.fold(
       errors ⇒ BadRequest(views.html.domains(DomainRepo.all, errors)),
       name ⇒ {
-        DomainRepo.create(name)
+        Fudim.execTx {
+          DomainRepo.create(name)
+        }
         Redirect(routes.Domains.index)
       })
   }

@@ -1,59 +1,70 @@
-package models.db
+package models
+package db
 
 import anorm._
 import anorm.SqlParser._
-import util.control.Exception._
+import base._
 import cube._
-import models.{ DomainId, FudimDimension, FudimDimensionRepo }
-import support.DatabaseRepo
+import support.AnormDb
 
-trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory with DatabaseRepo {
+trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory {
+  protected def database: SqlDatabase
+  protected val db = new AnormDb(database)
   def domain: DomainId
 
-  override def get(name: String) = withConnection { implicit c ⇒
-    SQL("select * from dimension where domain={domain} and name={name}").on("domain" -> domain.id, "name" -> name).as(dimension.singleOpt)
+  override def get(name: String) = {
+    db.notx.select(
+      SQL("select * from dimension where domain={domain} and name={name}").on("domain" -> domain.id, "name" -> name),
+      dimension.singleOpt)
   }
 
-  override def all = withConnection { implicit c ⇒
-    SQL("select * from dimension where domain={domain}").on("domain" -> domain.id).as(dimension *)
+  override def all = {
+    db.notx.select(SQL("select * from dimension where domain={domain}").on("domain" -> domain.id),
+      dimension *)
   }
-  def create(name: String) = withConnection { implicit c ⇒
-    SQL("insert into dimension(domain, name) values({domain}, {name})").on("domain" -> domain.id, "name" -> name).executeUpdate
-    get(name).getOrElse(throw new IllegalStateException(s"Insert of dimension $name failed"))
+  def create(name: String) = {
+    db.insert(SQL("insert into dimension(domain, name) values({domain}, {name})").on("domain" -> domain.id, "name" -> name))
+    get(name).getOrElse(throw new IllegalStateException(s"Insert of dimension $name failed")).tx
   }
-  def remove(name: String) = withConnection { implicit c ⇒
-    get(name).foreach { d ⇒
-      val id = idOf(d)
-      SQL("delete from dimension where id = {id}").on("id" -> id).executeUpdate
-      SQL("delete from dimension_value where dimension = {id}").on("id" -> id).executeUpdate
-    }
+  def remove(name: String) = {
+    get(name).map(idOf).mapTx { id =>
+      db.delete(SQL("delete from dimension where id = {id}").on("id" -> id))
+      db.delete(SQL("delete from dimension_value where dimension = {id}").on("id" -> id))
+    }.getOrElse(())
   }
 
-  private def coordinates(of: DatabaseDimension): List[Coordinate] = withConnection { implicit c ⇒
-    SQL("select id from dimension_value where dimension = {dim} order by nr").on("dim" -> of.id).
-      as(long("id").map(e ⇒ coordinate(of, e)) *)
+  private def coordinates(of: DatabaseDimension): List[Coordinate] = {
+    db.notx.select(
+      SQL("select id from dimension_value where dimension = {dim} order by nr").on("dim" -> of.id),
+      long("id").map(e ⇒ coordinate(of, e)) *)
   }
-  private def values(of: DatabaseDimension): List[(Coordinate, String)] = withConnection { implicit c ⇒
-    SQL("select id, content from dimension_value where dimension = {dim} order by nr").on("dim" -> of.id).
-      as(long("id") ~ str("content") map { case id ~ content ⇒ (coordinate(of, id), content) } *)
+  private def values(of: DatabaseDimension): List[(Coordinate, String)] = {
+    db.notx.select(SQL("select id, content from dimension_value where dimension = {dim} order by nr").on("dim" -> of.id),
+      long("id") ~ str("content") map {
+        case id ~ content ⇒ (coordinate(of, id), content)
+      } *)
   }
-  private def render(of: DatabaseDimension, at: Coordinate): String = withConnection { implicit c ⇒
-    SQL("select content from dimension_value where dimension = {dim} and id = {id}").on("dim" -> of.id, "id" -> at.id).as(scalar[String] single)
+  private def render(of: DatabaseDimension, at: Coordinate): String = {
+    db.notx.select(SQL("select content from dimension_value where dimension = {dim} and id = {id}").on("dim" -> of.id, "id" -> at.id),
+      scalar[String] single)
   }
-  private def addValue(to: DatabaseDimension, v: String) = withConnection { implicit c ⇒
-    val max = SQL("select max(nr) from dimension_value where dimension = {dim}").on("dim" -> to.id).single(scalar[Long] ?)
-    val id = SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").
-      on("dim" -> to.id, "nr" -> max.map(_ + 1).getOrElse(0), "val" -> v).executeInsert().get
+
+  private def addValue(to: DatabaseDimension, v: String): Coordinate@tx = {
+    val max = db.single(SQL("select max(nr) from dimension_value where dimension = {dim}").on("dim" -> to.id), scalar[Long] ?)
+    val id = db.insert(SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").
+      on("dim" -> to.id, "nr" -> max.map(_ + 1).getOrElse(0), "val" -> v)).get
     coordinate(to, id)
   }
-  private def addValue(to: DatabaseDimension, v: String, after: Option[Coordinate]): Coordinate = withConnection { implicit c ⇒
-    SQL("select nr from dimension_value where id = {id}").on("id" -> to.id).as(long("nr") singleOpt) match {
-      case Some(nr) ⇒
-        SQL("update dimension_value set nr = nr + 1 where dimension = {dim} and nr >= {nr}").on("dim" -> to.id, "nr" -> nr).executeUpdate
-        val id = SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").
-          on("dim" -> to.id, "nr" -> nr, "val" -> v).executeInsert().get
-        coordinate(to, id)
-      case None ⇒ addValue(to, v)
+  private def addValue(to: DatabaseDimension, v: String, after: Option[Coordinate]): Coordinate@tx = {
+    if (!after.isDefined) addValue(to, v)
+    else {
+      val nrOfAfter = db.select(SQL("select max(nr) from dimension_value where id = {id}").on("id" -> after.get.id), long("nr") singleOpt)
+      val nr = nrOfAfter.map { nr =>
+        db.update(SQL("update dimension_value set nr = nr + 1 where dimension = {dim} and nr > {nr}").on("dim" -> to.id, "nr" -> nr)).transaction
+      }.getOrElse(Transaction.pure(0)).tx
+      val id = db.insert(SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").
+        on("dim" -> to.id, "nr" -> nr, "val" -> v)).get
+      coordinate(to, id)
     }
   }
 

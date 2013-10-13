@@ -5,11 +5,11 @@ import db._
 import domain._
 import domain.db._
 
-object DomainRepo extends DatabaseDomainRepo with PlayDatabaseRepo {
+object DomainRepo extends DatabaseDomainRepo with FudimResources {
   protected val dataTypes = FudimDataTypes
 
   override protected def dimensionRepo(d: DomainId) = {
-    new DatabaseDimensionRepo with PlayDatabaseRepo {
+    new DatabaseDimensionRepo with FudimResources {
       override def domain = d
     }
   }
@@ -18,12 +18,12 @@ object DomainRepo extends DatabaseDomainRepo with PlayDatabaseRepo {
     val formulaRepo = new JsonFormulaMapperRepository {
       override val mappers = FudimFormulas.json(dataTypes, dimRepo)
     }
-    val cdsRepo = new DatabaseCubeDataStoreRepo with PlayDatabaseRepo {
+    val cdsRepo = new DatabaseCubeDataStoreRepo with FudimResources {
       protected def dimensionRepo = dimRepo
       protected def dataTypeRepo = dataTypes
       protected def storeTypes = StoreDataTypes.all
     }
-    new DatabaseFactRepo with PlayDatabaseRepo {
+    new DatabaseFactRepo with FudimResources {
       override def domain = DomainRepo.this.get(d).getOrElse(throw new IllegalStateException(s"Domain $d not found"))
       override protected def jsonFormulaRepo = formulaRepo
       override protected def cubeDataStoreRepo = cdsRepo

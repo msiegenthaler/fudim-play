@@ -5,24 +5,32 @@ import scalaz._
 import Scalaz._
 import anorm._
 import anorm.SqlParser._
+import base._
 import cube._
 import domain._
-import support.DatabaseRepo
 import play.api.Logger
 import play.api.libs.json._
+import support.AnormDb
 
-trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
+trait DatabaseFactRepo extends FudimFactRepo {
+  protected def database: SqlDatabase
+  protected val db = new AnormDb(database)
   protected def domain: FudimDomain
   protected def dataTypeRepo = FudimDataTypes
   protected def jsonFormulaRepo: JsonFormulaMapperRepository
   protected def cubeDataStoreRepo: CopyableCubeDataStoreRepo
 
-  override def get(name: String) = withConnection { implicit c ⇒
-    SQL("select * from fact where domain={domain} and name={name}").on("domain" -> domain.id.id, "name" -> name).as(fact singleOpt).flatten
+  override def get(name: String) = getInternal(name)
+  protected def getInternal(name: String): Option[DatabaseFact[_]] = {
+    db.notx.select(
+      SQL("select * from fact where domain={domain} and name={name}").on("domain" -> domain.id.id, "name" -> name),
+      fact singleOpt).flatten
   }
 
-  override def all = withConnection { implicit c ⇒
-    SQL("select * from fact where domain={domain}").on("domain" -> domain.id.id).as(fact *).flatten
+  override def all = {
+    db.notx.select(
+      SQL("select * from fact where domain={domain}").on("domain" -> domain.id.id),
+      fact *).flatten
   }
 
   def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]) = {
@@ -33,26 +41,25 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
     val backend = FormulaFactBackend(dataType, formula, aggregation)
     create(name, backend)
   }
-  protected def create[T](name: String, backend: FactBackend[T]): DatabaseFact[T] = withConnection { implicit c =>
+  protected def create[T](name: String, backend: FactBackend[T]): DatabaseFact[T]@tx = {
     val config = Json.stringify(backend.config)
-    val id = SQL("insert into fact(domain, name, dataType, factType, config) values({domain}, {name}, {dataType}, {factType}, {config})").
-      on("domain" -> domain.id.id, "name" -> name, "dataType" -> backend.dataType.name, "factType" -> backend.factType, "config" -> config).
-      executeInsert().get
+    val id = db.insert(SQL("insert into fact(domain, name, dataType, factType, config) values({domain}, {name}, {dataType}, {factType}, {config})").
+      on("domain" -> domain.id.id, "name" -> name, "dataType" -> backend.dataType.name, "factType" -> backend.factType, "config" -> config)).get
     new DatabaseFact(id, name, backend)
   }
 
   def remove(name: String) = {
-    get(name).foreach {
-      case fact: DatabaseFact[_] =>
-        fact.delete()
-        SQL("delete from fact where id={id}").on("id" -> fact.id)
-    }
+    val fact = getInternal(name).tx
+    fact.mapTx { fact =>
+      fact.delete()
+      db.delete(SQL("delete from fact where id={id}").on("id" -> fact.id))
+    }.getOrElse(Transaction.empty)
   }
 
   private val fact = {
     long("id") ~ str("name") ~ str("dataType") ~ str("factType") ~ str("config") map {
       case id ~ name ~ dataTypeName ~ factType ~ config ⇒
-        val fact: Validation[String, FudimFact[_]] = for {
+        val fact: Validation[String, DatabaseFact[_]] = for {
           dataType ← dataTypeRepo.get(dataTypeName).toSuccess(s"DataType $dataTypeName is not known")
           json = Json.parse(config)
           backend <- {
@@ -71,10 +78,9 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
   protected final class DatabaseFact[T](val id: Long, val name: String, ib: FactBackend[T]) extends FudimFact[T] {
     private[this] var _backend: FactBackend[T] = ib
     def backend = synchronized(_backend)
-    def backend_=(nb: FactBackend[T]) = withConnection { implicit c =>
+    def updateBackend(nb: FactBackend[T]): Unit@tx = {
       val config = Json.stringify(nb.config)
-      val updated = SQL("update fact set config={config} where id={id}").on("config" -> config, "id" -> id).executeUpdate
-      if (updated != 1) throw new IllegalStateException(s"Fact with id $id (named $name) was not found anymore.")
+      db.update(SQL("update fact set config={config} where id={id}").on("config" -> config, "id" -> id))
     }
 
 
@@ -82,10 +88,10 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
     def data = backend.data
     def editor = backend.editor
     def aggregation = backend.aggregation
-    def aggregation_=(aggr: Aggregation[T]) = backend = backend.aggregation(aggregation = aggr)
-    def addDimension(moveTo: Coordinate) = backend = backend.addDimension(moveTo)
-    def removeDimension(keepAt: Coordinate) = backend = backend.removeDimension(keepAt)
-    def delete() = backend.delete()
+    def aggregation_=(aggr: Aggregation[T]) = updateBackend(backend.aggregation(aggregation = aggr))
+    def addDimension(moveTo: Coordinate) = updateBackend(backend.addDimension(moveTo))
+    def removeDimension(keepAt: Coordinate) = updateBackend(backend.removeDimension(keepAt))
+    def delete() = backend.delete
 
     override def equals(o: Any) = {
       if (o.isInstanceOf[DatabaseFact[_]]) o.asInstanceOf[DatabaseFact[_]].id == id
@@ -105,9 +111,9 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
     def aggregation: Aggregation[T]
 
     def aggregation(aggregation: Aggregation[T] = aggregation): FactBackend[T]
-    def addDimension(moveTo: Coordinate): FactBackend[T]
-    def removeDimension(keepAt: Coordinate): FactBackend[T]
-    def delete(): Unit = ()
+    def addDimension(moveTo: Coordinate): FactBackend[T]@tx
+    def removeDimension(keepAt: Coordinate): FactBackend[T]@tx
+    def delete(): Unit@tx = noop
   }
 
   private def aggregationFromJson(json: JsValue) = for {
@@ -122,14 +128,14 @@ trait DatabaseFactRepo extends FudimFactRepo with DatabaseRepo {
 
     override def aggregation(aggregation: Aggregation[T]) = copy(aggregation = aggregation)
     override def addDimension(moveTo: Coordinate) = {
-      val newCds = cds.copy(moveTo, Point.empty)
+      val ncds = cds.copy(moveTo, Point.empty)
       delete()
-      copy(cds = newCds)
+      copy(cds = ncds)
     }
     override def removeDimension(keepAt: Coordinate) = {
-      val newCds = cds.copy(Point.empty, keepAt)
+      val ncds = cds.copy(Point.empty, keepAt)
       delete()
-      copy(cds = newCds)
+      copy(cds = ncds)
     }
     override def delete() = cubeDataStoreRepo.remove(cds.id)
 

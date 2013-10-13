@@ -1,28 +1,30 @@
 package models
 package db
 
-import java.sql.Connection
 import anorm._
 import anorm.SqlParser._
-import domain._
-import support.DatabaseRepo
+import base._
+import support.AnormDb
 
-trait DatabaseDomainRepo extends FudimDomainRepo with DatabaseRepo {
-  override def all = withConnection { implicit c ⇒
-    SQL("select * from domain").as(domain *)
+trait DatabaseDomainRepo extends FudimDomainRepo {
+  protected def database: SqlDatabase
+  protected val db = new AnormDb(database)
+
+  override def all = {
+    db.notx.select(SQL("select * from domain"), domain *)
   }
-  def get(name: String) = withConnection { implicit c ⇒
-    SQL("select * from domain where name={name}").on("name" -> name).as(domain.singleOpt)
+  def get(name: String) = {
+    db.notx.select(SQL("select * from domain where name={name}").on("name" -> name), domain.singleOpt)
   }
-  def get(id: DomainId) = withConnection { implicit c ⇒
-    SQL("select * from domain where id={id}").on("id" -> id.id).as(domain.singleOpt)
+  def get(id: DomainId) = {
+    db.notx.select(SQL("select * from domain where id={id}").on("id" -> id.id), domain.singleOpt)
   }
-  def create(name: String) = withConnection { implicit c ⇒
-    SQL("insert into domain(name) values ({name})").on("name" -> name).executeInsert()
+  def create(name: String) = {
+    db.insert(SQL("insert into domain(name) values ({name})").on("name" -> name))
     get(name).getOrElse(throw new IllegalStateException(s"Could not insert domain $name"))
   }
-  def remove(id: FudimDomain) = withConnection { implicit c ⇒
-    SQL("delete from domain where id={id}").on("id" -> id.id).executeUpdate
+  def remove(id: FudimDomain) = {
+    db.delete(SQL("delete from domain where id={id}").on("id" -> id.id))
   }
 
   private val domain: RowParser[FudimDomain] = long("id").map(DomainId) ~ str("name") map {

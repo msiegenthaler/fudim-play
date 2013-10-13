@@ -10,6 +10,6 @@ object JsHelper {
   /** Pendant to window.fudim.point.parse */
   def serializePoint(p: Point): String = {
     val json = Json.toJson(p.coordinates.map(c ⇒ (c.dimension.name, c.id.toString)).toMap)
-    URLEncoder.encode(json.toString, "UTF-8")
+    URLEncoder.encode(Json.stringify(json), "UTF-8")
   }
 }

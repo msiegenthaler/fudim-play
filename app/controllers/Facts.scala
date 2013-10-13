@@ -1,14 +1,15 @@
 package controllers
 
-import play.api._
 import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
+import scalaz._
+import Scalaz._
+import base._
 import cube._
 import models._
-import support.DomainAction
-import support.FactAction
-import support.PointDefinition
+import support._
+import models.playbinding.Fudim
 
 object Facts extends Controller {
 
@@ -22,7 +23,9 @@ object Facts extends Controller {
       data ⇒ {
         val (name, dataTypeName) = data
         FudimDataTypes.get(dataTypeName).map { dataType =>
-          val fact = domain.factRepo.createDatabaseBacked(name, dataType, Set.empty, Aggregation.none)
+          Fudim.execTx {
+            domain.factRepo.createDatabaseBacked(name, dataType, Set.empty, Aggregation.none)
+          }
           Redirect(routes.Facts.view(domain.name, name))
         }.getOrElse(BadRequest(s"Invalid data type $dataTypeName"))
       })
@@ -35,28 +38,24 @@ object Facts extends Controller {
       Ok(views.html.fact(domainName, fact, dims, fact.dataType.aggregations, aggrForm.fill(aggr.name)))
     }.getOrElse(NotFound)
   }
-  def addDimension(domainName: String, factName: String, dimensionName: String) = DomainAction(domainName) { domain ⇒
+  def addDimension(domainName: String, factName: String, dimensionName: String) = modFactDim(domainName, factName, dimensionName) { (fact, moveTo) =>
+    fact.addDimension(moveTo)
+  }
+  def removeDimension(domainName: String, factName: String, dimensionName: String) = modFactDim(domainName, factName, dimensionName) { (fact, keepAt) =>
+    fact.removeDimension(keepAt)
+  }
+  private def modFactDim(domainName: String, factName: String, dimensionName: String)(f: (FudimFact[_], Coordinate) => Unit@tx) = DomainAction(domainName) { domain ⇒
     val r = for {
-      fact ← domain.factRepo.get(factName)
-      dimension ← domain.dimensionRepo.get(dimensionName)
-      moveTo ← dimension.all.headOption
+      fact ← domain.factRepo.get(factName).toSuccess(s"Fact $factName not found")
+      dimension ← domain.dimensionRepo.get(dimensionName).toSuccess(s"Dimension $dimensionName not found")
+      coord ← dimension.all.headOption.toSuccess(s"Dimension $dimensionName has no values")
     } yield {
-      fact.addDimension(moveTo)
+      Fudim.execTx(f(fact, coord))
       Redirect(routes.Facts.view(domainName, factName))
     }
-    r.getOrElse(NotFound)
+    r.valueOr(e => NotFound(e))
   }
-  def removeDimension(domainName: String, factName: String, dimensionName: String) = DomainAction(domainName) { domain ⇒
-    val r = for {
-      fact ← domain.factRepo.get(factName)
-      dimension ← domain.dimensionRepo.get(dimensionName)
-      keepAt ← dimension.all.headOption
-    } yield {
-      fact.removeDimension(keepAt)
-      Redirect(routes.Facts.view(domainName, factName))
-    }
-    r.getOrElse(NotFound)
-  }
+
   def modifyDimension(domain: String, fact: String, dimension: String, action: String) = action match {
     case "PUT" => addDimension(domain, fact, dimension)
     case "DELETE" => removeDimension(domain, fact, dimension)
@@ -66,7 +65,9 @@ object Facts extends Controller {
   def setAggregation(domainName: String, factName: String) = FactAction(domainName, factName).on(fact ⇒ { implicit request ⇒
     def changeAggr[T](fact: FudimFact[T], aggrName: String) = {
       val aggr = fact.dataType.aggregations.find(_.name == aggrName).getOrElse(Aggregation.none)
-      fact.aggregation = aggr
+      Fudim.execTx {
+        fact.aggregation = aggr
+      }
       Redirect(routes.Facts.view(domainName, factName))
     }
     aggrForm.bindFromRequest.fold(
@@ -82,7 +83,9 @@ object Facts extends Controller {
       val tpe = fact.dataType
       tpe.parse(value).map { v ⇒
         try {
-          editor.set(at(fact), v)
+          Fudim.execTx {
+            editor.set(at(fact), v)
+          }
           Ok(tpe.render(v))
         } catch {
           case ValueCannotBeSetException(_) ⇒ cannotSet

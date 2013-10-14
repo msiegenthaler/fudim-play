@@ -8,6 +8,12 @@ import domain.db._
 object DomainRepo extends DatabaseDomainRepo with FudimResources {
   protected val dataTypes = FudimDataTypes
 
+  object versionRepo extends DatabaseVersionRepo with FudimResources
+
+  object versioner extends Versioner {
+    protected def versionRepo = DomainRepo.versionRepo
+  }
+
   override protected def dimensionRepo(d: DomainId) = {
     new DatabaseDimensionRepo with FudimResources {
       override def domain = d

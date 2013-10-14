@@ -6,6 +6,8 @@ import play.api.Play
 import play.api.test.FakeApplication
 import base._
 import models.playbinding.{Fudim, FudimResources}
+import models.Versioner
+import models.db.DatabaseVersionRepo
 
 
 /** Base trait for scopes that use the model. */
@@ -15,4 +17,11 @@ trait withModel extends Scope with BeforeAfter {
 
   def exec[A](tx: Transaction[A]): A = Fudim.exec(tx)
   def execTx[A](b: => A@tx): A = Fudim.execTx(b)
+}
+
+trait withDbVersioner extends withModel {
+  val versionRepo = new DatabaseVersionRepo with FudimResources
+  val versioner = new Versioner {
+    protected def versionRepo = withDbVersioner.this.versionRepo
+  }
 }

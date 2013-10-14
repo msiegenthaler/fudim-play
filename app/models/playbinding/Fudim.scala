@@ -7,6 +7,7 @@ import play.api.db._
 import play.api.Play.current
 import base._
 import play.api.Logger
+import models.{FudimVersion, VersionerState}
 
 object Fudim {
   def exec[A](tx: Transaction[A]): A = {
@@ -28,7 +29,8 @@ object Fudim {
   /** Executed after the transaction. */
   private def cleanupTx(s: TransactionState) = Db.cleanupTx(s)
 
-  private case class TxState private(id: Long, isReadOnly: Boolean, connection: Option[Connection]) extends TransactionState {
+  private case class TxState private(id: Long, isReadOnly: Boolean, connection: Option[Connection] = None, version: Option[FudimVersion] = None) extends TransactionState with VersionerState {
+    def withVersion(version: Option[FudimVersion]) = copy(version = version)
     override def toString = {
       if (isReadOnly) s"ro-tx-$id"
       else s"tx-$id"
@@ -58,14 +60,14 @@ object Fudim {
       }
     }
     override def inTransaction[A](b: Connection => A) = execute {
-      case s@TxState(_, _, Some(conn)) =>
+      case s@TxState(_, _, Some(conn), _) =>
         (s, run(b, conn))
-      case s@TxState(_, false, None) =>
+      case s@TxState(_, false, None, _) =>
         Logger.trace(s"Opening a new DB connection for transaction $s")
         val conn = DB.getConnection(autocommit = false)
         connStack.register(s.id, conn)
         (s.copy(connection = Some(conn)), run(b, conn))
-      case s@TxState(_, true, None) =>
+      case s@TxState(_, true, None, _) =>
         val conn = {
           //If a transaction is running on the thread, then reuse the tx's connection
           // else we get deadlocks and other not so nice things.
@@ -88,12 +90,12 @@ object Fudim {
     private[Fudim] def rollback = withExistingConnection(_.rollback())
     private[Fudim] def commit = withExistingConnection(_.commit())
     private def withExistingConnection[A](f: Connection => A) = executeSafe {
-      case s@TxState(_, _, Some(conn)) => f(conn); ()
-      case s@TxState(_, _, None) => ()
+      case s@TxState(_, _, Some(conn), _) => f(conn); ()
+      case s@TxState(_, _, None, _) => ()
     }
 
     private[Fudim] def cleanupTx(s: TransactionState) = s match {
-      case TxState(id, _, conn) => conn.foreach { conn =>
+      case TxState(id, _, conn, _) => conn.foreach { conn =>
         connStack.cleanup(id)
         ignoring(classOf[Exception])(conn.rollback())
         ignoring(classOf[Exception])(conn.close())

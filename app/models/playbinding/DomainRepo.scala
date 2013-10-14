@@ -10,8 +10,8 @@ object DomainRepo extends DatabaseDomainRepo with FudimResources {
 
   object versionRepo extends DatabaseVersionRepo with FudimResources
 
-  object versioner extends Versioner {
-    protected def versionRepo = DomainRepo.versionRepo
+  object versioner extends Versioner[FudimVersion] {
+    override protected def createVersion() = versionRepo.create()
   }
 
   override protected def dimensionRepo(d: DomainId) = {

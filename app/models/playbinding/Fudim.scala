@@ -29,7 +29,9 @@ object Fudim {
   /** Executed after the transaction. */
   private def cleanupTx(s: TransactionState) = Db.cleanupTx(s)
 
-  private case class TxState private(id: Long, isReadOnly: Boolean, connection: Option[Connection] = None, version: Option[FudimVersion] = None) extends TransactionState with VersionerState {
+  private case class TxState private(id: Long, isReadOnly: Boolean, connection: Option[Connection] = None, version: Option[FudimVersion] = None)
+    extends TransactionState with VersionerState[FudimVersion] {
+
     def withVersion(version: Option[FudimVersion]) = copy(version = version)
     override def toString = {
       if (isReadOnly) s"ro-tx-$id"

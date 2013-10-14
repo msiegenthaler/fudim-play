@@ -7,7 +7,7 @@ import base._
 import support.AnormDb
 
 trait DatabaseDomainRepo extends FudimDomainRepo {
-  protected def versioner: Versioner
+  protected def versioner: Versioner[ {def id: Long}]
   protected def database: SqlDatabase
   protected val db = new AnormDb(database)
 

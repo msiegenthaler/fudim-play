@@ -11,6 +11,7 @@ CREATE TABLE version (
 CREATE SEQUENCE domain_id_seq;
 CREATE TABLE domain (
   id integer not null default nextval('domain_id_seq'),
+  version bigint references version(id),
   name varchar(1024) not null
 );
 CREATE UNIQUE INDEX domain_name ON domain(name);

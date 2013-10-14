@@ -2,7 +2,7 @@ package models.db
 
 import org.specs2.mutable.Specification
 import base._
-import support.withModel
+import support.{withDbVersioner, withModel}
 import models._
 import models.playbinding.FudimResources
 import domain.Formula
@@ -10,7 +10,7 @@ import cube.Dimension
 import java.sql.SQLException
 
 class DatabaseDomainRepoSpec extends Specification {
-  trait repo extends withModel {
+  trait repo extends withModel with withDbVersioner {
     def mkDimensionRepo = new FudimDimensionRepo {
       def create(name: String) = ???
       def remove(name: String) = ???
@@ -24,6 +24,7 @@ class DatabaseDomainRepoSpec extends Specification {
       def remove(name: String) = ???
     }
     val repo = new DatabaseDomainRepo with FudimResources {
+      protected def versioner = repo.this.versioner
       protected def dimensionRepo(domain: DomainId) = mkDimensionRepo
       protected def factRepo(domain: DomainId) = mkFactRepo
     }
@@ -39,6 +40,17 @@ class DatabaseDomainRepoSpec extends Specification {
     "throw an exception on duplicate name" in new repo {
       val d1 = exec(repo.create("Test"))
       exec(repo.create("Test")) must throwA[IllegalStateException]
+    }
+    "give the domain an ascending version" in new repo {
+      val d1 = exec(repo.create("Test1"))
+      val d2 = exec(repo.create("Test2"))
+      d1.version must be < d2.version
+    }
+    "give two domains created in the same tx the same version" in new repo {
+      val (d1, d2) = exec {
+        (repo.create("Test1"), repo.create("Test2"))
+      }
+      d1.version must_== d2.version
     }
   }
   "DatabaseDomainRepo.remove" should {

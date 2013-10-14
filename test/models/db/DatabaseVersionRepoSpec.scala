@@ -22,7 +22,6 @@ class DatabaseVersionRepoSpec extends Specification {
       def checkAsc(vs: List[FudimVersion]): Unit = vs match {
         case a :: b :: tail =>
           a.id must be < b.id
-          a.at.isAfter(b.at) must_== false
           checkAsc(b :: tail)
         case _ => ()
       }
@@ -38,9 +37,15 @@ class DatabaseVersionRepoSpec extends Specification {
       }
       checkAsc(vs)
     }
+    "create a versionInfo for each version" in new repo {
+      val v = create()
+      val vi = repo.infoFor(v)
+      vi.version must_== v
+    }
     "create versions with timestamp very close to now" in new repo {
       val v = create()
-      val d = new Duration(v.at, DateTime.now())
+      val vi = repo.infoFor(v)
+      val d = new Duration(vi.at, DateTime.now())
       Math.abs(d.getMillis) must be < 5000L
     }
   }

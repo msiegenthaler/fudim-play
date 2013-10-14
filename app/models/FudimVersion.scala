@@ -5,20 +5,14 @@ import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
 
 /** Version with a strictly increasing id. */
-class FudimVersion(val id: Long, val at: DateTime) extends Ordered[FudimVersion] {
+case class FudimVersion(id: Long) extends Ordered[FudimVersion] {
   override def compare(that: FudimVersion) = id.compareTo(that.id)
-
-  override def equals(o: Any) = o match {
-    case o: FudimVersion => id == o.id
-    case _ => false
-  }
-  override def hashCode = id.hashCode
-  override def toString = {
-    val dt = ISODateTimeFormat.dateTime().print(at)
-    s"Version $id ($dt)"
-  }
+  override def toString = s"#$id"
 }
+
+case class FudimVersionInfo(version: FudimVersion, at: DateTime)
 
 trait FudimVersionRepo {
   def create(): FudimVersion@tx
+  def infoFor(version: FudimVersion): FudimVersionInfo
 }

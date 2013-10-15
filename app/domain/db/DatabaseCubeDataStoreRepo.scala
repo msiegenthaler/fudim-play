@@ -87,14 +87,17 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     val commonDims = from.dims.filter(v => to.dims.contains(v._1))
     val newDims = to.dims.filterNot(v => commonDims.contains(v._1))
     require(pos.defines(newDims.keys))
+    val version = versioner.version
     val fixed = newDims.map(_._1).zipWithIndex.map(v => (s"f${v._2}", toParameterValue(pos.coordinate(v._1).get.id))).toSeq
-    val oldFields = (List("content") ++ commonDims.map(_._2) ++ fixed.map(_._1).map("{" + _ + "}")).mkString(",")
-    val newFields = (List("content") ++ commonDims.map(d ⇒ to.dims(d._1)) ++ newDims.map(_._2)).mkString(",")
+    val oldFields = (List("content", "{version}") ++ commonDims.map(_._2) ++ fixed.map(_._1).map("{" + _ + "}")).mkString(",")
+    val newFields = (List("content", "version") ++ commonDims.map(d ⇒ to.dims(d._1)) ++ newDims.map(_._2)).mkString(",")
     val restrictOn = pos.onlyOn(from.dims.keySet -- to.dims.keySet).coordinates.map(c => (from.dims(c.dimension), toParameterValue(c.id)))
     val where = restrictOn.map(v => s"${v._1} = {${v._1}}").mkString(" AND ")
     db.insert(SQL(s"INSERT INTO ${to.table}($newFields) SELECT $oldFields FROM ${from.table}" + (if (where.length > 0) s" WHERE $where" else "")).
-      on(fixed ++ restrictOn: _*))
+      on(fixed ++ params(("version", version.id)) ++ restrictOn: _*))
   }
+
+  private def params(args: (Any, ParameterValue[_])*): Seq[(Any, ParameterValue[_])] = args.toSeq
 
   def json = new JsonCubeDSMapper {
     import scalaz._
@@ -118,7 +121,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     protected def repo = DatabaseCubeDataStoreRepo.this
 
     def create: Unit@tx = {
-      val fields = s"content ${storeType.sqlType}" :: "version bigint" :: dims.values.map { d ⇒ s"$d integer not null" }.toList
+      val fields = s"content ${storeType.sqlType}" :: "version bigint not null" :: dims.values.map { d ⇒ s"$d integer not null" }.toList
       db.execute(SQL(s"CREATE TABLE $table (${fields.mkString(",")})"))
     }
     def drop: Unit@tx = db.execute(SQL(s"DROP TABLE $table"))
@@ -153,7 +156,6 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       }
     }
 
-    private def params(args: (Any, ParameterValue[_])*): Seq[(Any, ParameterValue[_])] = args.toSeq
     private def insert(p: Point, value: T): Unit@tx = {
       val fields = p.on.map(dims.apply)
       val values = fields.map(f ⇒ s"{$f}")

@@ -24,7 +24,7 @@ object DomainRepo extends DatabaseDomainRepo with FudimResources {
     val formulaRepo = new JsonFormulaMapperRepository {
       override val mappers = FudimFormulas.json(dataTypes, dimRepo)
     }
-    val cdsRepo = new DatabaseCubeDataStoreRepo with FudimResources {
+    val cdsRepo = new DatabaseCubeDataStoreRepo[FudimVersion] with FudimResources {
       protected def dimensionRepo = dimRepo
       protected def dataTypeRepo = dataTypes
       protected def storeTypes = StoreDataTypes.all

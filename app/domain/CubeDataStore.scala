@@ -4,17 +4,17 @@ import base._
 import cube._
 
 /** Stores the data for a cube (storage backend). */
-trait CubeDataStore[T] {
+trait CubeDataStore[T, Version] {
   def id: Long
 
   def dataType: DataType[T]
 
-  def cube: Cube[T]
+  def cube: VersionedCube[T, Version]
   def editor: CubeEditor[T]
 }
 
-trait CubeDataStoreRepo {
-  type CDS[T] <: CubeDataStore[T]
+trait CubeDataStoreRepo[Version] {
+  type CDS[T] <: CubeDataStore[T, Version]
 
   def get(id: Long): Option[CDS[_]]
 
@@ -30,8 +30,8 @@ trait CubeDataStoreRepo {
 }
 
 
-trait CopyableCubeDataStore[T] extends CubeDataStore[T] {
-  type Self <: CopyableCubeDataStore[T]
+trait CopyableCubeDataStore[T, Version] extends CubeDataStore[T, Version] {
+  type Self <: CopyableCubeDataStore[T, Version]
 
   /** Creates a copy of this cube with identical data.
     * Dimensions in the 'add' point will be added, the existing data will be added at the specified Coordinates.
@@ -41,6 +41,6 @@ trait CopyableCubeDataStore[T] extends CubeDataStore[T] {
   def copy(add: Point = Point.empty, remove: Point = Point.empty): Self@tx
 }
 
-trait CopyableCubeDataStoreRepo extends CubeDataStoreRepo {
-  type CDS[T] <: CopyableCubeDataStore[T]
+trait CopyableCubeDataStoreRepo[Version] extends CubeDataStoreRepo[Version] {
+  type CDS[T] <: CopyableCubeDataStore[T, Version]
 }

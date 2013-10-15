@@ -9,15 +9,15 @@ import cube._
 import support.AnormDb
 
 
-trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
-  override type CDS[T] = DatabaseCubeDataStore[T]
+trait DatabaseCubeDataStoreRepo[Version <: {def id : Long}] extends CopyableCubeDataStoreRepo[Version] {
+  override type CDS[T] = DatabaseCubeDataStore[T, Version]
 
   protected def database: SqlDatabase
   protected val db = new AnormDb(database)
   protected def dimensionRepo: DimensionRepository
   protected def dataTypeRepo: DataTypeRepository
   protected def storeTypes: Traversable[StoreDataType[_]]
-  protected def versioner: Versioner[ {def id: Long}]
+  protected def versioner: Versioner[Version]
 
 
   private case class CubeDefinition(id: Long, typeName: String) {
@@ -46,7 +46,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       map(loadFromDefinition)
   }
 
-  override def create[T](dims: Set[Dimension], dataType: DataType[T]): DatabaseCubeDataStore[T]@tx = {
+  override def create[T](dims: Set[Dimension], dataType: DataType[T]): DatabaseCubeDataStore[T, Version]@tx = {
     val storeType = Types(dataType)
     val id = db.insert(SQL("insert into databaseCube(type) values({type})").on("type" -> storeType.name)).
       getOrElse(throw new RuntimeException(s"Could not create the cube in the database"))
@@ -99,7 +99,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
 
   private def params(args: (Any, ParameterValue[_])*): Seq[(Any, ParameterValue[_])] = args.toSeq
 
-  def json = new JsonCubeDSMapper {
+  def json = new JsonCubeDSMapper[Version] {
     import scalaz._
     import Scalaz.{ToOptionOpsFromOption, ToValidationV}
     override val id = "databaseCubeDataStore"
@@ -109,12 +109,14 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
         cds ← get(id).toSuccess(s"Could not find CubeDataStore with id $id in database")
       } yield cds
     override def serializer = {
-      case cds: DatabaseCubeDataStore[_] ⇒ Json.obj("id" -> cds.id).success
+      case cds: DatabaseCubeDataStore[_, Version] ⇒ Json.obj("id" -> cds.id).success
     }
   }
 
 
-  private case class DatabaseCubeDataStoreImpl[T](definition: CubeDefinition, storeType: StoreDataType[T], dims: Map[Dimension, String]) extends DatabaseCubeDataStore[T] with CoordinateFactory {
+  private case class DatabaseCubeDataStoreImpl[T](definition: CubeDefinition, storeType: StoreDataType[T], dims: Map[Dimension, String])
+    extends DatabaseCubeDataStore[T, Version] with CoordinateFactory {
+
     override type Self = DatabaseCubeDataStoreImpl[T]
     override val id = definition.id
     val table = definition.tableName
@@ -183,8 +185,8 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
 
 
     private val cube_ = TheCube(id)
-    override val cube: Cube[T] = cube_
-    private case class TheCube(id: Long, slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends AbstractCube[T] {
+    override def cube: VersionedCube[T, Version] = cube_
+    private case class TheCube(id: Long, slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends AbstractCube[T] with VersionedCube[T, Version] {
       override type Self = TheCube
 
       override def allDimensions = dims.keys.toSet
@@ -208,6 +210,11 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       }
       override def dense = allPoints.map(p ⇒ (p, get(p)))
       override def allPoints = super.allPoints
+
+      override def version = {
+        ???
+      }
+
       override def toString = s"DatabaseCube($id, slice=$slice, filters=$filters)"
     }
 
@@ -234,7 +241,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     }
 
     override def equals(o: Any) = o match {
-      case other: DatabaseCubeDataStore[T] => other.id == id
+      case other: DatabaseCubeDataStore[T, Version] => other.id == id
       case _ => false
     }
     override def hashCode = id.hashCode

@@ -4,8 +4,8 @@ package db
 import anorm.{RowParser, ParameterValue}
 
 
-trait DatabaseCubeDataStore[T] extends CopyableCubeDataStore[T] {
-  override type Self <: DatabaseCubeDataStore[T]
+trait DatabaseCubeDataStore[T, Version] extends CopyableCubeDataStore[T, Version] {
+  override type Self <: DatabaseCubeDataStore[T, Version]
   def storeType: StoreDataType[T]
   override def dataType = storeType.dataType
 }

@@ -1,7 +1,6 @@
 package domain
 package db
 
-import java.sql.Connection
 import anorm._
 import anorm.SqlParser._
 import play.api.libs.json._
@@ -18,6 +17,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
   protected def dimensionRepo: DimensionRepository
   protected def dataTypeRepo: DataTypeRepository
   protected def storeTypes: Traversable[StoreDataType[_]]
+  protected def versioner: Versioner[ {def id: Long}]
 
 
   private case class CubeDefinition(id: Long, typeName: String) {
@@ -73,9 +73,8 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
   }
 
   private def loadFromDefinition(definition: CubeDefinition): DatabaseCubeDataStoreImpl[_] = {
-    val dimensions = db.notx.select(
-      SQL("select id, dimension from databaseCube_dimension where cube={id}").on("id" -> definition.id),
-      long("id") ~ str("dimension") *).map {
+    val dimensions = db.notx.select(SQL("select id, dimension from databaseCube_dimension where cube={id}").on("id" -> definition.id),
+                                     long("id") ~ str("dimension") *).map {
       case id ~ name ⇒
         val d: Dimension = dimensionRepo.get(name).getOrElse(throw new IllegalStateException(s"Could not find dimension $name"))
         (d, s"dim_$id")
@@ -119,7 +118,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     protected def repo = DatabaseCubeDataStoreRepo.this
 
     def create: Unit@tx = {
-      val fields = s"content ${storeType.sqlType}" :: dims.values.map { d ⇒ s"$d integer not null"}.toList
+      val fields = s"content ${storeType.sqlType}" :: "version bigint" :: dims.values.map { d ⇒ s"$d integer not null" }.toList
       db.execute(SQL(s"CREATE TABLE $table (${fields.mkString(",")})"))
     }
     def drop: Unit@tx = db.execute(SQL(s"DROP TABLE $table"))
@@ -154,17 +153,21 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       }
     }
 
+    private def params(args: (Any, ParameterValue[_])*): Seq[(Any, ParameterValue[_])] = args.toSeq
     private def insert(p: Point, value: T): Unit@tx = {
       val fields = p.on.map(dims.apply)
       val values = fields.map(f ⇒ s"{$f}")
-      val ons = p.coordinates.map(e ⇒ (dims(e.dimension), coordToDb(e))).toSeq :+ ("content" -> storeType.toDb(value))
+      val version = versioner.version
+      val ons = p.coordinates.map(e ⇒ (dims(e.dimension), coordToDb(e))).toSeq ++
+        params(("content" -> storeType.toDb(value)), ("version" -> version.id))
       db.insert(
-        SQL(s"INSERT INTO $table(content,${fields.mkString(",")}) VALUES ({content},${values.mkString(",")})").on(ons: _*))
+                 SQL(s"INSERT INTO $table(content,version,${fields.mkString(",")}) VALUES ({content},{version},${values.mkString(",")})").on(ons: _*))
     }
     private def update(at: Point, value: T): Boolean@tx = {
       val (where, ons) = mkWhere(at)
-      val ons2 = ons :+ ("content" -> storeType.toDb(value))
-      val cnt = db.update(SQL(s"UPDATE $table SET content={content} WHERE $where").on(ons2: _*))
+      val version = versioner.version
+      val cnt = db.update(SQL(s"UPDATE $table SET content={content},version={version} WHERE $where").
+        on(ons ++ params(("content" -> storeType.toDb(value)), ("version" -> version.id)): _*))
       cnt match {
         case 1 ⇒ true
         case 0 ⇒ false
@@ -199,7 +202,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
           val (where, ons) = mkWhere(slice)
           db.notx.select(SQL(s"SELECT * FROM $table WHERE $where").on(ons: _*), as)
         }
-        res.filter(e ⇒ matches(e._2)).map { case value ~ point ⇒ (point, value)}
+        res.filter(e ⇒ matches(e._2)).map { case value ~ point ⇒ (point, value) }
       }
       override def dense = allPoints.map(p ⇒ (p, get(p)))
       override def allPoints = super.allPoints

@@ -8,7 +8,7 @@ import domain._
 import models.playbinding._
 import anorm.SqlParser._
 import scala.Some
-import support.withModel
+import support.{withDbVersioner, withModel}
 
 class DatabaseCubeDataStoreSpec extends Specification {
   trait storeDataTypes extends domain.TestFixtures.dataTypes {
@@ -31,7 +31,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
     def dtr = dataTypeRepo
   }
 
-  include(new CubeTck("DatabaseCube") with withModel with BeforeAfterExample with storeDataTypes {
+  include(new CubeTck("DatabaseCube") with withModel with withDbVersioner with BeforeAfterExample with storeDataTypes {
     override def makeAge(year: Dimension, data: Map[Point, Int]) = execTx(dbCubeForData(intType, data))
     override def makeSales(color: Dimension, location: Dimension, product: Dimension, data: Map[Point, Int]) =
       execTx(dbCubeForData(intType, data))
@@ -42,12 +42,14 @@ class DatabaseCubeDataStoreSpec extends Specification {
       d
     }
     private var dimensions: List[Dimension] = Nil
+    private val ver = versioner
     private object CubeRepo extends DatabaseCubeDataStoreRepo with FudimResources {
       override def dimensionRepo = new DimensionRepository {
         def all = dimensions
       }
       override def storeTypes = storeDataTypes.all
       override def dataTypeRepo = dtr
+      override val versioner = ver
     }
     private def dbCubeForData[T](dataType: DataType[T], data: Traversable[(Point, T)]) = {
       val cds = CubeRepo.create(data.head._1.on, dataType)
@@ -61,14 +63,16 @@ class DatabaseCubeDataStoreSpec extends Specification {
     }
   })
 
-  trait withplay extends withModel with storeDataTypes {
+  trait withplay extends withModel with withDbVersioner with storeDataTypes {
     var dimensions: List[Dimension] = Nil
+    private val ver = versioner
     object CubeRepo extends DatabaseCubeDataStoreRepo with FudimResources {
       override def dimensionRepo = new DimensionRepository {
         def all = dimensions
       }
       override def storeTypes = storeDataTypes.all
       override def dataTypeRepo = dtr
+      override def versioner = ver
     }
   }
   trait oneDimensionalCube extends withplay {

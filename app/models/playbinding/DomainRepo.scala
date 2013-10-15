@@ -28,6 +28,7 @@ object DomainRepo extends DatabaseDomainRepo with FudimResources {
       protected def dimensionRepo = dimRepo
       protected def dataTypeRepo = dataTypes
       protected def storeTypes = StoreDataTypes.all
+      protected def versioner = DomainRepo.versioner
     }
     new DatabaseFactRepo with FudimResources {
       override def domain = DomainRepo.this.get(d).getOrElse(throw new IllegalStateException(s"Domain $d not found"))

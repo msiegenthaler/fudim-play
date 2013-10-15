@@ -6,8 +6,9 @@ import play.api.Play
 import play.api.test.FakeApplication
 import base._
 import models.playbinding.{Fudim, FudimResources}
-import models.{FudimVersion, Versioner}
+import models.{FudimVersion}
 import models.db.DatabaseVersionRepo
+import domain.Versioner
 
 
 /** Base trait for scopes that use the model. */

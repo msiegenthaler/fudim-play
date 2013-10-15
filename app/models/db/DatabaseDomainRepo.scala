@@ -5,6 +5,7 @@ import anorm._
 import anorm.SqlParser._
 import base._
 import support.AnormDb
+import domain.Versioner
 
 trait DatabaseDomainRepo extends FudimDomainRepo {
   protected def versioner: Versioner[ {def id: Long}]

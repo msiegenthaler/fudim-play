@@ -7,7 +7,8 @@ import play.api.db._
 import play.api.Play.current
 import base._
 import play.api.Logger
-import models.{FudimVersion, VersionerState}
+import models.{FudimVersion}
+import domain.VersionerState
 
 object Fudim {
   def exec[A](tx: Transaction[A]): A = {

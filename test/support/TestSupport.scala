@@ -5,10 +5,9 @@ import org.specs2.specification.Scope
 import play.api.Play
 import play.api.test.FakeApplication
 import base._
+import domain.{Version, Versioner}
 import models.playbinding.{Fudim, FudimResources}
-import models.{FudimVersion}
 import models.db.DatabaseVersionRepo
-import domain.Versioner
 
 
 /** Base trait for scopes that use the model. */
@@ -22,7 +21,7 @@ trait withModel extends Scope with BeforeAfter {
 
 trait withDbVersioner extends withModel {
   val versionRepo = new DatabaseVersionRepo with FudimResources
-  val versioner = new Versioner[FudimVersion] {
+  val versioner = new Versioner {
     override protected def createVersion() = versionRepo.create()
   }
 }

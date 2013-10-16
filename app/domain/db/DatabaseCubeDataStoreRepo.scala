@@ -9,17 +9,15 @@ import cube._
 import support.AnormDb
 
 
-trait DatabaseCubeDataStoreRepo[Version <: {def id : Long}] extends CopyableCubeDataStoreRepo[Version] {
-  override type CDS[T] = DatabaseCubeDataStore[T, Version]
+trait DatabaseCubeDataStoreRepo[Version <: {def id : Long}] extends CopyableCubeDataStoreRepo {
+  override type CDS[T] = DatabaseCubeDataStore[T]
 
   protected def database: SqlDatabase
   protected val db = new AnormDb(database)
   protected def dimensionRepo: DimensionRepository
   protected def dataTypeRepo: DataTypeRepository
   protected def storeTypes: Traversable[StoreDataType[_]]
-  protected def versioner: Versioner[Version]
-  protected def versionFromId(id: Long): Version
-
+  protected def versioner: Versioner
 
   private case class CubeDefinition(id: Long, typeName: String) {
     def tableName = s"databaseCube_data_$id"
@@ -47,7 +45,7 @@ trait DatabaseCubeDataStoreRepo[Version <: {def id : Long}] extends CopyableCube
       map(loadFromDefinition)
   }
 
-  override def create[T](dims: Set[Dimension], dataType: DataType[T]): DatabaseCubeDataStore[T, Version]@tx = {
+  override def create[T](dims: Set[Dimension], dataType: DataType[T]): DatabaseCubeDataStore[T]@tx = {
     val storeType = Types(dataType)
     val id = db.insert(SQL("insert into databaseCube(type) values({type})").on("type" -> storeType.name)).
       getOrElse(throw new RuntimeException(s"Could not create the cube in the database"))
@@ -100,7 +98,7 @@ trait DatabaseCubeDataStoreRepo[Version <: {def id : Long}] extends CopyableCube
 
   private def params(args: (Any, ParameterValue[_])*): Seq[(Any, ParameterValue[_])] = args.toSeq
 
-  def json = new JsonCubeDSMapper[Version] {
+  def json = new JsonCubeDSMapper {
     import scalaz._
     import Scalaz.{ToOptionOpsFromOption, ToValidationV}
     override val id = "databaseCubeDataStore"
@@ -110,13 +108,13 @@ trait DatabaseCubeDataStoreRepo[Version <: {def id : Long}] extends CopyableCube
         cds ← get(id).toSuccess(s"Could not find CubeDataStore with id $id in database")
       } yield cds
     override def serializer = {
-      case cds: DatabaseCubeDataStore[_, Version] ⇒ Json.obj("id" -> cds.id).success
+      case cds: DatabaseCubeDataStore[_] ⇒ Json.obj("id" -> cds.id).success
     }
   }
 
 
   private case class DatabaseCubeDataStoreImpl[T](definition: CubeDefinition, storeType: StoreDataType[T], dims: Map[Dimension, String])
-    extends DatabaseCubeDataStore[T, Version] with CoordinateFactory {
+    extends DatabaseCubeDataStore[T] with CoordinateFactory {
 
     override type Self = DatabaseCubeDataStoreImpl[T]
     override val id = definition.id
@@ -186,8 +184,8 @@ trait DatabaseCubeDataStoreRepo[Version <: {def id : Long}] extends CopyableCube
 
 
     private val cube_ = TheCube(id)
-    override def cube: VersionedCube[T, Version] = cube_
-    private case class TheCube(id: Long, slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends AbstractCube[T] with VersionedCube[T, Version] {
+    override def cube: VersionedCube[T] = cube_
+    private case class TheCube(id: Long, slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends AbstractCube[T] with VersionedCube[T] {
       override type Self = TheCube
 
       override def allDimensions = dims.keys.toSet
@@ -219,7 +217,8 @@ trait DatabaseCubeDataStoreRepo[Version <: {def id : Long}] extends CopyableCube
           val (where, ons) = mkWhere(slice)
           db.notx.single(SQL(s"SELECT max(version) FROM $table WHERE $where").on(ons: _*), scalar[Option[Long]])
         }
-        versionFromId(versionId.getOrElse(0))
+        //TODO handle the zero
+        Version(versionId.getOrElse(0))
       }
 
       override def toString = s"DatabaseCube($id, slice=$slice, filters=$filters)"
@@ -248,7 +247,7 @@ trait DatabaseCubeDataStoreRepo[Version <: {def id : Long}] extends CopyableCube
     }
 
     override def equals(o: Any) = o match {
-      case other: DatabaseCubeDataStore[T, Version] => other.id == id
+      case other: DatabaseCubeDataStore[T] => other.id == id
       case _ => false
     }
     override def hashCode = id.hashCode

@@ -10,7 +10,7 @@ object DomainRepo extends DatabaseDomainRepo with FudimResources {
 
   object versionRepo extends DatabaseVersionRepo with FudimResources
 
-  object versioner extends Versioner[FudimVersion] {
+  object versioner extends Versioner {
     override protected def createVersion() = versionRepo.create()
   }
 
@@ -24,12 +24,11 @@ object DomainRepo extends DatabaseDomainRepo with FudimResources {
     val formulaRepo = new JsonFormulaMapperRepository {
       override val mappers = FudimFormulas.json(dataTypes, dimRepo)
     }
-    val cdsRepo = new DatabaseCubeDataStoreRepo[FudimVersion] with FudimResources {
+    val cdsRepo = new DatabaseCubeDataStoreRepo[Version] with FudimResources {
       protected def dimensionRepo = dimRepo
       protected def dataTypeRepo = dataTypes
       protected def storeTypes = StoreDataTypes.all
       protected def versioner = DomainRepo.versioner
-      protected def versionFromId(id: Long) = FudimVersion(id)
     }
     new DatabaseFactRepo with FudimResources {
       override def domain = DomainRepo.this.get(d).getOrElse(throw new IllegalStateException(s"Domain $d not found"))

@@ -4,11 +4,11 @@ package db
 import anorm._
 import anorm.SqlParser._
 import base._
+import domain._
 import support.AnormDb
-import domain.Versioner
 
 trait DatabaseDomainRepo extends FudimDomainRepo {
-  protected def versioner: Versioner[ {def id: Long}]
+  protected def versioner: Versioner
   protected def database: SqlDatabase
   protected val db = new AnormDb(database)
 
@@ -35,13 +35,13 @@ trait DatabaseDomainRepo extends FudimDomainRepo {
   }
 
   private val domain: RowParser[FudimDomain] = long("id").map(DomainId) ~ str("name") ~ long("version") map {
-    case id ~ name ~ versionId ⇒ new DatabaseDomain(id, name, FudimVersion(versionId), dimensionRepo(id), factRepo(id))
+    case id ~ name ~ versionId ⇒ new DatabaseDomain(id, name, Version(versionId), dimensionRepo(id), factRepo(id))
   }
 
   protected def dimensionRepo(domain: DomainId): FudimDimensionRepo
   protected def factRepo(domain: DomainId): FudimFactRepo
 
-  private class DatabaseDomain(val id: DomainId, val name: String, val version: FudimVersion,
+  private class DatabaseDomain(val id: DomainId, val name: String, val version: Version,
                                val dimensionRepo: FudimDimensionRepo, val factRepo: FudimFactRepo) extends FudimDomain {
     override def equals(o: Any) = o match {
       case o: DatabaseDomain => id == o.id

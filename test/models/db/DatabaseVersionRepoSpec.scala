@@ -3,7 +3,7 @@ package models.db
 import org.specs2.mutable.Specification
 import support._
 import models.playbinding.{Fudim, FudimResources}
-import models.FudimVersion
+import domain.Version
 import org.joda.time.{DateTime, Duration}
 
 class DatabaseVersionRepoSpec extends Specification {
@@ -19,7 +19,7 @@ class DatabaseVersionRepoSpec extends Specification {
     }
     "create versions with ascending ids" in new repo {
       val vs = (1 to 100).map(_ => create()).toList
-      def checkAsc(vs: List[FudimVersion]): Unit = vs match {
+      def checkAsc(vs: List[Version]): Unit = vs match {
         case a :: b :: tail =>
           a.id must be < b.id
           checkAsc(b :: tail)
@@ -29,7 +29,7 @@ class DatabaseVersionRepoSpec extends Specification {
     }
     "create ascending versions" in new repo {
       val vs = (1 to 100).map(_ => create()).toList
-      def checkAsc(vs: List[FudimVersion]): Unit = vs match {
+      def checkAsc(vs: List[Version]): Unit = vs match {
         case a :: b :: tail =>
           a must be < b
           checkAsc(b :: tail)

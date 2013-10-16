@@ -9,7 +9,7 @@ import models.playbinding._
 import anorm.SqlParser._
 import scala.Some
 import support.{ withDbVersioner, withModel }
-import models.FudimVersion
+import domain.Version
 
 class DatabaseCubeDataStoreSpec extends Specification {
   trait storeDataTypes extends domain.TestFixtures.dataTypes {
@@ -51,7 +51,6 @@ class DatabaseCubeDataStoreSpec extends Specification {
       override def storeTypes = storeDataTypes.all
       override def dataTypeRepo = dtr
       override val versioner = ver
-      override def versionFromId(id: Long) = FudimVersion(id)
     }
     private def dbCubeForData[T](dataType: DataType[T], data: Traversable[(Point, T)]) = {
       val cds = CubeRepo.create(data.head._1.on, dataType)
@@ -68,14 +67,13 @@ class DatabaseCubeDataStoreSpec extends Specification {
   trait withplay extends withModel with withDbVersioner with storeDataTypes {
     var dimensions: List[Dimension] = Nil
     private val ver = versioner
-    object CubeRepo extends DatabaseCubeDataStoreRepo[FudimVersion] with FudimResources {
+    object CubeRepo extends DatabaseCubeDataStoreRepo[Version] with FudimResources {
       override def dimensionRepo = new DimensionRepository {
         def all = dimensions
       }
       override def storeTypes = storeDataTypes.all
       override def dataTypeRepo = dtr
       override def versioner = ver
-      override def versionFromId(id: Long) = FudimVersion(id)
     }
   }
   trait oneDimensionalCube extends withplay {

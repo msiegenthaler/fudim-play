@@ -18,7 +18,7 @@ trait DatabaseFactRepo extends FudimFactRepo {
   protected def domain: FudimDomain
   protected def dataTypeRepo = FudimDataTypes
   protected def jsonFormulaRepo: JsonFormulaMapperRepository
-  protected def cubeDataStoreRepo: CopyableCubeDataStoreRepo[FudimVersion]
+  protected def cubeDataStoreRepo: CopyableCubeDataStoreRepo
 
   override def get(name: String) = getInternal(name)
   protected def getInternal(name: String): Option[DatabaseFact[_]] = {
@@ -121,7 +121,7 @@ trait DatabaseFactRepo extends FudimFactRepo {
     aggregation <- Aggregation.all.find(_.name == aggregationName).toSuccess(s"Aggregation $aggregationName does not exist")
   } yield aggregation
 
-  private case class DataStoreFactBackend[T](dataType: FudimDataType[T], cds: CopyableCubeDataStore[T, FudimVersion], aggregation: Aggregation[T]) extends FactBackend[T] {
+  private case class DataStoreFactBackend[T](dataType: FudimDataType[T], cds: CopyableCubeDataStore[T], aggregation: Aggregation[T]) extends FactBackend[T] {
     override def factType = DataStoreFactBackend.key
     override val data = aggregation.aggregator.map(CubeDecorator(cds.cube, _)).getOrElse(cds.cube)
     override val editor = Some(cds.editor)

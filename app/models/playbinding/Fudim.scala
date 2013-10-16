@@ -7,8 +7,8 @@ import play.api.db._
 import play.api.Play.current
 import base._
 import play.api.Logger
-import models.{FudimVersion}
-import domain.VersionerState
+import domain.{ Version, VersionerState }
+
 
 object Fudim {
   def exec[A](tx: Transaction[A]): A = {
@@ -30,10 +30,10 @@ object Fudim {
   /** Executed after the transaction. */
   private def cleanupTx(s: TransactionState) = Db.cleanupTx(s)
 
-  private case class TxState private(id: Long, isReadOnly: Boolean, connection: Option[Connection] = None, version: Option[FudimVersion] = None)
-    extends TransactionState with VersionerState[FudimVersion] {
+  private case class TxState private(id: Long, isReadOnly: Boolean, connection: Option[Connection] = None, version: Option[Version] = None)
+    extends TransactionState with VersionerState {
 
-    def withVersion(version: Option[FudimVersion]) = copy(version = version)
+    def withVersion(version: Option[Version]) = copy(version = version)
     override def toString = {
       if (isReadOnly) s"ro-tx-$id"
       else s"tx-$id"

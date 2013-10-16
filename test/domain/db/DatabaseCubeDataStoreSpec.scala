@@ -1,14 +1,15 @@
 package domain.db
 
 import org.specs2.mutable._
-import org.specs2.specification.{Scope, BeforeAfterExample}
+import org.specs2.specification.{ Scope, BeforeAfterExample }
 import base._
 import cube._
 import domain._
 import models.playbinding._
 import anorm.SqlParser._
 import scala.Some
-import support.{withDbVersioner, withModel}
+import support.{ withDbVersioner, withModel }
+import models.FudimVersion
 
 class DatabaseCubeDataStoreSpec extends Specification {
   trait storeDataTypes extends domain.TestFixtures.dataTypes {
@@ -43,13 +44,14 @@ class DatabaseCubeDataStoreSpec extends Specification {
     }
     private var dimensions: List[Dimension] = Nil
     private val ver = versioner
-    private object CubeRepo extends DatabaseCubeDataStoreRepo[ {def id: Long}] with FudimResources {
+    private object CubeRepo extends DatabaseCubeDataStoreRepo[{ def id: Long }] with FudimResources {
       override def dimensionRepo = new DimensionRepository {
         def all = dimensions
       }
       override def storeTypes = storeDataTypes.all
       override def dataTypeRepo = dtr
       override val versioner = ver
+      override def versionFromId(id: Long) = FudimVersion(id)
     }
     private def dbCubeForData[T](dataType: DataType[T], data: Traversable[(Point, T)]) = {
       val cds = CubeRepo.create(data.head._1.on, dataType)
@@ -66,13 +68,14 @@ class DatabaseCubeDataStoreSpec extends Specification {
   trait withplay extends withModel with withDbVersioner with storeDataTypes {
     var dimensions: List[Dimension] = Nil
     private val ver = versioner
-    object CubeRepo extends DatabaseCubeDataStoreRepo[ {def id: Long}] with FudimResources {
+    object CubeRepo extends DatabaseCubeDataStoreRepo[FudimVersion] with FudimResources {
       override def dimensionRepo = new DimensionRepository {
         def all = dimensions
       }
       override def storeTypes = storeDataTypes.all
       override def dataTypeRepo = dtr
       override def versioner = ver
+      override def versionFromId(id: Long) = FudimVersion(id)
     }
   }
   trait oneDimensionalCube extends withplay {
@@ -253,6 +256,27 @@ class DatabaseCubeDataStoreSpec extends Specification {
         cds2.cube.get(mar + bern) must beSome("3")
         cds2.cube.get(mar + ny) must beSome("Test")
       }
+    }
+
+    "have a version on an empty cube" in new oneDimensionalCube {
+      Option(cube.version).isDefined must beTrue
+    }
+    "have a version on cube" in new oneDimensionalCube {
+      execTx { editor.set(feb, Some("10")) }
+      Option(cube.version).isDefined must beTrue
+    }
+    "have an increasing version" in new oneDimensionalCube {
+      val v1 = cube.version
+      execTx(editor.set(jan, Some("12")))
+      cube.version must be > v1
+    }
+    "have an increasing version when modifying one value multiple times" in new oneDimensionalCube {
+      val v1 = cube.version
+      execTx(editor.set(jan, Some("12")))
+      val v2 = cube.version
+      v2 must be > v1
+      execTx(editor.set(jan, Some("13")))
+      cube.version must be > v2
     }
   }
 }

@@ -18,6 +18,7 @@ trait DatabaseCubeDataStoreRepo[Version <: {def id : Long}] extends CopyableCube
   protected def dataTypeRepo: DataTypeRepository
   protected def storeTypes: Traversable[StoreDataType[_]]
   protected def versioner: Versioner[Version]
+  protected def versionFromId(id: Long): Version
 
 
   private case class CubeDefinition(id: Long, typeName: String) {
@@ -212,7 +213,13 @@ trait DatabaseCubeDataStoreRepo[Version <: {def id : Long}] extends CopyableCube
       override def allPoints = super.allPoints
 
       override def version = {
-        ???
+        val versionId = if (slice.on.isEmpty) {
+          db.notx.single(SQL(s"SELECT max(version) FROM $table"), scalar[Option[Long]])
+        } else {
+          val (where, ons) = mkWhere(slice)
+          db.notx.single(SQL(s"SELECT max(version) FROM $table WHERE $where").on(ons: _*), scalar[Option[Long]])
+        }
+        versionFromId(versionId.getOrElse(0))
       }
 
       override def toString = s"DatabaseCube($id, slice=$slice, filters=$filters)"

@@ -165,20 +165,16 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       db.insert(
         SQL(s"INSERT INTO $table(content,version,${fields.mkString(",")}) VALUES ({content},{version},${values.mkString(",")})").on(ons: _*))
     }
-    private def update(at: Point, value: T): Boolean @tx = {
+    private def update(at: Point, value: Option[T]): Boolean @tx = {
       val (where, ons) = mkWhere(at)
       val version = versioner.version
       val cnt = db.update(SQL(s"UPDATE $table SET content={content},version={version} WHERE $where").
-        on(ons ++ params(("content" -> storeType.toDb(value)), ("version" -> version.id)): _*))
+        on(ons ++ params(("content" -> storeType.toDb(value.getOrElse(null.asInstanceOf[T]))), ("version" -> version.id)): _*))
       cnt match {
         case 1 ⇒ true
         case 0 ⇒ false
         case nr ⇒ throw new IllegalStateException(s"Too many rows affected by DatabaseCubeUpdate on $table ($nr rows)")
       }
-    }
-    private def delete(at: Point): Unit @tx = {
-      val (where, ons) = mkWhere(at)
-      db.delete(SQL(s"DELETE FROM $table WHERE $where").on(ons: _*))
     }
 
     private val cube_ = TheCube(id)
@@ -226,13 +222,8 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       override def isSettable(at: Point) = at.definesExactly(dims.keys)
       override def set(at: Point, to: Option[T]) = {
         if (isSettable(at)) {
-          if (to.isDefined) to.foreachTx { value ⇒
-            if (!update(at, value)) insert(at, value)
-            else noop
-          }
-          else {
-            delete(at)
-          }
+          if (update(at, to)) noop
+          else if (to.isDefined) insert(at, to.get)
         } else {
           noop
           throw new ValueCannotBeSetException(at)

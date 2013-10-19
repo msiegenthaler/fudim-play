@@ -276,5 +276,14 @@ class DatabaseCubeDataStoreSpec extends Specification {
       execTx(editor.set(jan, Some("13")))
       cube.version must be > v2
     }
+    "increase the version when a value gets deleted" in new oneDimensionalCube {
+      execTx(editor.set(jan, Some("12")))
+      execTx(editor.set(feb, Some("11")))
+      val v1 = cube.version
+      execTx(editor.set(jan, None))
+      cube.version must be > v1
+      cube.version(jan) must be > v1
+      cube.version(feb) must_== v1
+    }
   }
 }

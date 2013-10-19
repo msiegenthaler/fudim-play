@@ -48,7 +48,7 @@ trait DatabaseFactRepo extends FudimFactRepo {
       create(name, backend)
     }
   }
-  protected def create[T](name: String, backend: FactBackend[T]): DatabaseFact[T]@tx = {
+  protected def create[T](name: String, backend: FactBackend[T]): DatabaseFact[T] @tx = {
     val config = Json.stringify(backend.config)
     val id = db.insert(SQL("insert into fact(domain, name, dataType, factType, config) values({domain}, {name}, {dataType}, {factType}, {config})").
       on("domain" -> domain.id.id, "name" -> name, "dataType" -> backend.dataType.name, "factType" -> backend.factType, "config" -> config)).get
@@ -57,7 +57,7 @@ trait DatabaseFactRepo extends FudimFactRepo {
 
   def remove(name: String) = {
     val fact = getInternal(name).tx
-    fact.mapTx { fact =>
+    fact.mapTx { fact ⇒
       fact.delete()
       db.delete(SQL("delete from fact where id={id}").on("id" -> fact.id))
     }.getOrElse(Transaction.empty)
@@ -69,10 +69,10 @@ trait DatabaseFactRepo extends FudimFactRepo {
         val fact: Validation[String, DatabaseFact[_]] = for {
           dataType ← dataTypeRepo.get(dataTypeName).toSuccess(s"DataType $dataTypeName is not known")
           json = Json.parse(config)
-          backend <- {
+          backend ← {
             val mk: PartialFunction[String, FactBackend[_]] = {
-              case DataStoreFactBackend.key => DataStoreFactBackend(dataType, json)
-              case FormulaFactBackend.key => FormulaFactBackend(dataType, json)
+              case DataStoreFactBackend.key ⇒ DataStoreFactBackend(dataType, json)
+              case FormulaFactBackend.key ⇒ FormulaFactBackend(dataType, json)
             }
             mk.lift(factType).toSuccess(s"Unknown fact type $factType")
           }
@@ -85,11 +85,10 @@ trait DatabaseFactRepo extends FudimFactRepo {
   protected final class DatabaseFact[T](val id: Long, val name: String, ib: FactBackend[T]) extends FudimFact[T] {
     private[this] var _backend: FactBackend[T] = ib
     def backend = synchronized(_backend)
-    def updateBackend(nb: FactBackend[T]): Unit@tx = {
+    def updateBackend(nb: FactBackend[T]): Unit @tx = {
       val config = Json.stringify(nb.config)
       db.update(SQL("update fact set config={config} where id={id}").on("config" -> config, "id" -> id))
     }
-
 
     override def dataType = backend.dataType
     def data = backend.data
@@ -118,14 +117,14 @@ trait DatabaseFactRepo extends FudimFactRepo {
     def aggregation: Aggregation[T]
 
     def aggregation(aggregation: Aggregation[T] = aggregation): FactBackend[T]
-    def addDimension(moveTo: Coordinate): FactBackend[T]@tx
-    def removeDimension(keepAt: Coordinate): FactBackend[T]@tx
-    def delete(): Unit@tx = noop
+    def addDimension(moveTo: Coordinate): FactBackend[T] @tx
+    def removeDimension(keepAt: Coordinate): FactBackend[T] @tx
+    def delete(): Unit @tx = noop
   }
 
   private def aggregationFromJson(json: JsValue) = for {
-    aggregationName <- json.asOpt[String].toSuccess("Missing aggregation in config")
-    aggregation <- Aggregation.all.find(_.name == aggregationName).toSuccess(s"Aggregation $aggregationName does not exist")
+    aggregationName ← json.asOpt[String].toSuccess("Missing aggregation in config")
+    aggregation ← Aggregation.all.find(_.name == aggregationName).toSuccess(s"Aggregation $aggregationName does not exist")
   } yield aggregation
 
   private case class DataStoreFactBackend[T](dataType: FudimDataType[T], cds: CopyableCubeDataStore[T], aggregation: Aggregation[T]) extends FactBackend[T] {
@@ -149,19 +148,18 @@ trait DatabaseFactRepo extends FudimFactRepo {
     override def config = {
       Json.obj(
         "cubeDataStore-id" -> cds.id,
-        "aggregation" -> aggregation.name
-      )
+        "aggregation" -> aggregation.name)
     }
   }
   private object DataStoreFactBackend {
     val key = "dataStore"
     def apply[T](dataType: FudimDataType[T], config: JsValue) = {
       val backend = for {
-        id <- (config \ "cubeDataStore-id").asOpt[Long].toSuccess("Missing cubeDataStore-id")
-        cds <- cubeDataStoreRepo.get(id, dataType).toSuccess(s"CubeDataStore $id not found")
-        aggregation <- aggregationFromJson(config \ "aggregation")
+        id ← (config \ "cubeDataStore-id").asOpt[Long].toSuccess("Missing cubeDataStore-id")
+        cds ← cubeDataStoreRepo.get(id, dataType).toSuccess(s"CubeDataStore $id not found")
+        aggregation ← aggregationFromJson(config \ "aggregation")
       } yield new DataStoreFactBackend(dataType, cds, aggregation.asInstanceOf[Aggregation[T]])
-      backend.valueOr(e => throw new IllegalStateException(s"Cannot load cds-fact from config: $e"))
+      backend.valueOr(e ⇒ throw new IllegalStateException(s"Cannot load cds-fact from config: $e"))
     }
     def apply[T](dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]) = {
       val cds = cubeDataStoreRepo.create(dimensions, dataType)
@@ -181,18 +179,17 @@ trait DatabaseFactRepo extends FudimFactRepo {
     def removeDimension(keepAt: Coordinate) = throw new UnsupportedOperationException("cannot modify dimenesions")
 
     def config = Json.obj(
-      "formula" -> jsonFormulaRepo.serialize(formula).valueOr(e => throw new IllegalStateException(e)),
-      "aggregation" -> aggregation.name
-    )
+      "formula" -> jsonFormulaRepo.serialize(formula).valueOr(e ⇒ throw new IllegalStateException(e)),
+      "aggregation" -> aggregation.name)
   }
   private object FormulaFactBackend {
     val key = "formula"
     def apply[T](dataType: FudimDataType[T], config: JsValue) = {
       val backend = for {
-        formula <- jsonFormulaRepo.parse(config \ "formula")
-        aggregation <- aggregationFromJson(config \ "aggregation")
+        formula ← jsonFormulaRepo.parse(config \ "formula")
+        aggregation ← aggregationFromJson(config \ "aggregation")
       } yield new FormulaFactBackend(dataType, formula.asInstanceOf[Formula[T]], aggregation.asInstanceOf[Aggregation[T]])
-      backend.valueOr(e => throw new IllegalStateException(s"Cannot load formula-fact from config: $e"))
+      backend.valueOr(e ⇒ throw new IllegalStateException(s"Cannot load formula-fact from config: $e"))
     }
   }
 }

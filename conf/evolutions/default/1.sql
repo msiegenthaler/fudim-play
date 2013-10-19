@@ -40,6 +40,7 @@ CREATE TABLE fact (
   factType varchar(100) not null,
   config text not null
 );
+CREATE UNIQUE INDEX fact_name ON fact(domain, name);
 
 CREATE SEQUENCE databaseCube_id_seq;
 CREATE TABLE databaseCube (

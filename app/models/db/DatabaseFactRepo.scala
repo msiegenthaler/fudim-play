@@ -33,13 +33,20 @@ trait DatabaseFactRepo extends FudimFactRepo {
       fact *).flatten
   }
 
+  private def requireNotExisting[A](name: String)(body: ⇒ A @tx): A @tx = {
+    get(name).map(_ ⇒ throw new IllegalStateException(s"Fact $name already exists")).getOrElseTx(body)
+  }
   def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]) = {
-    val backend = DataStoreFactBackend(dataType, dimensions, aggregation)
-    create(name, backend)
+    requireNotExisting(name) {
+      val backend = DataStoreFactBackend(dataType, dimensions, aggregation)
+      create(name, backend)
+    }
   }
   def createFormulaBased[T](name: String, dataType: FudimDataType[T], formula: Formula[T], aggregation: Aggregation[T]) = {
-    val backend = FormulaFactBackend(dataType, formula, aggregation)
-    create(name, backend)
+    requireNotExisting(name) {
+      val backend = FormulaFactBackend(dataType, formula, aggregation)
+      create(name, backend)
+    }
   }
   protected def create[T](name: String, backend: FactBackend[T]): DatabaseFact[T]@tx = {
     val config = Json.stringify(backend.config)

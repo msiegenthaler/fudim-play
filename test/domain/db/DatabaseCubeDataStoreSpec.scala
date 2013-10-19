@@ -285,5 +285,18 @@ class DatabaseCubeDataStoreSpec extends Specification {
       cube.version(jan) must be > v1
       cube.version(feb) must_== v1
     }
+    "have an individual version per cell" in new oneDimensionalCube {
+      val v1 = cube.version
+      execTx(editor.set(jan, Some("12")))
+      val v2 = cube.version
+      execTx(editor.set(feb, Some("11")))
+      val v3 = cube.version
+      cube.version(jan) must_== v2
+      cube.slice(jan).version must_== v2
+      cube.version(feb) must_== v3
+      cube.slice(feb).version must_== v3
+      cube.version(mar) must_== v1
+      cube.slice(mar).version must_== v1
+    }
   }
 }

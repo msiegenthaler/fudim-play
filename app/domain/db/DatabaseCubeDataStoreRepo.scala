@@ -18,12 +18,12 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
   protected def storeTypes: Traversable[StoreDataType[_]]
   protected def versioner: Versioner
 
-  private case class CubeDefinition(id: Long, typeName: String) {
+  private case class CubeDefinition(id: Long, typeName: String, version: Version) {
     def tableName = s"databaseCube_data_$id"
   }
   private val cubeDefinition = {
-    long("id") ~ str("type") map {
-      case id ~ tpe ⇒ CubeDefinition(id, tpe)
+    long("id") ~ str("type") ~ long("version") map {
+      case id ~ tpe ~ v ⇒ CubeDefinition(id, tpe, Version(v))
     }
   }
 
@@ -44,12 +44,13 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       map(loadFromDefinition)
   }
 
-  override def create[T](dims: Set[Dimension], dataType: DataType[T]): DatabaseCubeDataStore[T]@tx = {
+  override def create[T](dims: Set[Dimension], dataType: DataType[T]): DatabaseCubeDataStore[T] @tx = {
+    val version = versioner.version
     val storeType = Types(dataType)
-    val id = db.insert(SQL("insert into databaseCube(type) values({type})").on("type" -> storeType.name)).
+    val id = db.insert(SQL("insert into databaseCube(type, version) values({type}, {version})").
+      on(("type" -> storeType.name), ("version" -> version.id))).
       getOrElse(throw new RuntimeException(s"Could not create the cube in the database"))
-    val definition = CubeDefinition(id, storeType.name)
-
+    val definition = CubeDefinition(id, storeType.name, version)
 
     val cdims = dims.mapTx { dim ⇒
       val dimId = db.insert(SQL("insert into databaseCube_dimension(cube, dimension) values ({cube}, {dimension})").on("cube" -> id, "dimension" -> dim.name)).get
@@ -214,8 +215,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
           val (where, ons) = mkWhere(slice)
           db.notx.single(SQL(s"SELECT max(version) FROM $table WHERE $where").on(ons: _*), scalar[Option[Long]])
         }
-        //TODO handle the zero
-        Version(versionId.getOrElse(0))
+        versionId.map(Version(_)).getOrElse(definition.version)
       }
 
       override def toString = s"DatabaseCube($id, slice=$slice, filters=$filters)"

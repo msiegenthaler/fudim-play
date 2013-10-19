@@ -44,7 +44,8 @@ CREATE TABLE fact (
 CREATE SEQUENCE databaseCube_id_seq;
 CREATE TABLE databaseCube (
   id integer not null default nextval('databaseCube_id_seq'),
-  type varchar(255) not null
+  type varchar(255) not null,
+  version bigint not null references version(id)
 );
 
 CREATE SEQUENCE databaseCube_dimension_id_seq;

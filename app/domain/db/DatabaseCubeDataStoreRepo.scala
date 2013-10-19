@@ -8,8 +8,7 @@ import base._
 import cube._
 import support.AnormDb
 
-
-trait DatabaseCubeDataStoreRepo[Version <: {def id : Long}] extends CopyableCubeDataStoreRepo {
+trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
   override type CDS[T] = DatabaseCubeDataStore[T]
 
   protected def database: SqlDatabase
@@ -111,7 +110,6 @@ trait DatabaseCubeDataStoreRepo[Version <: {def id : Long}] extends CopyableCube
       case cds: DatabaseCubeDataStore[_] ⇒ Json.obj("id" -> cds.id).success
     }
   }
-
 
   private case class DatabaseCubeDataStoreImpl[T](definition: CubeDefinition, storeType: StoreDataType[T], dims: Map[Dimension, String])
     extends DatabaseCubeDataStore[T] with CoordinateFactory {

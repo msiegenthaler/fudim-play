@@ -44,7 +44,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
     }
     private var dimensions: List[Dimension] = Nil
     private val ver = versioner
-    private object CubeRepo extends DatabaseCubeDataStoreRepo[{ def id: Long }] with FudimResources {
+    private object CubeRepo extends DatabaseCubeDataStoreRepo with FudimResources {
       override def dimensionRepo = new DimensionRepository {
         def all = dimensions
       }
@@ -67,7 +67,7 @@ class DatabaseCubeDataStoreSpec extends Specification {
   trait withplay extends withModel with withDbVersioner with storeDataTypes {
     var dimensions: List[Dimension] = Nil
     private val ver = versioner
-    object CubeRepo extends DatabaseCubeDataStoreRepo[Version] with FudimResources {
+    object CubeRepo extends DatabaseCubeDataStoreRepo with FudimResources {
       override def dimensionRepo = new DimensionRepository {
         def all = dimensions
       }

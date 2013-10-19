@@ -35,8 +35,8 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       dataTypeMapping.get(dataType).map(_.asInstanceOf[StoreDataType[T]]).
         getOrElse(throw new IllegalArgumentException(s"Unsupported data type: $dataType"))
     }
-    private lazy val dataTypeMapping = storeTypes.map(t => (t.dataType, t)).toMap[DataType[_], StoreDataType[_]]
-    private lazy val nameMapping = storeTypes.map(t => (t.dataType.name, t)).toMap[String, StoreDataType[_]]
+    private lazy val dataTypeMapping = storeTypes.map(t ⇒ (t.dataType, t)).toMap[DataType[_], StoreDataType[_]]
+    private lazy val nameMapping = storeTypes.map(t ⇒ (t.dataType.name, t)).toMap[String, StoreDataType[_]]
   }
 
   override def get(id: Long): Option[CDS[_]] = {
@@ -62,7 +62,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
 
   override def remove(id: Long) = {
     val definition = db.select(SQL("select * from databaseCube where id={id}").on("id" -> id), cubeDefinition.singleOpt)
-    definition.mapTx { definition =>
+    definition.mapTx { definition ⇒
       val cds = loadFromDefinition(definition)
       db.delete(SQL("delete from databaseCube_dimension where cube={id}").on("id" -> definition.id))
       db.delete(SQL("delete from databaseCube where id={id}").on("id" -> definition.id))
@@ -72,25 +72,25 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
 
   private def loadFromDefinition(definition: CubeDefinition): DatabaseCubeDataStoreImpl[_] = {
     val dimensions = db.notx.select(SQL("select id, dimension from databaseCube_dimension where cube={id}").on("id" -> definition.id),
-                                     long("id") ~ str("dimension") *).map {
-      case id ~ name ⇒
-        val d: Dimension = dimensionRepo.get(name).getOrElse(throw new IllegalStateException(s"Could not find dimension $name"))
-        (d, s"dim_$id")
-    }.toMap
+      long("id") ~ str("dimension") *).map {
+        case id ~ name ⇒
+          val d: Dimension = dimensionRepo.get(name).getOrElse(throw new IllegalStateException(s"Could not find dimension $name"))
+          (d, s"dim_$id")
+      }.toMap
     val storeType = Types(definition.typeName)
     DatabaseCubeDataStoreImpl(definition, storeType, dimensions)
   }
 
-  protected def copyData[T](from: DatabaseCubeDataStoreImpl[T], to: DatabaseCubeDataStoreImpl[T], pos: Point = Point.empty): Unit@tx = {
-    val commonDims = from.dims.filter(v => to.dims.contains(v._1))
-    val newDims = to.dims.filterNot(v => commonDims.contains(v._1))
+  protected def copyData[T](from: DatabaseCubeDataStoreImpl[T], to: DatabaseCubeDataStoreImpl[T], pos: Point = Point.empty): Unit @tx = {
+    val commonDims = from.dims.filter(v ⇒ to.dims.contains(v._1))
+    val newDims = to.dims.filterNot(v ⇒ commonDims.contains(v._1))
     require(pos.defines(newDims.keys))
     val version = versioner.version
-    val fixed = newDims.map(_._1).zipWithIndex.map(v => (s"f${v._2}", toParameterValue(pos.coordinate(v._1).get.id))).toSeq
+    val fixed = newDims.map(_._1).zipWithIndex.map(v ⇒ (s"f${v._2}", toParameterValue(pos.coordinate(v._1).get.id))).toSeq
     val oldFields = (List("content", "{version}") ++ commonDims.map(_._2) ++ fixed.map(_._1).map("{" + _ + "}")).mkString(",")
     val newFields = (List("content", "version") ++ commonDims.map(d ⇒ to.dims(d._1)) ++ newDims.map(_._2)).mkString(",")
-    val restrictOn = pos.onlyOn(from.dims.keySet -- to.dims.keySet).coordinates.map(c => (from.dims(c.dimension), toParameterValue(c.id)))
-    val where = restrictOn.map(v => s"${v._1} = {${v._1}}").mkString(" AND ")
+    val restrictOn = pos.onlyOn(from.dims.keySet -- to.dims.keySet).coordinates.map(c ⇒ (from.dims(c.dimension), toParameterValue(c.id)))
+    val where = restrictOn.map(v ⇒ s"${v._1} = {${v._1}}").mkString(" AND ")
     db.insert(SQL(s"INSERT INTO ${to.table}($newFields) SELECT $oldFields FROM ${from.table}" + (if (where.length > 0) s" WHERE $where" else "")).
       on(fixed ++ params(("version", version.id)) ++ restrictOn: _*))
   }
@@ -99,7 +99,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
 
   def json = new JsonCubeDSMapper {
     import scalaz._
-    import Scalaz.{ToOptionOpsFromOption, ToValidationV}
+    import Scalaz.{ ToOptionOpsFromOption, ToValidationV }
     override val id = "databaseCubeDataStore"
     override def parser = json ⇒
       for {
@@ -119,11 +119,11 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     val table = definition.tableName
     protected def repo = DatabaseCubeDataStoreRepo.this
 
-    def create: Unit@tx = {
+    def create: Unit @tx = {
       val fields = s"content ${storeType.sqlType}" :: "version bigint not null" :: dims.values.map { d ⇒ s"$d integer not null" }.toList
       db.execute(SQL(s"CREATE TABLE $table (${fields.mkString(",")})"))
     }
-    def drop: Unit@tx = db.execute(SQL(s"DROP TABLE $table"))
+    def drop: Unit @tx = db.execute(SQL(s"DROP TABLE $table"))
 
     override def copy(add: Point = Point.empty, remove: Point = Point.empty) = {
       val missing = remove.on.filterNot(dims.keySet.contains)
@@ -135,7 +135,7 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       copyData(this, newCube, add ++ remove)
       newCube
     }
-    protected def cloneStructure(dims: Set[Dimension]): Self@tx = {
+    protected def cloneStructure(dims: Set[Dimension]): Self @tx = {
       val res = repo.create(dims, dataType)
       res.asInstanceOf[Self]
     }
@@ -155,16 +155,16 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       }
     }
 
-    private def insert(p: Point, value: T): Unit@tx = {
+    private def insert(p: Point, value: T): Unit @tx = {
       val fields = p.on.map(dims.apply)
       val values = fields.map(f ⇒ s"{$f}")
       val version = versioner.version
       val ons = p.coordinates.map(e ⇒ (dims(e.dimension), coordToDb(e))).toSeq ++
         params(("content" -> storeType.toDb(value)), ("version" -> version.id))
       db.insert(
-                 SQL(s"INSERT INTO $table(content,version,${fields.mkString(",")}) VALUES ({content},{version},${values.mkString(",")})").on(ons: _*))
+        SQL(s"INSERT INTO $table(content,version,${fields.mkString(",")}) VALUES ({content},{version},${values.mkString(",")})").on(ons: _*))
     }
-    private def update(at: Point, value: T): Boolean@tx = {
+    private def update(at: Point, value: T): Boolean @tx = {
       val (where, ons) = mkWhere(at)
       val version = versioner.version
       val cnt = db.update(SQL(s"UPDATE $table SET content={content},version={version} WHERE $where").
@@ -175,11 +175,10 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
         case nr ⇒ throw new IllegalStateException(s"Too many rows affected by DatabaseCubeUpdate on $table ($nr rows)")
       }
     }
-    private def delete(at: Point): Unit@tx = {
+    private def delete(at: Point): Unit @tx = {
       val (where, ons) = mkWhere(at)
       db.delete(SQL(s"DELETE FROM $table WHERE $where").on(ons: _*))
     }
-
 
     private val cube_ = TheCube(id)
     override def cube: VersionedCube[T] = cube_
@@ -227,10 +226,11 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
       override def isSettable(at: Point) = at.definesExactly(dims.keys)
       override def set(at: Point, to: Option[T]) = {
         if (isSettable(at)) {
-          if (to.isDefined) to.foreachTx { value =>
+          if (to.isDefined) to.foreachTx { value ⇒
             if (!update(at, value)) insert(at, value)
             else noop
-          } else {
+          }
+          else {
             delete(at)
           }
         } else {
@@ -245,8 +245,8 @@ trait DatabaseCubeDataStoreRepo extends CopyableCubeDataStoreRepo {
     }
 
     override def equals(o: Any) = o match {
-      case other: DatabaseCubeDataStore[T] => other.id == id
-      case _ => false
+      case other: DatabaseCubeDataStore[T] ⇒ other.id == id
+      case _ ⇒ false
     }
     override def hashCode = id.hashCode
     override def toString = s"DatabaseCube($id)"

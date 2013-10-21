@@ -93,7 +93,7 @@ class DatabaseFactRepoSpec extends Specification {
       repo.get("Test") must beSome(fact)
     }
   }
-  
+
   "DatabaseFactRepo.all" should {
     "be empty if no facts have been added" in new repo {
       repo.all must beEmpty
@@ -103,4 +103,47 @@ class DatabaseFactRepoSpec extends Specification {
     }
   }
 
+  "DatabaseFact.version" should {
+    "not change when fact is not changed" in new testFact {
+      fact.version must_== fact.version
+    }
+    "not change when fact is reloaded" in new testFact {
+      val f = repo.get("Test").get
+      fact.version must_== f.version
+    }
+    "increase in later created facts" in new repo {
+      val fact1 = execTx { repo.createDatabaseBacked("Test1", FudimDataTypes.integer, Set.empty, Aggregation.none) }
+      val fact2 = execTx { repo.createDatabaseBacked("Test2", FudimDataTypes.integer, Set.empty, Aggregation.none) }
+      fact1.version must be < fact2.version
+    }
+    "be the same for two facts created in the same tx" in new repo {
+      val (fact1, fact2) = execTx {
+        val fact1 = repo.createDatabaseBacked("Test1", FudimDataTypes.integer, Set.empty, Aggregation.none)
+        val fact2 = repo.createDatabaseBacked("Test2", FudimDataTypes.integer, Set.empty, Aggregation.none)
+        (fact1, fact2)
+      }
+      fact1.version must_== fact2.version
+    }
+    "increase when the aggragation is changed" in new testFact {
+      val v1 = fact.version
+      execTx { fact.aggregation = Aggregation.sum }
+      v1 must be < fact.version
+      fact.version must_== repo.get("Test").get.version
+    }
+    "increase when a dimension is added" in new testFact {
+      val v1 = fact.version
+      val coord = execTx { dimensionRepo.create("TD").add("Xx") }
+      execTx { fact.addDimension(coord) }
+      v1 must be < fact.version
+      fact.version must_== repo.get("Test").get.version
+    }
+    "not change when data is edited" in new testFact {
+      val coord = execTx { dimensionRepo.create("TD").add("Xx") }
+      execTx { fact.addDimension(coord) }
+      execTx { fact.editor.get.set(coord, 21) }
+      val v1 = fact.version
+      execTx { fact.editor.get.set(coord, 22) }
+      fact.version must_== v1
+    }
+  }
 }

@@ -22,6 +22,7 @@ CREATE TABLE dimension (
   domain integer not null,
   name varchar(1024) not null
 );
+CREATE UNIQUE INDEX dimension_name ON dimension(domain, name);
 
 CREATE SEQUENCE dimension_value_seq;
 CREATE TABLE dimension_value (
@@ -69,12 +70,14 @@ DROP SEQUENCE databaseCube_id_seq;
 DROP TABLE databaseCube;
 
 DROP SEQUENCE fact_id_seq;
+DROP INDEX fact_name;
 DROP TABLE fact;
 
 DROP SEQUENCE dimension_value_seq;
 DROP TABLE dimension_value;
 
 DROP SEQUENCE dimension_id_seq;
+DROP INDEX dimension_name;
 DROP TABLE dimension;
 
 DROP SEQUENCE domain_id_seq;

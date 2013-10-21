@@ -23,8 +23,12 @@ trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory {
       dimension *)
   }
   def create(name: String) = {
-    db.insert(SQL("insert into dimension(domain, name) values({domain}, {name})").on("domain" -> domain.id, "name" -> name))
-    get(name).getOrElse(throw new IllegalStateException(s"Insert of dimension $name failed")).tx
+    get(name).map { _ ⇒
+      throw new IllegalStateException(s"Dimension $name already exists.")
+    }.getOrElseTx {
+      db.insert(SQL("insert into dimension(domain, name) values({domain}, {name})").on("domain" -> domain.id, "name" -> name))
+      get(name).getOrElse(throw new IllegalStateException(s"Insert of dimension $name failed")).tx
+    }
   }
   def remove(name: String) = {
     get(name).map(idOf).mapTx { id =>

@@ -18,10 +18,22 @@ class DatabaseDimensionRepoSpec extends Specification {
       override def domain = repo.this.domain.id
     }
   }
+  trait testDim extends repo {
+    lazy val dim = execTx { repo.create("Test") }
+    override def before = {
+      super.before
+      dim
+    }
+  }
 
   "DatabaseDimensionRepo.create" should {
-    "create a new dimension" in pending
-    "throw an IllegalStateException on duplicate name" in pending
+    "create a new dimension" in new repo {
+      val r  = execTx { repo.create("Test") }
+      repo.get("Test") must beSome(r)
+    }
+    "throw an IllegalStateException on duplicate name" in new testDim {
+      execTx { repo.create("Test") } must throwA[IllegalStateException]
+    }
   }
   "DatabaseDimensionRepo.remove" should {
     "delete an existing dimension" in pending

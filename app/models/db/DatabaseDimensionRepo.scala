@@ -31,7 +31,7 @@ trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory {
     }
   }
   def remove(name: String) = {
-    get(name).map(idOf).mapTx { id =>
+    get(name).map(idOf).mapTx { id ⇒
       db.delete(SQL("delete from dimension where id = {id}").on("id" -> id))
       db.delete(SQL("delete from dimension_value where dimension = {id}").on("id" -> id))
     }.getOrElse(())
@@ -53,17 +53,17 @@ trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory {
       scalar[String] single)
   }
 
-  private def addValue(to: DatabaseDimension, v: String): Coordinate@tx = {
+  private def addValue(to: DatabaseDimension, v: String): Coordinate @tx = {
     val max = db.single(SQL("select max(nr) from dimension_value where dimension = {dim}").on("dim" -> to.id), scalar[Long] ?)
     val id = db.insert(SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").
       on("dim" -> to.id, "nr" -> max.map(_ + 1).getOrElse(0), "val" -> v)).get
     coordinate(to, id)
   }
-  private def addValue(to: DatabaseDimension, v: String, after: Option[Coordinate]): Coordinate@tx = {
+  private def addValue(to: DatabaseDimension, v: String, after: Option[Coordinate]): Coordinate @tx = {
     if (!after.isDefined) addValue(to, v)
     else {
       val nrOfAfter = db.select(SQL("select max(nr) from dimension_value where id = {id}").on("id" -> after.get.id), long("nr") singleOpt)
-      val nr = nrOfAfter.map { nr =>
+      val nr = nrOfAfter.map { nr ⇒
         db.update(SQL("update dimension_value set nr = nr + 1 where dimension = {dim} and nr > {nr}").on("dim" -> to.id, "nr" -> nr)).transaction
       }.getOrElse(Transaction.pure(0)).tx
       val id = db.insert(SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").

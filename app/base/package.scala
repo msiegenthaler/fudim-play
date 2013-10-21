@@ -30,6 +30,10 @@ package object base {
       if (o.isDefined) Some(f(o.get)).m
       else Transaction.pure(None)
     }.tx
+    def flatMapTx[B](f: A => Option[B]@tx): Option[B]@tx = {
+      if (o.isDefined) f(o.get).m
+      else Transaction.pure(None)
+    }.tx
     def foreachTx[B](f: A => B@tx): Unit@tx = {
       if (o.isDefined) f(o.get)
       else noop

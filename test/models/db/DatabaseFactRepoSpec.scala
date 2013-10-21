@@ -102,6 +102,25 @@ class DatabaseFactRepoSpec extends Specification {
       repo.all must_== List(fact)
     }
   }
+  "DatabaseFact.addDimension" should {
+    "add a dimension to the fact" in new testFact {
+      fact.dimensions.size must_== 0
+      val coord = execTx { dimensionRepo.create("TD").add("Xx") }
+      execTx { fact.addDimension(coord) }
+      repo.get("Test").get.dimensions.size must_== 1
+      fact.dimensions.size must_== 1
+    }
+  }
+  "DatabaseFact.removeDimension" should {
+    "remove a dimension from the fact" in new testFact {
+      val coord = execTx { dimensionRepo.create("TD").add("Xx") }
+      execTx { fact.addDimension(coord) }
+      repo.get("Test").get.dimensions.size must_== 1
+      execTx { fact.removeDimension(coord) }
+      repo.get("Test").get.dimensions.size must_== 0
+      fact.dimensions.size must_== 0
+    }
+  }
 
   "DatabaseFact.version" should {
     "not change when fact is not changed" in new testFact {

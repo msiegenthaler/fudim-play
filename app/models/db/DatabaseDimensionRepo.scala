@@ -60,16 +60,14 @@ trait DatabaseDimensionRepo extends FudimDimensionRepo with CoordinateFactory {
     coordinate(to, id)
   }
   private def addValue(to: DatabaseDimension, v: String, after: Option[Coordinate]): Coordinate @tx = {
-    if (!after.isDefined) addValue(to, v)
-    else {
-      val nrOfAfter = db.select(SQL("select max(nr) from dimension_value where id = {id}").on("id" -> after.get.id), long("nr") singleOpt)
-      val nr = nrOfAfter.map { nr ⇒
-        db.update(SQL("update dimension_value set nr = nr + 1 where dimension = {dim} and nr > {nr}").on("dim" -> to.id, "nr" -> nr)).transaction
-      }.getOrElse(Transaction.pure(0)).tx
-      val id = db.insert(SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").
-        on("dim" -> to.id, "nr" -> nr, "val" -> v)).get
-      coordinate(to, id)
-    }
+    val nr = after.flatMapTx { after ⇒
+      db.single(SQL("select nr from dimension_value where id = {id}").on("id" -> after.id), scalar[Option[Long]]).
+        map(_ + 1)
+    }.getOrElse(0L)
+    db.update(SQL("update dimension_value set nr = nr + 1 where dimension = {dim} and nr >= {nr}").on("dim" -> to.id, "nr" -> nr))
+    val id = db.insert(SQL("insert into dimension_value(dimension, nr, content) values({dim}, {nr}, {val})").
+      on("dim" -> to.id, "nr" -> nr, "val" -> v)).get
+    coordinate(to, id)
   }
 
   private val dimension: RowParser[FudimDimension] = {

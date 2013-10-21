@@ -17,6 +17,7 @@ object DomainRepo extends DatabaseDomainRepo with FudimResources {
   override protected def dimensionRepo(d: DomainId) = {
     new DatabaseDimensionRepo with FudimResources {
       override def domain = d
+      override protected def versioner = DomainRepo.versioner
     }
   }
   override protected def factRepo(d: DomainId) = {

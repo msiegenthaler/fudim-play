@@ -16,6 +16,7 @@ class DatabaseDimensionRepoSpec extends Specification {
     }
     val repo = new DatabaseDimensionRepo with FudimResources {
       override def domain = repo.this.domain.id
+      override def versioner = repo.this.versioner
     }
   }
   trait testDim extends repo {
@@ -33,6 +34,10 @@ class DatabaseDimensionRepoSpec extends Specification {
     }
     "throw an IllegalStateException on duplicate name" in new testDim {
       execTx { repo.create("Test") } must throwA[IllegalStateException]
+    }
+    "give a new version to the dimension" in new testDim {
+      val d = execTx { repo.create("Test2") }
+      d.version must be > dim.version
     }
   }
   "DatabaseDimensionRepo.remove" should {
@@ -54,6 +59,10 @@ class DatabaseDimensionRepoSpec extends Specification {
     "return None for a non-existing dimension" in new testDim {
       repo.get("non-existing") must beNone
     }
+    "not change the version" in new testDim {
+      val d = repo.get("Test").get
+      dim.version must_== d.version
+    }
   }
   "DatabaseDimensionRepo.all" should {
     "list nothing if no dimensions exist" in new repo {
@@ -65,6 +74,9 @@ class DatabaseDimensionRepoSpec extends Specification {
     "list two dimensions if two exist" in new testDim {
       val d2 = execTx { repo.create("Test2") }
       repo.all.toSet must_== Set(dim, d2)
+    }
+    "not change the version" in new testDim {
+      repo.all.head.version must_== dim.version
     }
   }
 
@@ -102,6 +114,26 @@ class DatabaseDimensionRepoSpec extends Specification {
       val c2 = execTx { dim.add("v2") }
       val c3 = execTx { dim.add("v3", Some(c2)) }
       dim.all must_== List(c1, c2, c3)
+    }
+    "increase the version" in new testDim {
+      val v0 = dim.version
+      val c1 = execTx { dim.add("v1") }
+      val v1 = dim.version
+      val c2 = execTx { dim.add("v1") }
+      val v2 = dim.version
+      v1 must be > v0
+      v2 must be > v1
+    }
+    "increase the version when inserting in the middle" in new testDim {
+      val v0 = dim.version
+      val c1 = execTx { dim.add("v1") }
+      val v1 = dim.version
+      val c2 = execTx { dim.add("v1") }
+      val v2 = dim.version
+      val c3 = execTx { dim.add("v3", Some(c2)) }
+      val v3 = dim.version
+      v2 must be > v1
+      v3 must be > v2
     }
   }
 }

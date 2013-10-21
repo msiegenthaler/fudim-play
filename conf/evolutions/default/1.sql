@@ -20,7 +20,8 @@ CREATE SEQUENCE dimension_id_seq;
 CREATE TABLE dimension (
   id integer not null default nextval('dimension_id_seq'),
   domain integer not null,
-  name varchar(1024) not null
+  name varchar(1024) not null,
+  version bigint not null references version(id)
 );
 CREATE UNIQUE INDEX dimension_name ON dimension(domain, name);
 
@@ -28,6 +29,7 @@ CREATE SEQUENCE dimension_value_seq;
 CREATE TABLE dimension_value (
   id integer not null default nextval('dimension_value_seq'),
   dimension integer not null,
+  version bigint not null references version(id),
   nr integer not null,
   content varchar(1024) not null
 );

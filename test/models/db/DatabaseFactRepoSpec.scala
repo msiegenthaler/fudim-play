@@ -20,6 +20,7 @@ class DatabaseFactRepoSpec extends Specification {
     }
     val dimensionRepo = new DatabaseDimensionRepo with FudimResources {
       override def domain = repo.this.domain.id
+      override def versioner = repo.this.versioner
     }
     val cubeStore = new DatabaseCubeDataStoreRepo with FudimResources {
       override def dataTypeRepo = FudimDataTypes

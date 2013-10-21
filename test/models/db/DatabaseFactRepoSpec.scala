@@ -34,6 +34,7 @@ class DatabaseFactRepoSpec extends Specification {
       override def jsonFormulaRepo = new JsonFormulaMapperRepository {
         override val mappers = FudimFormulas.json(FudimDataTypes, dimensionRepo)
       }
+      override def versioner = repo.this.versioner
     }
   }
 

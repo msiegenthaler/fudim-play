@@ -5,6 +5,9 @@ import cube._
 import domain._
 
 trait FudimFact[T] extends RenderFact[T] {
+  /** Version of the fact itself (does not include the data, for that use data.version). */
+  def version: Version
+
   override def dataType: FudimDataType[T]
 
   override lazy val rendered = data.map(dataType.render)

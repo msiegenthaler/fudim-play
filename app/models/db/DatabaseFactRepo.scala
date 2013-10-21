@@ -19,6 +19,7 @@ trait DatabaseFactRepo extends FudimFactRepo {
   protected def dataTypeRepo = FudimDataTypes
   protected def jsonFormulaRepo: JsonFormulaMapperRepository
   protected def cubeDataStoreRepo: CopyableCubeDataStoreRepo
+  protected def versioner: Versioner
 
   override def get(name: String) = getInternal(name)
   protected def getInternal(name: String): Option[DatabaseFact[_]] = {
@@ -50,9 +51,12 @@ trait DatabaseFactRepo extends FudimFactRepo {
   }
   protected def create[T](name: String, backend: FactBackend[T]): DatabaseFact[T] @tx = {
     val config = Json.stringify(backend.config)
-    val id = db.insert(SQL("insert into fact(domain, name, dataType, factType, config) values({domain}, {name}, {dataType}, {factType}, {config})").
-      on("domain" -> domain.id.id, "name" -> name, "dataType" -> backend.dataType.name, "factType" -> backend.factType, "config" -> config)).get
-    new DatabaseFact(id, name, backend)
+    val version = versioner.version
+    val id = db.insert(SQL("insert into fact(domain, name, version, dataType, factType, config) " +
+      "values({domain}, {name}, {version}, {dataType}, {factType}, {config})").
+      on("domain" -> domain.id.id, "name" -> name, "version" -> version.id,
+        "dataType" -> backend.dataType.name, "factType" -> backend.factType, "config" -> config)).get
+    new DatabaseFact(id, name, backend, version)
   }
 
   def remove(name: String) = {
@@ -64,8 +68,8 @@ trait DatabaseFactRepo extends FudimFactRepo {
   }
 
   private val fact = {
-    long("id") ~ str("name") ~ str("dataType") ~ str("factType") ~ str("config") map {
-      case id ~ name ~ dataTypeName ~ factType ~ config ⇒
+    long("id") ~ str("name") ~ long("version") ~ str("dataType") ~ str("factType") ~ str("config") map {
+      case id ~ name ~ version ~ dataTypeName ~ factType ~ config ⇒
         val fact: Validation[String, DatabaseFact[_]] = for {
           dataType ← dataTypeRepo.get(dataTypeName).toSuccess(s"DataType $dataTypeName is not known")
           json = Json.parse(config)
@@ -76,18 +80,22 @@ trait DatabaseFactRepo extends FudimFactRepo {
             }
             mk.lift(factType).toSuccess(s"Unknown fact type $factType")
           }
-        } yield new DatabaseFact(id, name, backend)
+        } yield new DatabaseFact(id, name, backend, Version(version))
         fact.leftMap(msg ⇒ Logger.warn(s"Could not load fact $name: $msg"))
         fact.toOption
     }
   }
 
-  protected final class DatabaseFact[T](val id: Long, val name: String, ib: FactBackend[T]) extends FudimFact[T] {
-    private[this] var _backend: FactBackend[T] = ib
-    def backend = synchronized(_backend)
+  protected final class DatabaseFact[T](val id: Long, val name: String, ib: FactBackend[T], iv: Version) extends FudimFact[T] {
+    private[this] var _state: (Version, FactBackend[T]) = (iv, ib)
+    def backend = synchronized(_state._2)
+    def version = synchronized(_state._1)
     def updateBackend(nb: FactBackend[T]): Unit @tx = {
       val config = Json.stringify(nb.config)
-      db.update(SQL("update fact set config={config} where id={id}").on("config" -> config, "id" -> id))
+      val version = versioner.version
+      db.update(SQL("update fact set config={config}, version={version} where id={id}").
+        on("config" -> config, "id" -> id, "version" -> version.id))
+      _state = (version, nb)
     }
 
     override def dataType = backend.dataType
@@ -104,7 +112,7 @@ trait DatabaseFactRepo extends FudimFactRepo {
       else false
     }
     override def hashCode = id.hashCode
-    override def toString = s"DatabaseFact(id=$id, name=$name, factType=${backend.factType}, dataType=$dataType)"
+    override def toString = s"DatabaseFact(id=$id, name=$name, version=$version, factType=${backend.factType}, dataType=$dataType)"
   }
 
   protected trait FactBackend[T] {

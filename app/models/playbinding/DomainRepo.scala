@@ -34,6 +34,7 @@ object DomainRepo extends DatabaseDomainRepo with FudimResources {
       override def domain = DomainRepo.this.get(d).getOrElse(throw new IllegalStateException(s"Domain $d not found"))
       override protected def jsonFormulaRepo = formulaRepo
       override protected def cubeDataStoreRepo = cdsRepo
+      override protected def versioner = DomainRepo.versioner
     }
   }
 }

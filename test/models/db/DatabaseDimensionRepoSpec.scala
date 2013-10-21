@@ -28,32 +28,80 @@ class DatabaseDimensionRepoSpec extends Specification {
 
   "DatabaseDimensionRepo.create" should {
     "create a new dimension" in new repo {
-      val r  = execTx { repo.create("Test") }
-      repo.get("Test") must beSome(r)
+      val d = execTx { repo.create("Test") }
+      repo.get("Test") must beSome(d)
     }
     "throw an IllegalStateException on duplicate name" in new testDim {
       execTx { repo.create("Test") } must throwA[IllegalStateException]
     }
   }
   "DatabaseDimensionRepo.remove" should {
-    "delete an existing dimension" in pending
-    "do nothing on a non-existing dimension" in pending
+    "delete an existing dimension" in new testDim {
+      repo.get("Test").isDefined must beTrue
+      execTx { repo.remove("Test") }
+      repo.get("Test") must beNone
+    }
+    "do nothing on a non-existing dimension" in new testDim {
+      repo.get("non-existing") must beNone
+      execTx { repo.remove("non-existing") }
+      repo.get("non-existing") must beNone
+    }
   }
   "DatabaseDimensionRepo.get" should {
-    "return Some() for an existing dimension" in pending
-    "return None for a non-existing dimension" in pending
+    "return Some() for an existing dimension" in new testDim {
+      repo.get("Test") must beSome(dim)
+    }
+    "return None for a non-existing dimension" in new testDim {
+      repo.get("non-existing") must beNone
+    }
   }
   "DatabaseDimensionRepo.all" should {
-    "list nothing if no dimensions exist" in pending
-    "find the only dimension if only one exists" in pending
-    "list two dimensions if two exist" in pending
+    "list nothing if no dimensions exist" in new repo {
+      repo.all must_== Nil
+    }
+    "find the only dimension if only one exists" in new testDim {
+      repo.all must_== List(dim)
+    }
+    "list two dimensions if two exist" in new testDim {
+      val d2 = execTx { repo.create("Test2") }
+      repo.all.toSet must_== Set(dim, d2)
+    }
   }
 
   "DatabaseDimension.add" should {
-    "add a first value to the dimension" in pending
-    "add a new value to the dimension" in pending
-    "insert a new value at the beginning" in pending
-    "insert a new value in the middle" in pending
-    "insert a new value at the end" in pending
+    "add a first value to the dimension" in new testDim {
+      val c = execTx { dim.add("v1") }
+      dim.all.size must_== 1
+      dim.all must_== List(c)
+      dim.render(c) must_== "v1"
+    }
+    "when called twice add a two values to the dimension" in new testDim {
+      val c1 = execTx { dim.add("v1") }
+      val c2 = execTx { dim.add("v2") }
+      dim.all.size must_== 2
+      dim.all must_== List(c1, c2)
+      dim.render(c1) must_== "v1"
+      dim.render(c2) must_== "v2"
+    }
+  }
+  "DatabaseDimension.add(after)" should {
+    "insert a new value at the beginning" in new testDim {
+      val c1 = execTx { dim.add("v1") }
+      val c2 = execTx { dim.add("v2") }
+      val c3 = execTx { dim.add("v3", None) }
+      dim.all must_== List(c3, c1, c2)
+    }
+    "insert a new value in the middle" in new testDim {
+      val c1 = execTx { dim.add("v1") }
+      val c2 = execTx { dim.add("v2") }
+      val c3 = execTx { dim.add("v3", Some(c1)) }
+      dim.all must_== List(c1, c3, c2)
+    }
+    "insert a new value at the end" in new testDim {
+      val c1 = execTx { dim.add("v1") }
+      val c2 = execTx { dim.add("v2") }
+      val c3 = execTx { dim.add("v3", Some(c2)) }
+      dim.all must_== List(c1, c2, c3)
+    }
   }
 }

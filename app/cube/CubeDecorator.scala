@@ -2,7 +2,7 @@ package cube
 
 import play.api.libs.json._
 import models._
-import support.{JsonMapper, JsonMapperRepository}
+import support.{ JsonMapper, JsonMapperRepository }
 
 /** Decorator for a cube, for use with DecoratedCube.apply(). */
 trait CubeDecorator[T] {

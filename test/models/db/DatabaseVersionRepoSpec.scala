@@ -2,9 +2,9 @@ package models.db
 
 import org.specs2.mutable.Specification
 import support._
-import models.playbinding.{Fudim, FudimResources}
+import models.playbinding.{ Fudim, FudimResources }
 import domain.Version
-import org.joda.time.{DateTime, Duration}
+import org.joda.time.{ DateTime, Duration }
 
 class DatabaseVersionRepoSpec extends Specification {
   trait repo extends withModel {
@@ -18,22 +18,22 @@ class DatabaseVersionRepoSpec extends Specification {
       v must not beNull
     }
     "create versions with ascending ids" in new repo {
-      val vs = (1 to 100).map(_ => create()).toList
+      val vs = (1 to 100).map(_ ⇒ create()).toList
       def checkAsc(vs: List[Version]): Unit = vs match {
-        case a :: b :: tail =>
+        case a :: b :: tail ⇒
           a.id must be < b.id
           checkAsc(b :: tail)
-        case _ => ()
+        case _ ⇒ ()
       }
       checkAsc(vs)
     }
     "create ascending versions" in new repo {
-      val vs = (1 to 100).map(_ => create()).toList
+      val vs = (1 to 100).map(_ ⇒ create()).toList
       def checkAsc(vs: List[Version]): Unit = vs match {
-        case a :: b :: tail =>
+        case a :: b :: tail ⇒
           a must be < b
           checkAsc(b :: tail)
-        case _ => ()
+        case _ ⇒ ()
       }
       checkAsc(vs)
     }

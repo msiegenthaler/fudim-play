@@ -8,26 +8,26 @@ class TransactionSpec extends Specification {
     object Res extends TransactionalRessource {
       private[this] var state: Int = 0
       def value = state
-      def get = executeSafe { _ => state }
-      def set(v: Int) = executeSafe { _ =>
+      def get = executeSafe { _ ⇒ state }
+      def set(v: Int) = executeSafe { _ ⇒
         state = v
         v
       }
-      def increment = executeSafe { _ =>
+      def increment = executeSafe { _ ⇒
         val nv = state + 1
         state = nv
         nv
       }
       def setStateToThis = execute {
-        case Txs(v) => (Txs(state), Right(()))
+        case Txs(v) ⇒ (Txs(state), Right(()))
       }
       def setThisToState = execute {
-        case Txs(v) =>
+        case Txs(v) ⇒
           state = v
           (Txs(v), Right(()))
       }
-      def throwException = executeSafe { _ => throw MyException() }
-      def throwException2 = execute { _ => (Txs(666), Left(MyException())) }
+      def throwException = executeSafe { _ ⇒ throw MyException() }
+      def throwException2 = execute { _ ⇒ (Txs(666), Left(MyException())) }
     }
     case class MyException() extends Exception
 
@@ -38,8 +38,8 @@ class TransactionSpec extends Specification {
       (s, r.fold(throw _, identity))
     }
 
-    def assertionAction(p: Txs => Unit): Transaction[Unit] = Transaction.on {
-      case t: Txs => p(t); (t, ())
+    def assertionAction(p: Txs ⇒ Unit): Transaction[Unit] = Transaction.on {
+      case t: Txs ⇒ p(t); (t, ())
     }
   }
 
@@ -81,7 +81,7 @@ class TransactionSpec extends Specification {
       s2 must_== Txs(12)
     }
     "return the value to run" in new txs {
-      List(10, 0, "Hallo", ()).foreach { v =>
+      List(10, 0, "Hallo", ()).foreach { v ⇒
         val a = Transaction.pure(v)
         val (_, v1) = run(a, 1)
         v1 must_== v

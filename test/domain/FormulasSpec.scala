@@ -2,7 +2,7 @@ package domain
 
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
-import support.{JsonMapperRepository, ObjectJsonMapper, JsonMapper}
+import support.{ JsonMapperRepository, ObjectJsonMapper, JsonMapper }
 import PointFoldFormula.FoldFunction
 import TestFixtures._
 import cube.DimensionRepository
@@ -10,9 +10,9 @@ import cube.DimensionRepository
 class FormulasSpec extends Specification {
 
   trait concatFunction {
-    val concat: FoldFunction[String, String] = xs => {
+    val concat: FoldFunction[String, String] = xs ⇒ {
       if (xs.isEmpty) None
-      else Some(xs.foldLeft("")((a, e) => a + e.getOrElse("")))
+      else Some(xs.foldLeft("")((a, e) ⇒ a + e.getOrElse("")))
     }
     val concatMapper: JsonMapper[FoldFunction[_, _]] = ObjectJsonMapper("concat", concat)
     val funRepo = new JsonMapperRepository[FoldFunction[_, _]] {
@@ -37,7 +37,7 @@ class FormulasSpec extends Specification {
     "be reparsable from json (if function is serializable)" in new repos {
       val p = for {
         json ← formulaRepo.serialize(formula)
-      _ = println(json)
+        _ = println(json)
         c ← formulaRepo.parse(json)
       } yield c
       println(p)

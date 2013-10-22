@@ -21,7 +21,7 @@ object SingleFactTable extends Controller {
       val editor = fact.editor.getOrElse(CubeEditor.readOnly)
 
       def linkFun(d: Dimension)(c: Option[Coordinate]) = {
-        val p = c.fold(point - d)(v => point - d + v)
+        val p = c.fold(point - d)(v ⇒ point - d + v)
         routes.SingleFactTable.show(domainName, fact.name, d1.name, d2.name, p, sum1, sum2).url
       }
 

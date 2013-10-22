@@ -1,7 +1,7 @@
 package models
 
 import scala.util.control.Exception._
-import domain.{DataType, DataTypeRepository}
+import domain.{ DataType, DataTypeRepository }
 
 trait FudimDataType[T] extends DataType[T] {
   def render(value: T): String

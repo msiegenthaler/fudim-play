@@ -1,9 +1,9 @@
 package models
 
-import cube.{DimensionRepository, Dimension}
+import cube.{ DimensionRepository, Dimension }
 import domain._
 import PointFoldFormula.FoldFunction
-import support.{ObjectJsonMapper, JsonMapperRepository, JsonMapper}
+import support.{ ObjectJsonMapper, JsonMapperRepository, JsonMapper }
 
 object FudimFormulas {
   /** Adds the value at the point on all referenced facts. */
@@ -15,10 +15,10 @@ object FudimFormulas {
     PointFoldFormula(differenceFun, FudimDataTypes.integer)(of, FudimDataTypes.integer, over)
   }
 
-  private val sumFun: FoldFunction[Long, Long] = { vs =>
+  private val sumFun: FoldFunction[Long, Long] = { vs ⇒
     Some(vs.view.filter(_.isDefined).map(_.get).foldLeft(0L)(_ + _))
   }
-  private val differenceFun: FoldFunction[Long, Long] = { vs =>
+  private val differenceFun: FoldFunction[Long, Long] = { vs ⇒
     vs.headOption.map(_.get).map(_ - sumFun(vs.tail).getOrElse(0L))
   }
 

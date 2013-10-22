@@ -1,7 +1,7 @@
 package cube
 
 /** Point in a set of dimensions. Defines the coordinate in all this dimensions. */
-class Point private(val coordinates: Set[Coordinate]) {
+class Point private (val coordinates: Set[Coordinate]) {
   /** Dimensions defined by this point. */
   val on = coordinates.map(_.dimension).toSet
 
@@ -32,7 +32,7 @@ class Point private(val coordinates: Set[Coordinate]) {
     this - newValue.dimension + newValue
   }
 
-  def onlyOn(ds: Set[Dimension]) = new Point(coordinates.filter(c => ds.contains(c.dimension)))
+  def onlyOn(ds: Set[Dimension]) = new Point(coordinates.filter(c ⇒ ds.contains(c.dimension)))
 
   /** True if the other point has the same coordinate for every dimension defined by this point. */
   def contains(other: Point) = (coordinates -- other.coordinates).isEmpty

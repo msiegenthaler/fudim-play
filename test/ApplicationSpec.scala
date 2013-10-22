@@ -9,7 +9,7 @@ class ApplicationSpec extends Specification {
   "Application" should {
     "boot" in {
       running(FakeApplication()) {
-        val result  = route( FakeRequest( GET, "/")).get
+        val result = route(FakeRequest(GET, "/")).get
         status(result) must equalTo(303)
       }
     }

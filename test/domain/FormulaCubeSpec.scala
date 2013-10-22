@@ -3,7 +3,7 @@ package domain
 import org.specs2.mutable.Specification
 import cube._
 import cube.TestFixtures._
-import support.{JsonMapperRepository, ObjectJsonMapper, JsonMapper}
+import support.{ JsonMapperRepository, ObjectJsonMapper, JsonMapper }
 
 class FormulaCubeSpec extends Specification {
   trait additionCube extends sumCube with productCube with TestFixtures.dataTypes {

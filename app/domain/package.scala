@@ -1,4 +1,4 @@
-import support.{JsonMapperRepository, JsonMapper}
+import support.{ JsonMapperRepository, JsonMapper }
 
 package object domain {
   type JsonFormulaMapper = JsonMapper[Formula[_]]

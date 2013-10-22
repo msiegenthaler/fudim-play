@@ -50,7 +50,6 @@ object Cube {
   }
 }
 
-
 /** Implements the slicing/dicing. */
 trait AbstractCube[T] extends Cube[T] {
   override protected type Self <: AbstractCube[T]

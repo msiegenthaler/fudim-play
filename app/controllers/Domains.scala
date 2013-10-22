@@ -4,7 +4,7 @@ import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
 import support.DomainAction
-import models.playbinding.{Fudim, DomainRepo}
+import models.playbinding.{ Fudim, DomainRepo }
 
 object Domains extends Controller {
   def index = Action {

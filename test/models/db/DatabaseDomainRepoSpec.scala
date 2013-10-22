@@ -2,7 +2,7 @@ package models.db
 
 import org.specs2.mutable.Specification
 import base._
-import support.{withDbVersioner, withModel}
+import support.{ withDbVersioner, withModel }
 import models._
 import models.playbinding.FudimResources
 import domain.Formula
@@ -28,7 +28,7 @@ class DatabaseDomainRepoSpec extends Specification {
       protected def dimensionRepo(domain: DomainId) = mkDimensionRepo
       protected def factRepo(domain: DomainId) = mkFactRepo
     }
-    def exec[A](tx: => A@tx): A = execTx(tx)
+    def exec[A](tx: ⇒ A @tx): A = execTx(tx)
   }
 
   "DatabaseDomainRepo.create" should {
@@ -84,7 +84,7 @@ class DatabaseDomainRepoSpec extends Specification {
     "list all domains" in new repo {
       execTx(repo.all.foreachTx(repo.remove))
 
-      val ds = (1 to 10).map(i => exec(repo.create("Test " + i))).toSet
+      val ds = (1 to 10).map(i ⇒ exec(repo.create("Test " + i))).toSet
       repo.all.toSet must_== ds
       repo.all.size must_== 10
     }

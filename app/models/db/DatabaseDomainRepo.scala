@@ -22,7 +22,7 @@ trait DatabaseDomainRepo extends FudimDomainRepo {
     db.notx.select(SQL("select * from domain where id={id}").on("id" -> id.id), domain.singleOpt)
   }
   def create(name: String) = {
-    get(name).map { _ =>
+    get(name).map { _ ⇒
       throw new IllegalStateException(s"Domain $name already exists.")
     }.getOrElseTx {
       val version = versioner.version
@@ -42,10 +42,10 @@ trait DatabaseDomainRepo extends FudimDomainRepo {
   protected def factRepo(domain: DomainId): FudimFactRepo
 
   private class DatabaseDomain(val id: DomainId, val name: String, val version: Version,
-                               val dimensionRepo: FudimDimensionRepo, val factRepo: FudimFactRepo) extends FudimDomain {
+    val dimensionRepo: FudimDimensionRepo, val factRepo: FudimFactRepo) extends FudimDomain {
     override def equals(o: Any) = o match {
-      case o: DatabaseDomain => id == o.id
-      case _ => false
+      case o: DatabaseDomain ⇒ id == o.id
+      case _ ⇒ false
     }
     override def hashCode = id.hashCode
     override def toString = s"DatabaseDomain($id, $name)"

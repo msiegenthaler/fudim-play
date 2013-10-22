@@ -7,19 +7,19 @@ trait CubeEditor[-T] {
   /** Whether the value at this point can be set. */
   def isSettable(at: Point): Boolean
   /** Set the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
-  def set(at: Point, value: Option[T]): Unit@tx
+  def set(at: Point, value: Option[T]): Unit @tx
 
   /** Set the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
-  def set(at: Point, value: T): Unit@tx = set(at, Some(value))
+  def set(at: Point, value: T): Unit @tx = set(at, Some(value))
   /** Remove the value at the point. Throws ValueCannotBeSetException if isSettable for this point is false. */
   def remove(at: Point) = set(at, None)
 
   /** Set data in this cube. Slice/dice does apply (non-matching are not changed). */
-  def multiSet(filter: Point, value: Option[T]): Unit@tx
+  def multiSet(filter: Point, value: Option[T]): Unit @tx
   /** Remove all data in this cube. Slice/dice does apply (non-matching are not deleted). */
   def clear() = multiSet(Point.empty, None)
 
-  def map[A](f: A => T): CubeEditor[A] = {
+  def map[A](f: A ⇒ T): CubeEditor[A] = {
     val parent = this
     new CubeEditor[A] {
       override def set(at: Point, value: Option[A]) = parent.set(at, value.map(f))

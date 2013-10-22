@@ -7,11 +7,11 @@ import support.JsonMapperRepository
 /** Aggregates values. */
 sealed trait Aggregator[T]
 /** Aggregator that only cares for defined values. */
-trait SparseAggregator[T] extends Aggregator[T] with (Traversable[T] => Option[T]) {
+trait SparseAggregator[T] extends Aggregator[T] with (Traversable[T] ⇒ Option[T]) {
   def apply(v: Traversable[T]): Option[T]
 }
 /** Aggregator that cares for non-defined values. */
-trait DenseAggregator[T] extends Aggregator[T] with (Traversable[Option[T]] => Option[T]) {
+trait DenseAggregator[T] extends Aggregator[T] with (Traversable[Option[T]] ⇒ Option[T]) {
   def apply(v: Traversable[Option[T]]): Option[T]
 }
 
@@ -76,12 +76,12 @@ object Aggregators {
   def sumLong = reduce[Long](_ + _)
   def sumInt = reduce[Int](_ + _)
 
-  def avgLong = sparse[Long] { vs =>
-    val (count, sum) = vs.foldLeft((0L, 0L))((s, v) => (s._1 + 1, s._2 + v))
+  def avgLong = sparse[Long] { vs ⇒
+    val (count, sum) = vs.foldLeft((0L, 0L))((s, v) ⇒ (s._1 + 1, s._2 + v))
     Some((sum.toDouble / count).round)
   }
-  def avgInt = sparse[Int] { vs =>
-    val (count, sum) = vs.foldLeft((0, 0))((s, v) => (s._1 + 1, s._2 + v))
+  def avgInt = sparse[Int] { vs ⇒
+    val (count, sum) = vs.foldLeft((0, 0))((s, v) ⇒ (s._1 + 1, s._2 + v))
     Some((sum.toDouble / count).round.toInt)
   }
 }

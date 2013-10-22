@@ -21,5 +21,5 @@ class AnormDb(db: SqlDatabase) {
   def delete(sql: Sql) = update(sql)
   def execute(sql: Sql) = appl(sql.execute()(_))
 
-  private def appl[A](f: Connection => A) = db.inTransaction(f).tx
+  private def appl[A](f: Connection ⇒ A) = db.inTransaction(f).tx
 }

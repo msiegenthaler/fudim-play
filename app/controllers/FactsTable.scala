@@ -6,14 +6,14 @@ import cube._
 
 object FactsTable extends Controller {
 
-  def index(domainName: String) = DomainAction(domainName) { domain =>
-    domain.dimensions.headOption.map { dim =>
+  def index(domainName: String) = DomainAction(domainName) { domain ⇒
+    domain.dimensions.headOption.map { dim ⇒
       Redirect(routes.FactsTable.show(domainName, dim.name, Nil))
     }.getOrElse(NotFound)
   }
 
-  def show(domainName: String, dimensionName: String, factNames: List[String], restrictTo: PointDefinition, invert: Boolean) = DomainAction(domainName) { domain =>
-    domain.dimensionRepo.get(dimensionName).map { dimension =>
+  def show(domainName: String, dimensionName: String, factNames: List[String], restrictTo: PointDefinition, invert: Boolean) = DomainAction(domainName) { domain ⇒
+    domain.dimensionRepo.get(dimensionName).map { dimension ⇒
       val factOpts = factNames.distinct.map(domain.factRepo.get)
       if (factOpts.contains(None)) NotFound
       else {
@@ -24,7 +24,7 @@ object FactsTable extends Controller {
         if (!point.on.filterNot(filterableDims.contains).isEmpty) BadRequest
         else {
           def linkFun(d: Dimension)(c: Option[Coordinate]) = {
-            val p = c.fold(point - d)(v => point - d + v)
+            val p = c.fold(point - d)(v ⇒ point - d + v)
             routes.FactsTable.show(domainName, dimensionName, facts.map(_.name), p, invert).toString
           }
           Ok(views.html.factsTable(domain, dimension, filterableDims.toList.sortBy(_.name), point,

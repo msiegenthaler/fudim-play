@@ -21,7 +21,7 @@ object Global extends GlobalSettings {
 object InitialData {
   def hasData = !DomainRepo.get("example").isEmpty
 
-  def insertExample: Unit@tx = {
+  def insertExample: Unit @tx = {
     Logger.trace("Generating example data..")
     val example = DomainRepo.create("example")
 
@@ -47,8 +47,8 @@ object InitialData {
     val gewinnFact = example.factRepo.createFormulaBased("Gewinn", FudimDataTypes.integer, gewinnFormula, Aggregation.sum)
 
     val rnd = new Random(1)
-    monat.all.foreachTx { m =>
-      projekt.all.foreachTx { p =>
+    monat.all.foreachTx { m ⇒
+      projekt.all.foreachTx { p ⇒
         val at = m + p
         val k = rnd.nextInt(1000) + 8500
 

@@ -23,6 +23,6 @@ trait FudimDomainRepo {
   def get(name: String): Option[FudimDomain]
   def get(id: DomainId): Option[FudimDomain]
 
-  def create(name: String): FudimDomain@tx
-  def remove(id: FudimDomain): Unit@tx
+  def create(name: String): FudimDomain @tx
+  def remove(id: FudimDomain): Unit @tx
 }

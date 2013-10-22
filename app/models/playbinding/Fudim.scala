@@ -9,7 +9,6 @@ import base._
 import play.api.Logger
 import domain.{ Version, VersionerState }
 
-
 object Fudim {
   def exec[A](tx: Transaction[A]): A = {
     val state = TxState.full
@@ -18,19 +17,19 @@ object Fudim {
     cleanupTx(s)
     r.fold(throw _, identity)
   }
-  def execTx[A](tx: => A@tx): A = exec(tx.transaction)
+  def execTx[A](tx: ⇒ A @tx): A = exec(tx.transaction)
 
   def execReadOnly[A](tx: Transaction[A]): A = {
     val (s, result) = (tx <* Db.rollback).run(TxState.readOnly)
     cleanupTx(s)
     result.fold(throw _, identity)
   }
-  def execReadOnlyTx[A](tx: => A@tx): A = execReadOnly(tx.transaction)
+  def execReadOnlyTx[A](tx: ⇒ A @tx): A = execReadOnly(tx.transaction)
 
   /** Executed after the transaction. */
   private def cleanupTx(s: TransactionState) = Db.cleanupTx(s)
 
-  private case class TxState private(id: Long, isReadOnly: Boolean, connection: Option[Connection] = None, version: Option[Version] = None)
+  private case class TxState private (id: Long, isReadOnly: Boolean, connection: Option[Connection] = None, version: Option[Version] = None)
     extends TransactionState with VersionerState {
 
     def withVersion(version: Option[Version]) = copy(version = version)
@@ -45,7 +44,6 @@ object Fudim {
     def readOnly = TxState(ids.incrementAndGet(), true, None)
   }
 
-
   private[playbinding] object Db extends SqlDatabase {
     private[this] val connStack = new ThreadLocal[List[(Long, Connection)]] {
       override protected def initialValue = Nil
@@ -54,27 +52,26 @@ object Fudim {
       def top = get.headOption.map(_._2)
     }
 
-    private def run[A](f: Connection => A, c: Connection): Either[Exception, A] = {
+    private def run[A](f: Connection ⇒ A, c: Connection): Either[Exception, A] = {
       try {
         Right(f(c))
-      }
-      catch {
-        case e: Exception => Left(e)
+      } catch {
+        case e: Exception ⇒ Left(e)
       }
     }
-    override def inTransaction[A](b: Connection => A) = execute {
-      case s@TxState(_, _, Some(conn), _) =>
+    override def inTransaction[A](b: Connection ⇒ A) = execute {
+      case s @ TxState(_, _, Some(conn), _) ⇒
         (s, run(b, conn))
-      case s@TxState(_, false, None, _) =>
+      case s @ TxState(_, false, None, _) ⇒
         Logger.trace(s"Opening a new DB connection for transaction $s")
         val conn = DB.getConnection(autocommit = false)
         connStack.register(s.id, conn)
         (s.copy(connection = Some(conn)), run(b, conn))
-      case s@TxState(_, true, None, _) =>
+      case s @ TxState(_, true, None, _) ⇒
         val conn = {
           //If a transaction is running on the thread, then reuse the tx's connection
           // else we get deadlocks and other not so nice things.
-          connStack.top.map { c =>
+          connStack.top.map { c ⇒
             Logger.trace(s"Reusing DB connection of running tx for $s")
             ReadOnlyConnection(c)
           }.getOrElse {
@@ -85,20 +82,21 @@ object Fudim {
           }
         }
         (s.copy(connection = Some(conn)), run(b, conn))
-      case _ => throw new AssertionError("Unsupported TransactionState: Does not implement Db")
+      case _ ⇒ throw new AssertionError("Unsupported TransactionState: Does not implement Db")
     }
 
     override def readOnly[A](tx: Transaction[A]) = Fudim.execReadOnly(tx)
 
     private[Fudim] def rollback = withExistingConnection(_.rollback())
     private[Fudim] def commit = withExistingConnection(_.commit())
-    private def withExistingConnection[A](f: Connection => A) = executeSafe {
-      case s@TxState(_, _, Some(conn), _) => f(conn); ()
-      case s@TxState(_, _, None, _) => ()
+    private def withExistingConnection[A](f: Connection ⇒ A) = executeSafe {
+      case s @ TxState(_, _, Some(conn), _) ⇒
+        f(conn); ()
+      case s @ TxState(_, _, None, _) ⇒ ()
     }
 
     private[Fudim] def cleanupTx(s: TransactionState) = s match {
-      case TxState(id, _, conn, _) => conn.foreach { conn =>
+      case TxState(id, _, conn, _) ⇒ conn.foreach { conn ⇒
         connStack.cleanup(id)
         ignoring(classOf[Exception])(conn.rollback())
         ignoring(classOf[Exception])(conn.close())

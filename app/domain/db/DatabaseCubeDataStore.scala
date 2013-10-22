@@ -1,8 +1,7 @@
 package domain
 package db
 
-import anorm.{RowParser, ParameterValue}
-
+import anorm.{ RowParser, ParameterValue }
 
 trait DatabaseCubeDataStore[T] extends CopyableCubeDataStore[T] {
   override type Self <: DatabaseCubeDataStore[T]

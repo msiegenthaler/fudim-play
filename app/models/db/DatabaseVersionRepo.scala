@@ -3,7 +3,7 @@ package models.db
 import base._
 import anorm._
 import anorm.SqlParser._
-import models.{FudimVersionInfo, FudimVersionRepo}
+import models.{ FudimVersionInfo, FudimVersionRepo }
 import domain.Version
 import support.AnormDb
 import org.joda.time._
@@ -23,6 +23,6 @@ trait DatabaseVersionRepo extends FudimVersionRepo {
   }
 
   private val versionInfo = long("id") ~ date("ts") map {
-    case id ~ date => FudimVersionInfo(Version(id), new DateTime(date))
+    case id ~ date ⇒ FudimVersionInfo(Version(id), new DateTime(date))
   }
 }

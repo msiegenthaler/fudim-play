@@ -59,16 +59,16 @@ private case class ReadOnlyConnection(connection: Connection) extends Connection
   def unwrap[T](iface: Class[T]) = connection.unwrap(iface)
 
   //jdbc 4.1
-  def getSchema() = connection.asInstanceOf[ {def getSchema(): String}].getSchema()
-  def setSchema(schema: String) = connection.asInstanceOf[ {def setSchema(schema: String): Unit}].setSchema(schema)
-  def getNetworkTimeout() = connection.asInstanceOf[ {def getNetworkTimeout(): Int}].getNetworkTimeout()
+  def getSchema() = connection.asInstanceOf[{ def getSchema(): String }].getSchema()
+  def setSchema(schema: String) = connection.asInstanceOf[{ def setSchema(schema: String): Unit }].setSchema(schema)
+  def getNetworkTimeout() = connection.asInstanceOf[{ def getNetworkTimeout(): Int }].getNetworkTimeout()
   def setNetworkTimeout(executor: java.util.concurrent.Executor, milliseconds: Int) = {
-    connection.asInstanceOf[ {
-      def setNetworkTimeout(executor: java.util.concurrent.Executor, milliseconds: Int): Unit}
-      ].setNetworkTimeout(executor, milliseconds)
+    connection.asInstanceOf[{
+      def setNetworkTimeout(executor: java.util.concurrent.Executor, milliseconds: Int): Unit
+    }].setNetworkTimeout(executor, milliseconds)
   }
   def abort(executor: java.util.concurrent.Executor) = {
-    connection.asInstanceOf[ {
+    connection.asInstanceOf[{
       def abort(executor: java.util.concurrent.Executor): Unit
     }].abort(executor)
   }

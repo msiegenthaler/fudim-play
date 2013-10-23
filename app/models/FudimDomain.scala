@@ -7,6 +7,7 @@ case class DomainId(id: Long)
 
 trait FudimDomain extends Domain {
   def id: DomainId
+  /** Version of the structure of the domain (data is ignored). */
   def version: Version
 
   def dimensionRepo: FudimDimensionRepo

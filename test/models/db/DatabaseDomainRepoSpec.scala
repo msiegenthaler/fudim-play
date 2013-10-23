@@ -14,11 +14,11 @@ class DatabaseDomainRepoSpec extends Specification {
     def mkDimensionRepo = new FudimDimensionRepo {
       def create(name: String) = ???
       def remove(name: String) = ???
-      def all = ???
+      def all = Nil
     }
     def mkFactRepo = new FudimFactRepo {
       def get(name: String) = ???
-      def all = ???
+      def all = Nil
       def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]) = ???
       def createFormulaBased[T](name: String, dataType: FudimDataType[T], formula: Formula[T], aggregation: Aggregation[T]) = ???
       def remove(name: String) = ???

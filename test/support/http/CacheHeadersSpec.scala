@@ -104,4 +104,40 @@ class CacheHeadersSpec extends Specification {
       h.ifNoneMatch must beRight(Set(EntityTag("a", true), EntityTag("b"), EntityTag("c", true)))
     }
   }
+
+  "CacheHeaders.matchesEtag" should {
+    "return true for all etag if *" in {
+      val h = hNoneMatch("*")
+      h.matchesETag(EntityTag("123")) must beTrue
+      h.matchesETag(EntityTag("123", true)) must beTrue
+      h.matchesETag(EntityTag("blabla")) must beTrue
+    }
+    "match single same" in {
+      val h = hNoneMatch("\"abc\"")
+      h.matchesETag(EntityTag("abc")) must beTrue
+    }
+    "match single different" in {
+      val h = hNoneMatch("\"abc\"")
+      h.matchesETag(EntityTag("123")) must beFalse
+    }
+    "match not match between weak an non-weak" in {
+      val h = hNoneMatch("\"abc\"")
+      h.matchesETag(EntityTag("abc", true)) must beFalse
+    }
+    "match not match between non-weak an weak" in {
+      val h = hNoneMatch("W/\"abc\"")
+      h.matchesETag(EntityTag("abc")) must beFalse
+    }
+    "match match between weak an weak" in {
+      val h = hNoneMatch("W/\"abc\"")
+      h.matchesETag(EntityTag("abc", true)) must beTrue
+    }
+    "match one out of a list" in {
+      val h = hNoneMatch(""""a", "b", "c"""")
+      h.matchesETag(EntityTag("a")) must beTrue
+      h.matchesETag(EntityTag("b")) must beTrue
+      h.matchesETag(EntityTag("c")) must beTrue
+      h.matchesETag(EntityTag("d")) must beFalse
+    }
+  }
 }

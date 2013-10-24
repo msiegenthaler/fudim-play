@@ -14,7 +14,10 @@ case class CacheHeaders(headers: Headers) {
   }
 
   /** True if the If-None-Match header contains the etag. */
-  def matchesEtag(etag: EntityTag): Boolean = ???
+  def matchesETag(etag: EntityTag): Boolean = ifNoneMatch match {
+    case Left(AllETags) ⇒ true
+    case Right(set) ⇒ set.contains(etag)
+  }
 
   def ifModifiedSince: Option[DateTime] = ???
 }

@@ -2,16 +2,24 @@ package support.http
 
 import org.joda.time.DateTime
 import play.api.mvc.Headers
+import play.api.http.HeaderNames._
 import play.api.libs.Codecs
 
 case class CacheHeaders(headers: Headers) {
-  def ifNoneMatch: Set[EntityTag] = ???
+  def ifNoneMatch: Either[AllETags.type, Set[EntityTag]] = {
+    val values = headers.getAll(IF_NONE_MATCH).mkString(", ")
+    val etagStrings = values.split(',').map(_.trim).filter(_.nonEmpty)
+    if (etagStrings.contains("*")) Left(AllETags)
+    else Right(etagStrings.flatMap(EntityTag.parse).toSet)
+  }
 
   /** True if the If-None-Match header contains the etag. */
   def matchesEtag(etag: EntityTag): Boolean = ???
 
   def ifModifiedSince: Option[DateTime] = ???
 }
+
+case object AllETags
 
 /**
  * HTTP-EntityTag (also called ETag).

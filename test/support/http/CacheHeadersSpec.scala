@@ -1,6 +1,7 @@
 package support.http
 
 import org.specs2.mutable.Specification
+import play.api.mvc.Headers
 
 class CacheHeadersSpec extends Specification {
   "EntityTag" should {
@@ -68,9 +69,39 @@ class CacheHeadersSpec extends Specification {
     }
   }
 
+  def h(vs: (String, String)*): Headers = {
+    new Headers {
+      override val data = vs.groupBy(_._1).mapValues(_.map(_._2)).toSeq
+    }
+  }
+
+  def hNoneMatch(v: String*) = h(v.map(value ⇒ "If-None-Match" -> value): _*)
+
   "CacheHeaders.ifNoneMatch" should {
-    "handle a * value" in pending
-    "handle a single value" in pending
-    "handle multiple values separated by spaces" in pending
+    "handle a * value" in {
+      hNoneMatch("*").ifNoneMatch must beLeft(AllETags)
+    }
+    "handle a single value" in {
+      hNoneMatch("\"1d2c1a\"").ifNoneMatch must beRight(Set(EntityTag("1d2c1a")))
+    }
+    "handle a single weak value" in {
+      hNoneMatch("W/\"1d2c1a\"").ifNoneMatch must beRight(Set(EntityTag("1d2c1a", true)))
+    }
+    "handle multiple values in multiple header repeats" in {
+      val h = hNoneMatch("\"a\"", "\"b\"", "\"c\"")
+      h.ifNoneMatch must beRight(Set(EntityTag("a"), EntityTag("b"), EntityTag("c")))
+    }
+    "handle multiple values separated by colons" in {
+      val h = hNoneMatch(""""a","b","c"""")
+      h.ifNoneMatch must beRight(Set(EntityTag("a"), EntityTag("b"), EntityTag("c")))
+    }
+    "handle multiple values separated by colons and spaces" in {
+      val h = hNoneMatch(""""a", "b", "c"""")
+      h.ifNoneMatch must beRight(Set(EntityTag("a"), EntityTag("b"), EntityTag("c")))
+    }
+    "handle multiple weak values separated by colons" in {
+      val h = hNoneMatch("""W/"a","b",W/"c"""")
+      h.ifNoneMatch must beRight(Set(EntityTag("a", true), EntityTag("b"), EntityTag("c", true)))
+    }
   }
 }

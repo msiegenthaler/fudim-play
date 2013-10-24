@@ -13,6 +13,10 @@ case class CacheHeaders(headers: Headers) {
   def ifModifiedSince: Option[DateTime] = ???
 }
 
+/**
+ * HTTP-EntityTag (also called ETag).
+ * An opaque identifier assigned by a web server to a specific version of a resource found at a URL
+ */
 case class EntityTag(id: String, isWeak: Boolean = false) {
   def value = {
     if (isWeak) "W/\"" + id + '"'

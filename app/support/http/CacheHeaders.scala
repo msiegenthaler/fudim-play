@@ -4,6 +4,7 @@ import org.joda.time.DateTime
 import play.api.mvc.Headers
 import play.api.http.HeaderNames._
 import play.api.libs.Codecs
+import scala.math.Ordering
 
 case class CacheHeaders(headers: Headers) {
   def ifNoneMatch: Either[AllETags.type, Set[EntityTag]] = {
@@ -19,7 +20,14 @@ case class CacheHeaders(headers: Headers) {
     case Right(set) ⇒ set.contains(etag)
   }
 
-  def ifModifiedSince: Option[DateTime] = ???
+  private implicit val dateTimeOrdering = new Ordering[DateTime] {
+    override def compare(a: DateTime, b: DateTime) = a.compareTo(b)
+  }
+  def ifModifiedSince: Option[DateTime] = {
+    val ds = headers.getAll(IF_MODIFIED_SINCE).flatMap(HttpDate.parse)
+    if (ds.isEmpty) None
+    else Some(ds.min)
+  }
 }
 
 case object AllETags

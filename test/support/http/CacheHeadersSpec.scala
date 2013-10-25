@@ -2,6 +2,8 @@ package support.http
 
 import org.specs2.mutable.Specification
 import play.api.mvc.Headers
+import org.joda.time.DateTime
+import org.joda.time.DateTimeZone
 
 class CacheHeadersSpec extends Specification {
   "EntityTag" should {
@@ -76,6 +78,7 @@ class CacheHeadersSpec extends Specification {
   }
 
   def hNoneMatch(v: String*) = h(v.map(value ⇒ "If-None-Match" -> value): _*)
+  def hModSince(v: String*) = h(v.map(value ⇒ "If-Modified-Since" -> value): _*)
 
   "CacheHeaders.ifNoneMatch" should {
     "handle a * value" in {
@@ -138,6 +141,32 @@ class CacheHeadersSpec extends Specification {
       h.matchesETag(EntityTag("b")) must beTrue
       h.matchesETag(EntityTag("c")) must beTrue
       h.matchesETag(EntityTag("d")) must beFalse
+    }
+  }
+
+  "CacheHeaders.ifModifiedSince" should {
+    "be None if no header is set" in {
+      hModSince().ifModifiedSince must beNone
+    }
+    "be None if an empty header is set" in {
+      hModSince("").ifModifiedSince must beNone
+    }
+    "be None if an invalid header is set" in {
+      hModSince("bla").ifModifiedSince must beNone
+    }
+    "be the date if a valid date" in {
+      val dt = new DateTime(1994, 11, 6, 8, 49, 37, DateTimeZone.forID("UTC"))
+      hModSince("Sun, 06 Nov 1994 08:49:37 UTC").ifModifiedSince must beSome(dt)
+    }
+    "be the minimum date if multiple valid dates" in {
+      val dt = new DateTime(1994, 11, 6, 8, 49, 37, DateTimeZone.forID("UTC"))
+      hModSince("Sun, 06 Nov 1994 08:49:37 UTC", "Sun, 06 Nov 1995 08:49:37 UTC").ifModifiedSince must beSome(dt)
+      hModSince("Sun, 06 Nov 1995 08:49:37 UTC", "Sun, 06 Nov 1994 08:49:37 UTC").ifModifiedSince must beSome(dt)
+    }
+    "be the minimum date if multiple valid dates and some garbage" in {
+      val dt = new DateTime(1994, 11, 6, 8, 49, 37, DateTimeZone.forID("UTC"))
+      hModSince("bla", "Sun, 06 Nov 1994 08:49:37 UTC", "xxx", "Sun, 06 Nov 1995 08:49:37 UTC", "bla").
+        ifModifiedSince must beSome(dt)
     }
   }
 }

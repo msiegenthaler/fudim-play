@@ -13,11 +13,12 @@ import models.playbinding.Fudim
 
 object Facts extends Controller {
 
-  def list(domainName: String) = DomainAction(domainName) { domain ⇒
-    Ok(views.html.facts(domainName, domain.factRepo.all, FudimDataTypes.all, addForm))
+  def list(domainName: String) = DomainAction(domainName) { req ⇒
+    Ok(views.html.facts(domainName, req.fudimDomain.factRepo.all, FudimDataTypes.all, addForm))
   }
 
-  def add(domainName: String) = DomainAction(domainName).on(domain ⇒ { implicit request ⇒
+  def add(domainName: String) = DomainAction(domainName) { implicit req ⇒
+    val domain = req.fudimDomain
     addForm.bindFromRequest.fold(
       errors ⇒ BadRequest(views.html.facts(domainName, domain.factRepo.all, FudimDataTypes.all, errors)),
       data ⇒ {
@@ -29,14 +30,13 @@ object Facts extends Controller {
           Redirect(routes.Facts.view(domain.name, name))
         }.getOrElse(BadRequest(s"Invalid data type $dataTypeName"))
       })
-  })
+  }
 
-  def view(domainName: String, name: String) = DomainAction(domainName) { domain ⇒
-    domain.factRepo.get(name).map { fact ⇒
-      val dims = domain.dimensionRepo.all.filterNot(fact.dimensions.contains)
-      val aggr = Aggregation.unapply(fact.data).getOrElse(Aggregation.none)
-      Ok(views.html.fact(domainName, fact, dims, fact.dataType.aggregations, aggrForm.fill(aggr.name)))
-    }.getOrElse(NotFound)
+  def view(domainName: String, name: String) = FactAction(domainName, name) { req ⇒
+    val fact = req.fact
+    val dims = req.fudimDomain.dimensionRepo.all.filterNot(fact.dimensions.contains)
+    val aggr = Aggregation.unapply(fact.data).getOrElse(Aggregation.none)
+    Ok(views.html.fact(domainName, fact, dims, fact.dataType.aggregations, aggrForm.fill(aggr.name)))
   }
   def addDimension(domainName: String, factName: String, dimensionName: String) = modFactDim(domainName, factName, dimensionName) { (fact, moveTo) ⇒
     fact.addDimension(moveTo)
@@ -44,13 +44,12 @@ object Facts extends Controller {
   def removeDimension(domainName: String, factName: String, dimensionName: String) = modFactDim(domainName, factName, dimensionName) { (fact, keepAt) ⇒
     fact.removeDimension(keepAt)
   }
-  private def modFactDim(domainName: String, factName: String, dimensionName: String)(f: (FudimFact[_], Coordinate) ⇒ Unit @tx) = DomainAction(domainName) { domain ⇒
+  private def modFactDim(domainName: String, factName: String, dimensionName: String)(f: (FudimFact[_], Coordinate) ⇒ Unit @tx) = FactAction(domainName, factName) { req ⇒
     val r = for {
-      fact ← domain.factRepo.get(factName).toSuccess(s"Fact $factName not found")
-      dimension ← domain.dimensionRepo.get(dimensionName).toSuccess(s"Dimension $dimensionName not found")
+      dimension ← req.fudimDomain.dimensionRepo.get(dimensionName).toSuccess(s"Dimension $dimensionName not found")
       coord ← dimension.all.headOption.toSuccess(s"Dimension $dimensionName has no values")
     } yield {
-      Fudim.execTx(f(fact, coord))
+      Fudim.execTx(f(req.fact, coord))
       Redirect(routes.Facts.view(domainName, factName))
     }
     r.valueOr(e ⇒ NotFound(e))
@@ -62,7 +61,7 @@ object Facts extends Controller {
     case _ ⇒ Action(BadRequest(s"Unsupported Action $action"))
   }
 
-  def setAggregation(domainName: String, factName: String) = FactAction(domainName, factName).on(fact ⇒ { implicit request ⇒
+  def setAggregation(domainName: String, factName: String) = FactAction(domainName, factName) { implicit req ⇒
     def changeAggr[T](fact: FudimFact[T], aggrName: String) = {
       val aggr = fact.dataType.aggregations.find(_.name == aggrName).getOrElse(Aggregation.none)
       Fudim.execTx {
@@ -72,13 +71,15 @@ object Facts extends Controller {
     }
     aggrForm.bindFromRequest.fold(
       errors ⇒ NotImplemented,
-      aggrName ⇒ changeAggr(fact, aggrName))
-  })
-
-  def get(domainName: String, factName: String, at: PointDefinition) = FactAction(domainName, factName) { fact ⇒
-    fact.rendered.get(at(fact)).map(v ⇒ Ok(v)).getOrElse(NotFound)
+      aggrName ⇒ changeAggr(req.fact, aggrName))
   }
-  def save(domainName: String, factName: String, at: PointDefinition) = FactAction(domainName, factName).on(fact ⇒ { request ⇒
+
+  def get(domainName: String, factName: String, at: PointDefinition) = FactAction(domainName, factName) { req ⇒
+    req.fact.rendered.get(at(req.fact)).
+      map(v ⇒ Ok(v)).
+      getOrElse(NotFound)
+  }
+  def save(domainName: String, factName: String, at: PointDefinition) = FactAction(domainName, factName) { req ⇒
     def setValue[T](fact: FudimFact[T], value: String) = fact.editor.map { editor ⇒
       val tpe = fact.dataType
       tpe.parse(value).map { v ⇒
@@ -92,10 +93,10 @@ object Facts extends Controller {
         }
       }.getOrElse(NotAcceptable("Value is not parsable"))
     }
-    request.body.asText.filterNot(_.isEmpty).
-      map(setValue(fact, _).getOrElse(cannotSet)).
+    req.body.asText.filterNot(_.isEmpty).
+      map(setValue(req.fact, _).getOrElse(cannotSet)).
       getOrElse(NotAcceptable)
-  })
+  }
   private def cannotSet = MethodNotAllowed.withHeaders("Allow" -> "GET")
 
   val addForm = Form(tuple(

@@ -28,7 +28,7 @@ object HttpCache {
     } else {
       block match {
         case r @ SimpleResult(h, _, _) if h.status == 200 ⇒
-          r.withHeaders(headers: _*)
+          r.withHeaders((headers :+ (CACHE_CONTROL -> "max-age=0")): _*)
         case other ⇒ other
       }
     }

@@ -26,6 +26,10 @@ case class CacheHeaders(headers: Headers) {
     else Some(ds.min)
   }
 }
+object CacheHeaders {
+  def etag(etag: EntityTag) = (ETAG, etag.value)
+  def lastModified(dateTime: DateTime) = (LAST_MODIFIED, HttpDate.serialize(dateTime))
+}
 
 case object AllETags
 

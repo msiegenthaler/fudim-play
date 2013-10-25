@@ -30,6 +30,34 @@ class HttpDateSpec extends Specification {
       val dt = new DateTime(1994, 11, 6, 8, 49, 37, DateTimeZone.forID("UTC"))
       HttpDate.parse("Sun, 06 Nov 1994 08:49:37") must beSome(dt)
     }
+
+    "be None for no value" in {
+      HttpDate.parse("") must beNone
+    }
+    "be None for garbarge value" in {
+      HttpDate.parse("blablabla") must beNone
+    }
+    "be None for missing day of week" in {
+      HttpDate.parse("06 Nov 1994 08:49:37 UTC") must beNone
+    }
+    "be None for missing date" in {
+      HttpDate.parse("Sun, 06 Nov 1994 UTC") must beNone
+    }
+    "be None for missing seconds" in {
+      HttpDate.parse("Sun, 06 Nov 1994 08:49 UTC") must beNone
+    }
+    "be None for missing seconds and minutes" in {
+      HttpDate.parse("Sun, 06 Nov 1994 08 UTC") must beNone
+    }
+    "be None for missing year" in {
+      HttpDate.parse("Sun, 06 Nov 08:00:00 UTC") must beNone
+    }
+    "be None for just a time" in {
+      HttpDate.parse("08:49:37") must beNone
+    }
+    "be None for incorrect timezone" in {
+      HttpDate.parse("Sun, 06 Nov 1994 08:49:37 XXX") must beNone
+    }
   }
   "HttpDate.serialize" should {
     "serialize to 'Wed, 13 Jan 2021 22:23:01 UTC'" in {

@@ -11,8 +11,8 @@ object Domains extends Controller {
     Ok(views.html.domains(DomainRepo.all, addForm))
   }
 
-  def get(name: String) = DomainAction(name) { domain ⇒
-    Ok(views.html.domain(domain))
+  def get(name: String) = DomainAction(name) { req ⇒
+    Ok(views.html.domain(req.fudimDomain))
   }
 
   def add = Action { implicit request ⇒

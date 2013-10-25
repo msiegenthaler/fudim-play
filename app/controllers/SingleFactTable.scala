@@ -11,7 +11,8 @@ import support.FactAction
 import support.PointDefinition
 
 object SingleFactTable extends Controller {
-  def show(domainName: String, factName: String, d1Name: String, d2Name: String, fixed: PointDefinition = PointDefinition.empty, sum1: Boolean = false, sum2: Boolean = false) = FactAction(domainName, factName) { fact ⇒
+  def show(domainName: String, factName: String, d1Name: String, d2Name: String, fixed: PointDefinition = PointDefinition.empty, sum1: Boolean = false, sum2: Boolean = false) = FactAction(domainName, factName) { req ⇒
+    val fact = req.fact
     val r = for {
       d1 ← fact.dimensions.find(_.name == d1Name)
       d2 ← fact.dimensions.find(_.name == d2Name)

@@ -14,7 +14,9 @@ import models.playbinding.Fudim
 object Facts extends Controller {
 
   def list(domainName: String) = DomainAction(domainName) { req ⇒
-    Ok(views.html.facts(domainName, req.fudimDomain.factRepo.all, FudimDataTypes.all, addForm))
+    HttpCache.cached(req, req.fudimDomain.version) {
+      Ok(views.html.facts(domainName, req.fudimDomain.factRepo.all, FudimDataTypes.all, addForm))
+    }
   }
 
   def add(domainName: String) = DomainAction(domainName) { implicit req ⇒
@@ -34,9 +36,11 @@ object Facts extends Controller {
 
   def view(domainName: String, name: String) = FactAction(domainName, name) { req ⇒
     val fact = req.fact
-    val dims = req.fudimDomain.dimensionRepo.all.filterNot(fact.dimensions.contains)
-    val aggr = Aggregation.unapply(fact.data).getOrElse(Aggregation.none)
-    Ok(views.html.fact(domainName, fact, dims, fact.dataType.aggregations, aggrForm.fill(aggr.name)))
+    HttpCache.cached(req, fact.version or req.fudimDomain.version) {
+      val dims = req.fudimDomain.dimensionRepo.all.filterNot(fact.dimensions.contains)
+      val aggr = Aggregation.unapply(fact.data).getOrElse(Aggregation.none)
+      Ok(views.html.fact(domainName, fact, dims, fact.dataType.aggregations, aggrForm.fill(aggr.name)))
+    }
   }
   def addDimension(domainName: String, factName: String, dimensionName: String) = modFactDim(domainName, factName, dimensionName) { (fact, moveTo) ⇒
     fact.addDimension(moveTo)

@@ -3,8 +3,8 @@ package controllers
 import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
-import support.DomainAction
 import models.playbinding.{ Fudim, DomainRepo }
+import support.{ DomainAction, HttpCache }
 
 object Domains extends Controller {
   def index = Action {
@@ -12,7 +12,9 @@ object Domains extends Controller {
   }
 
   def get(name: String) = DomainAction(name) { req ⇒
-    Ok(views.html.domain(req.fudimDomain))
+    HttpCache.cached(req, req.fudimDomain.version) {
+      Ok(views.html.domain(req.fudimDomain))
+    }
   }
 
   def add = Action { implicit request ⇒

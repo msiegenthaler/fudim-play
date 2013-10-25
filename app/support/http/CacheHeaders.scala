@@ -1,12 +1,11 @@
 package support.http
 
 import com.github.nscala_time.time.Imports._
-import play.api.mvc.Headers
 import play.api.http.HeaderNames._
 import play.api.libs.Codecs
 import scala.math.Ordering
 
-case class CacheHeaders(headers: Headers) {
+case class CacheHeaders(headers: HeaderSupplier) {
   def ifNoneMatch: Either[AllETags.type, Set[EntityTag]] = {
     val values = headers.getAll(IF_NONE_MATCH).mkString(", ")
     val etagStrings = values.split(',').map(_.trim).filter(_.nonEmpty)

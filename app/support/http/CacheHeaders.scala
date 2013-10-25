@@ -1,6 +1,6 @@
 package support.http
 
-import org.joda.time.DateTime
+import com.github.nscala_time.time.Imports._
 import play.api.mvc.Headers
 import play.api.http.HeaderNames._
 import play.api.libs.Codecs
@@ -20,9 +20,6 @@ case class CacheHeaders(headers: Headers) {
     case Right(set) ⇒ set.contains(etag)
   }
 
-  private implicit val dateTimeOrdering = new Ordering[DateTime] {
-    override def compare(a: DateTime, b: DateTime) = a.compareTo(b)
-  }
   def ifModifiedSince: Option[DateTime] = {
     val ds = headers.getAll(IF_MODIFIED_SINCE).flatMap(HttpDate.parse)
     if (ds.isEmpty) None

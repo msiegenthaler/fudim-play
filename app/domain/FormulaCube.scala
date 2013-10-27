@@ -7,9 +7,13 @@ import support.{ JsonMapper, JsonMapperRepository }
 /** Calculates points based on data in other cubes. */
 trait Formula[T] {
   /** The resulting function must be pure and must only depend on data in the referenced cubes. */
-  def bind(cubes: Cubes): Point ⇒ Option[T]
+  def bind(cubes: Cubes): BoundFormula[T]
   def dimensions: Set[Dimension]
   def references: Iterable[CubeRef[_]]
+}
+/** Formula that is 'connected' to the cubes it depends on. */
+trait BoundFormula[T] {
+  def get(at: Point): Option[T]
 }
 
 /** Cube based on a calculation. */
@@ -37,11 +41,11 @@ object FormulaCube {
     }
   }
 
-  private case class FormulaCube[T](formula: Formula[T], bound: Point ⇒ Option[T], slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends AbstractCube[T] {
+  private case class FormulaCube[T](formula: Formula[T], bound: BoundFormula[T], slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends AbstractCube[T] {
     override protected type Self = FormulaCube[T]
     override protected def derive(slice: Point = slice, filters: DimensionFilter = filters) = copy(slice = slice, filters = filters)
-    override def get(at: Point) = bound(at)
-    override def dense = allPoints.map(p ⇒ (p, bound(p)))
+    override def get(at: Point) = bound.get(at)
+    override def dense = allPoints.map(p ⇒ (p, bound.get(p)))
     override val allDimensions = formula.dimensions
   }
 }

@@ -21,11 +21,13 @@ object PointFoldFormula {
       val missing = cs.find(_._2.isEmpty)
       if (!missing.isEmpty) throw new IllegalArgumentException(s"Unresolved dependencies to: ${missing.mkString(", ")}")
       val deps = cs.map(_._2.get)
-      point ⇒ {
-        if (point.definesExactly(dimensions)) {
-          val values = deps.map(_.get(point))
-          f(values)
-        } else None
+      new BoundFormula[B] {
+        override def get(point: Point) = {
+          if (point.definesExactly(dimensions)) {
+            val values = deps.map(_.get(point))
+            f(values)
+          } else None
+        }
       }
     }
   }

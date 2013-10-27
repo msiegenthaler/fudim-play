@@ -4,19 +4,21 @@ import base._
 import cube._
 import domain._
 
-trait FudimFact[T] extends RenderFact[T] {
+trait FudimFact[T] {
+  def name: String
   /** Version of the fact itself (does not include the data, for that use data.version). */
   def version: Version
 
-  override def dataType: FudimDataType[T]
-
-  override lazy val rendered = data.map(dataType.render)
+  def data: Cube[T]
+  def dataType: FudimDataType[T]
+  def rendered = data.map(dataType.render)
 
   def editor: Option[CubeEditor[T]]
 
   def aggregation: Aggregation[T]
   def aggregation_=(aggr: Aggregation[T]): Unit @tx
 
+  def dimensions: Set[FudimDimension] = data.dimensions.map { case d: FudimDimension ⇒ d }
   def addDimension(moveTo: Coordinate): Unit @tx
   def removeDimension(keepAt: Coordinate): Unit @tx
 }

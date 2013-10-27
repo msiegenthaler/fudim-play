@@ -5,9 +5,9 @@ import base._
 import domain.Version
 
 /** Additional information about a version. */
-case class FudimVersionInfo(version: Version, at: DateTime)
+case class VersionInfo(version: Version, at: DateTime)
 
-trait FudimVersionRepo {
+trait VersionRepo {
   def create(): Version @tx
-  def infoFor(version: Version): FudimVersionInfo
+  def infoFor(version: Version): VersionInfo
 }

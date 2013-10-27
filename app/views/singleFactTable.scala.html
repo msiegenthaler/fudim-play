@@ -1,4 +1,4 @@
-@(domain: String, fact: FudimFact[_], data: cube.Cube[String], isSettable: cube.Point => Boolean, d1: cube.Dimension, d2: cube.Dimension, otherDims: List[cube.Dimension], filterPoint: cube.Point, sumd1: Boolean, sumd2: Boolean, linkFun: cube.Dimension => Option[cube.Coordinate] => String)
+@(domain: String, fact: Fact[_], data: cube.Cube[String], isSettable: cube.Point => Boolean, d1: cube.Dimension, d2: cube.Dimension, otherDims: List[cube.Dimension], filterPoint: cube.Point, sumd1: Boolean, sumd2: Boolean, linkFun: cube.Dimension => Option[cube.Coordinate] => String)
 
 @import helper._
 @import helper.twitterBootstrap._

@@ -60,19 +60,13 @@ object CubeDecorator {
     }
   }
 
-  private class CubeWithDecorator[T](val underlying: Cube[T], val decorator: CubeDecorator[T]) extends CubeDecoratorCube[T] {
+  private class CubeWithDecorator[T](val underlying: Cube[T], val decorator: CubeDecorator[T]) extends CubeDecoratorCube[T] with AbstractDecoratedCube[T] {
     override protected type Self = CubeWithDecorator[T]
     override type Underlying = Cube[T]
-    private def wrap(c: Cube[T]) = new CubeWithDecorator(c, decorator)
-
+    override protected def wrap(c: underlying.Self) = new CubeWithDecorator(c, decorator)
     override def get(at: Point) = decorator.get(underlying)(at)
     override def dense = decorator.dense(underlying)
     override def sparse = decorator.sparse(underlying)
-    override def slice = underlying.slice
-    override def dimensions = underlying.dimensions
-    override def raw = wrap(underlying.raw)
-    override def slice(to: Point) = wrap(underlying.slice(to))
-    override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = wrap(underlying.dice(dimension, filter))
     override def toString = s"CubeWithDecorator($underlying, $decorator)"
   }
 }

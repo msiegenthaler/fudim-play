@@ -5,7 +5,7 @@
 
 @main("Dimensions", Some(domain)) {
 	<ul>
-	  @dims.map { dimension =>
+	  @dims.toSeq.sortBy(_.name).map { dimension =>
       <li>
         <a href="@routes.Dimensions.get(domain, dimension.name)">@dimension.name</a>
       </li>

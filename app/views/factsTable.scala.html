@@ -7,12 +7,12 @@
 
 @main(s"Facts Table on ${dim.name}", Some(domain.name)) {
   <ul class="unstyled form-horizontal">
-    @otherDims.map { d =>
+    @otherDims.toSeq.sortBy(_.name).map { d =>
       <li>
         @views.html.dimensionValueSelect(d, filterPoint.coordinate(d), allowAll = true, linkFun(d))
       </li>
     }
-    @otherFacts.map { fact =>
+    @otherFacts.toSeq.sortBy(_.name).map { fact =>
       <li>
         <div class="control-group">
           <div class="controls">

@@ -9,7 +9,7 @@
 @main("Fact "+fact.name+" ("+d1.name+" / "+d2.name+")", Some(domain)) {
 
   <ul class="unstyled form-horizontal">
-    @otherDims.map { d =>
+    @otherDims.toSeq.sortBy(_.name).map { d =>
       <li>
         @views.html.dimensionValueSelect(d, filterPoint.coordinate(d), allowAll = true, linkFun(d))
       </li>

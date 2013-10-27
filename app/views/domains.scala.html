@@ -5,7 +5,7 @@
 
 @main("Domains", None) {
 	<ul>
-	  @domains.map { domain =>
+	  @domains.toSeq.sortBy(_.name).map { domain =>
       <li>
         <a href="@routes.Domains.get(domain.name)">@domain.name</a>
       </li>

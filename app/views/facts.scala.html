@@ -5,7 +5,7 @@
 
 @main("Facts", Some(domain)) {
 	<ul>
-	  @facts.map { fact =>
+	  @facts.toSeq.sortBy(_.name).map { fact =>
       <li>
         <a href="@routes.Facts.view(domain, fact.name)">@fact.name</a>
         @if(fact.dimensions.isEmpty) {

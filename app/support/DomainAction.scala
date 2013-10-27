@@ -6,7 +6,10 @@ import play.api.mvc._
 import models._
 import models.playbinding.DomainRepo
 
-class RequestWithDomain[A](val fudimDomain: Domain, request: Request[A]) extends WrappedRequest[A](request)
+class RequestWithDomain[A](val fudimDomain: Domain, request: Request[A]) extends WrappedRequest[A](request) {
+  def dimensions = fudimDomain.dimensions
+  def facts = fudimDomain.facts
+}
 case class DomainAction(name: String) extends ActionBuilder[RequestWithDomain] {
   protected override def invokeBlock[A](request: Request[A], block: (RequestWithDomain[A]) ⇒ Future[SimpleResult]) = {
     DomainRepo.get(name).map(domain ⇒ block(new RequestWithDomain(domain, request))).
@@ -21,7 +24,7 @@ case class DimensionAction(domainName: String, name: String) extends ActionBuild
     {
       for {
         domain ← DomainRepo.get(domainName)
-        dimension ← domain.dimensionRepo.get(name)
+        dimension ← domain.dimensions.get(name)
       } yield block(new RequestWithDimension(dimension, domain, request))
     }.getOrElse(Future.successful(Results.NotFound))
   }
@@ -34,7 +37,7 @@ case class FactAction(domainName: String, name: String) extends ActionBuilder[Re
     {
       for {
         domain ← DomainRepo.get(domainName)
-        fact ← domain.factRepo.get(name)
+        fact ← domain.facts.get(name)
       } yield block(new RequestWithFact(fact, domain, request))
     }.getOrElse(Future.successful(Results.NotFound))
   }

@@ -15,21 +15,20 @@ object Facts extends Controller {
 
   def list(domainName: String) = DomainAction(domainName) { req ⇒
     HttpCache.cached(req, req.fudimDomain.version) {
-      Ok(views.html.facts(domainName, req.fudimDomain.factRepo.all, FudimDataTypes.all, addForm))
+      Ok(views.html.facts(domainName, req.facts.all, FudimDataTypes.all, addForm))
     }
   }
 
   def add(domainName: String) = DomainAction(domainName) { implicit req ⇒
-    val domain = req.fudimDomain
     addForm.bindFromRequest.fold(
-      errors ⇒ BadRequest(views.html.facts(domainName, domain.factRepo.all, FudimDataTypes.all, errors)),
+      errors ⇒ BadRequest(views.html.facts(domainName, req.facts.all, FudimDataTypes.all, errors)),
       data ⇒ {
         val (name, dataTypeName) = data
         FudimDataTypes.get(dataTypeName).map { dataType ⇒
           Fudim.execTx {
-            domain.factRepo.createDatabaseBacked(name, dataType, Set.empty, Aggregation.none)
+            req.facts.createDatabaseBacked(name, dataType, Set.empty, Aggregation.none)
           }
-          Redirect(routes.Facts.view(domain.name, name))
+          Redirect(routes.Facts.view(req.fudimDomain.name, name))
         }.getOrElse(BadRequest(s"Invalid data type $dataTypeName"))
       })
   }
@@ -37,7 +36,7 @@ object Facts extends Controller {
   def view(domainName: String, name: String) = FactAction(domainName, name) { req ⇒
     val fact = req.fact
     HttpCache.cached(req, fact.version or req.fudimDomain.version) {
-      val dims = req.fudimDomain.dimensionRepo.all.filterNot(fact.dimensions.contains)
+      val dims = req.dimensions.all.filterNot(fact.dimensions.contains)
       val aggr = Aggregation.unapply(fact.data).getOrElse(Aggregation.none)
       Ok(views.html.fact(domainName, fact, dims, fact.dataType.aggregations, aggrForm.fill(aggr.name)))
     }
@@ -50,7 +49,7 @@ object Facts extends Controller {
   }
   private def modFactDim(domainName: String, factName: String, dimensionName: String)(f: (Fact[_], Coordinate) ⇒ Unit @tx) = FactAction(domainName, factName) { req ⇒
     val r = for {
-      dimension ← req.fudimDomain.dimensionRepo.get(dimensionName).toSuccess(s"Dimension $dimensionName not found")
+      dimension ← req.dimensions.get(dimensionName).toSuccess(s"Dimension $dimensionName not found")
       coord ← dimension.all.headOption.toSuccess(s"Dimension $dimensionName has no values")
     } yield {
       Fudim.execTx(f(req.fact, coord))

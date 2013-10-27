@@ -14,21 +14,15 @@ trait Domain {
   /** Version of the structure of the domain (data is ignored). */
   def version: Version
 
-  def dimensionRepo: FudimDimensionRepo
-  def dimensions = dimensionRepo.all.toSet
-  def dimension(name: String) = dimensionRepo.get(name)
-
-  def factRepo: FactRepo
-  def facts = factRepo.all.toSet
-  def fact(name: String) = factRepo.get(name)
-
+  def dimensions: FudimDimensionRepo
+  def facts: FactRepo
   def cubes: Cubes = DomainCubes(Domain.this)
 }
 
 private case class DomainCubes(domain: Domain) extends Cubes {
-  override def refs = domain.facts.map(f ⇒ CubeRef(f.name, f.dataType))
+  override def refs = domain.facts.all.map(f ⇒ CubeRef(f.name, f.dataType)).toSet
   override def get[T](ref: CubeRef[T]) = {
-    domain.fact(ref.name).filter(_.dataType == ref.dataType).map(_.data.asInstanceOf[Cube[T]])
+    domain.facts.get(ref.name).filter(_.dataType == ref.dataType).map(_.data.asInstanceOf[Cube[T]])
   }
 }
 

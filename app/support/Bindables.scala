@@ -7,18 +7,18 @@ import cube._
 import models._
 import domain._
 
-sealed trait PointDefinition extends (Set[FudimDimension] ⇒ Point) {
-  def apply(domain: Domain): Point = apply(domain.dimensions)
+sealed trait PointDefinition extends (Iterable[Dimension] ⇒ Point) {
+  def apply(domain: Domain): Point = apply(domain.dimensions.all)
   def apply(fact: Fact[_]): Point = apply(fact.dimensions)
   private[support] def raw: Iterable[(String, Long)]
 }
 object PointDefinition {
   implicit def apply(p: Point): PointDefinition = new PointDefinition {
-    override def apply(ds: Set[FudimDimension]) = p
+    override def apply(ds: Iterable[Dimension]) = p
     override def raw = p.coordinates.map(c ⇒ (c.dimension.name, c.id))
   }
   def empty = new PointDefinition {
-    override def apply(ds: Set[FudimDimension]) = Point.empty
+    override def apply(ds: Iterable[Dimension]) = Point.empty
     override def raw = Map.empty
   }
 }
@@ -33,7 +33,7 @@ object Bindables {
           flatMap(v ⇒ v._2.map((v._1, _))).map(v ⇒ (dec(v._1), dec(v._2))).
           flatMap(v ⇒ long(v._2).map((v._1, _)))
         val definition = new PointDefinition {
-          override def apply(ds: Set[Dimension]) = {
+          override def apply(ds: Iterable[Dimension]) = {
             rawValues.
               flatMap(v ⇒ ds.find(_.name == v._1).flatMap(_.get(v._2))).
               foldLeft(Point.empty)(_ + _)

@@ -18,7 +18,7 @@ trait Fact[T] {
   def aggregation: Aggregation[T]
   def aggregation_=(aggr: Aggregation[T]): Unit @tx
 
-  def dimensions: Set[FudimDimension] = data.dimensions.map { case d: FudimDimension ⇒ d }
+  def dimensions: Set[Dimension] = data.dimensions
   def addDimension(moveTo: Coordinate): Unit @tx
   def removeDimension(keepAt: Coordinate): Unit @tx
 }

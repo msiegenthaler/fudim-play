@@ -6,7 +6,7 @@ import play.api.mvc._
 import models._
 import models.playbinding.DomainRepo
 
-class RequestWithDomain[A](val fudimDomain: FudimDomain, request: Request[A]) extends WrappedRequest[A](request)
+class RequestWithDomain[A](val fudimDomain: Domain, request: Request[A]) extends WrappedRequest[A](request)
 case class DomainAction(name: String) extends ActionBuilder[RequestWithDomain] {
   protected override def invokeBlock[A](request: Request[A], block: (RequestWithDomain[A]) ⇒ Future[SimpleResult]) = {
     DomainRepo.get(name).map(domain ⇒ block(new RequestWithDomain(domain, request))).
@@ -14,7 +14,7 @@ case class DomainAction(name: String) extends ActionBuilder[RequestWithDomain] {
   }
 }
 
-class RequestWithDimension[A](val dimension: FudimDimension, fudimDomain: FudimDomain, request: Request[A])
+class RequestWithDimension[A](val dimension: FudimDimension, fudimDomain: Domain, request: Request[A])
   extends RequestWithDomain[A](fudimDomain, request)
 case class DimensionAction(domainName: String, name: String) extends ActionBuilder[RequestWithDimension] {
   protected override def invokeBlock[A](request: Request[A], block: (RequestWithDimension[A]) ⇒ Future[SimpleResult]) = {
@@ -27,7 +27,7 @@ case class DimensionAction(domainName: String, name: String) extends ActionBuild
   }
 }
 
-class RequestWithFact[A](val fact: FudimFact[_], fudimDomain: FudimDomain, request: Request[A])
+class RequestWithFact[A](val fact: FudimFact[_], fudimDomain: Domain, request: Request[A])
   extends RequestWithDomain[A](fudimDomain, request)
 case class FactAction(domainName: String, name: String) extends ActionBuilder[RequestWithFact] {
   protected override def invokeBlock[A](request: Request[A], block: (RequestWithFact[A]) ⇒ Future[SimpleResult]) = {

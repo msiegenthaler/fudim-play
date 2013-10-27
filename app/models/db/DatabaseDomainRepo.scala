@@ -7,7 +7,7 @@ import base._
 import domain._
 import support.AnormDb
 
-trait DatabaseDomainRepo extends FudimDomainRepo {
+trait DatabaseDomainRepo extends DomainRepo {
   protected def versioner: Versioner
   protected def database: SqlDatabase
   protected val db = new AnormDb(database)
@@ -30,11 +30,11 @@ trait DatabaseDomainRepo extends FudimDomainRepo {
       get(id).getOrElse(throw new IllegalStateException(s"Could not insert domain $name"))
     }
   }
-  def remove(domain: FudimDomain) = {
+  def remove(domain: Domain) = {
     db.delete(SQL("delete from domain where id={id}").on("id" -> domain.id.id))
   }
 
-  private val domain: RowParser[FudimDomain] = long("id").map(DomainId) ~ str("name") ~ long("version") map {
+  private val domain: RowParser[Domain] = long("id").map(DomainId) ~ str("name") ~ long("version") map {
     case id ~ name ~ versionId ⇒ new DatabaseDomain(id, name, Version(versionId), dimensionRepo(id), factRepo(id))
   }
 
@@ -42,7 +42,7 @@ trait DatabaseDomainRepo extends FudimDomainRepo {
   protected def factRepo(domain: DomainId): FudimFactRepo
 
   private class DatabaseDomain(val id: DomainId, val name: String, val domainVersion: Version,
-    val dimensionRepo: FudimDimensionRepo, val factRepo: FudimFactRepo) extends FudimDomain {
+    val dimensionRepo: FudimDimensionRepo, val factRepo: FudimFactRepo) extends Domain {
     override def version = (List(domainVersion) ++ dimensionRepo.all.map(_.version) ++ factRepo.all.map(_.version)).max
     override def equals(o: Any) = o match {
       case o: DatabaseDomain ⇒ id == o.id

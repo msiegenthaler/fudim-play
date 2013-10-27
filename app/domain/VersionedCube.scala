@@ -16,8 +16,15 @@ trait VersionedCube[T] extends Cube[T] {
 }
 
 object VersionedCube {
+  def fixed[T](cube: Cube[T], version: Version): VersionedCube[T] = FixedVersionCube(cube, version)
   def mapped[A, B](cube: VersionedCube[A], f: A ⇒ B): VersionedCube[B] = MappedCube(cube, f)
 
+  private case class FixedVersionCube[T](override val underlying: Cube[T], version: Version)
+    extends AbstractDecoratedCube[T] with VersionedCube[T] {
+    override type Self = FixedVersionCube[T]
+    override type Underlying = Cube[T]
+    override def wrap(c: underlying.Self) = FixedVersionCube[T](c, version)
+  }
   private case class MappedCube[A, B](cube: VersionedCube[A], f: A ⇒ B) extends VersionedCube[B] {
     override type Self = VersionedCube[B]
     override def version = cube.version

@@ -1,4 +1,4 @@
-@(domain: FudimDomain, dim: cube.Dimension, otherDims: List[cube.Dimension], filterPoint: cube.Point, facts: List[FudimFact[_]], otherFacts: List[FudimFact[_]], linkFun: cube.Dimension => Option[cube.Coordinate] => String, invert: Boolean)
+@(domain: Domain, dim: cube.Dimension, otherDims: List[cube.Dimension], filterPoint: cube.Point, facts: List[Fact[_]], otherFacts: List[Fact[_]], linkFun: cube.Dimension => Option[cube.Coordinate] => String, invert: Boolean)
 
 @import helper._
 @import cube._

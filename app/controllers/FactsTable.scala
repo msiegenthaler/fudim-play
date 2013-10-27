@@ -7,7 +7,7 @@ import cube._
 object FactsTable extends Controller {
 
   def index(domainName: String) = DomainAction(domainName) { req ⇒
-    req.fudimDomain.dimensions.headOption.map { dim ⇒
+    req.dimensions.all.headOption.map { dim ⇒
       Redirect(routes.FactsTable.show(domainName, dim.name, Nil))
     }.getOrElse(NotFound)
   }
@@ -15,12 +15,13 @@ object FactsTable extends Controller {
   def show(domainName: String, dimensionName: String, factNames: List[String], restrictTo: PointDefinition, invert: Boolean) = DimensionAction(domainName, dimensionName) { req ⇒
     val dimension = req.dimension
     val domain = req.fudimDomain
-    val factOpts = factNames.distinct.map(domain.factRepo.get)
+    val factOpts = factNames.distinct.map(domain.facts.get)
     if (factOpts.contains(None)) NotFound
     else {
       val facts = factOpts.map(_.get)
-      val otherFacts = (domain.factRepo.all.toSet -- facts.toSet).filter(_.dimensions.contains(dimension))
-      val filterableDims = facts.map(_.dimensions).foldLeft(domain.dimensions - dimension)(_.intersect(_))
+      val otherFacts = (req.facts.all.toSet -- facts.toSet).filter(_.dimensions.contains(dimension))
+      val allDims: Set[Dimension] = req.dimensions.all.toSet
+      val filterableDims = facts.map(_.dimensions).foldLeft(allDims - dimension)(_.intersect(_))
       val point = restrictTo(domain)
       if (!point.on.filterNot(filterableDims.contains).isEmpty) BadRequest
       else {

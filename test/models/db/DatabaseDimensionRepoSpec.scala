@@ -7,11 +7,11 @@ import support._
 
 class DatabaseDimensionRepoSpec extends Specification {
   trait repo extends withModel with withDbVersioner {
-    def domain: FudimDomain = new FudimDomain {
+    def domain: Domain = new Domain {
       override def id = DomainId(123)
       override def name = "test-domain"
-      override def dimensionRepo = repo.this.repo
-      override def factRepo = ???
+      override def dimensions = repo.this.repo
+      override def facts = ???
       override def version = ???
     }
     val repo = new DatabaseDimensionRepo with FudimResources {

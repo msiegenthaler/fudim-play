@@ -12,10 +12,10 @@ import play.api.Logger
 import play.api.libs.json._
 import support.AnormDb
 
-trait DatabaseFactRepo extends FudimFactRepo {
+trait DatabaseFactRepo extends FactRepo {
   protected def database: SqlDatabase
   protected val db = new AnormDb(database)
-  protected def domain: FudimDomain
+  protected def domain: Domain
   protected def dataTypeRepo = FudimDataTypes
   protected def jsonFormulaRepo: JsonFormulaMapperRepository
   protected def cubeDataStoreRepo: CopyableCubeDataStoreRepo
@@ -86,7 +86,7 @@ trait DatabaseFactRepo extends FudimFactRepo {
     }
   }
 
-  protected final class DatabaseFact[T](val id: Long, val name: String, ib: FactBackend[T], iv: Version) extends FudimFact[T] {
+  protected final class DatabaseFact[T](val id: Long, val name: String, ib: FactBackend[T], iv: Version) extends Fact[T] {
     private[this] var _state: (Version, FactBackend[T]) = (iv, ib)
     def backend = synchronized(_state._2)
     def version = synchronized(_state._1)

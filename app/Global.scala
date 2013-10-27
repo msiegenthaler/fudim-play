@@ -25,26 +25,26 @@ object InitialData {
     Logger.trace("Generating example data..")
     val example = DomainRepo.create("example")
 
-    val monat = example.dimensionRepo.create("Monat")
+    val monat = example.dimensions.create("Monat")
     List("Jan", "Feb", "Mar", "Apr", "Mai").
       foreachTx(monat.add)
 
-    val projekt = example.dimensionRepo.create("Projekt")
+    val projekt = example.dimensions.create("Projekt")
     List("BZ", "AB", "GG").foreachTx(projekt.add)
 
-    val kostenart = example.dimensionRepo.create("Kostenart")
+    val kostenart = example.dimensions.create("Kostenart")
     val ka_ma = kostenart.add("Mitarbeiter")
     val ka_ext = kostenart.add("Externe")
     val ka_mat = kostenart.add("Material")
     val ka_gk = kostenart.add("Gemeinkosten")
 
-    val umsatzFact = example.factRepo.createDatabaseBacked("Umsatz", FudimDataTypes.integer, Set(monat, projekt), Aggregation.sum)
+    val umsatzFact = example.facts.createDatabaseBacked("Umsatz", FudimDataTypes.integer, Set(monat, projekt), Aggregation.sum)
     val umsatz = umsatzFact.editor.get
-    val kostenFact = example.factRepo.createDatabaseBacked("Kosten", FudimDataTypes.integer, Set(monat, projekt, kostenart), Aggregation.sum)
+    val kostenFact = example.facts.createDatabaseBacked("Kosten", FudimDataTypes.integer, Set(monat, projekt, kostenart), Aggregation.sum)
     val kosten = kostenFact.editor.get
 
     val gewinnFormula = FudimFormulas.subtract("Umsatz" :: "Kosten" :: Nil, monat :: projekt :: Nil)
-    val gewinnFact = example.factRepo.createFormulaBased("Gewinn", FudimDataTypes.integer, gewinnFormula, Aggregation.sum)
+    val gewinnFact = example.facts.createFormulaBased("Gewinn", FudimDataTypes.integer, gewinnFormula, Aggregation.sum)
 
     val rnd = new Random(1)
     monat.all.foreachTx { m ⇒

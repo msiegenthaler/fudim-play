@@ -120,7 +120,7 @@ trait DatabaseFactRepo extends FactRepo {
     def config: JsValue
 
     def dataType: FudimDataType[T]
-    def data: Cube[T]
+    def data: VersionedCube[T]
     def editor: Option[CubeEditor[T]]
     def aggregation: Aggregation[T]
 
@@ -179,7 +179,7 @@ trait DatabaseFactRepo extends FactRepo {
     override def factType = FormulaFactBackend.key
     override val data = {
       val cube = FormulaCube(formula, domain.cubes)
-      aggregation.aggregator.map(CubeDecorator(cube, _)).getOrElse(cube)
+      aggregation.onCube(cube)
     }
     override def editor = None
     def aggregation(aggregation: Aggregation[T]) = copy(aggregation = aggregation)

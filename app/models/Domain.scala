@@ -22,7 +22,7 @@ trait Domain {
 private case class DomainCubes(domain: Domain) extends Cubes {
   override def refs = domain.facts.all.map(f ⇒ CubeRef(f.name, f.dataType)).toSet
   override def get[T](ref: CubeRef[T]) = {
-    domain.facts.get(ref.name).filter(_.dataType == ref.dataType).map(_.data.asInstanceOf[Cube[T]])
+    domain.facts.get(ref.name).filter(_.dataType == ref.dataType).map({ case c: VersionedCube[T] ⇒ c })
   }
 }
 

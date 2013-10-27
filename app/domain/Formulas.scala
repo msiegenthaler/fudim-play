@@ -28,6 +28,7 @@ object PointFoldFormula {
             f(values)
           } else None
         }
+        override def version(at: Point) = deps.map(_.version(at)).max
       }
     }
   }

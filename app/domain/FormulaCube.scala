@@ -14,11 +14,12 @@ trait Formula[T] {
 /** Formula that is 'connected' to the cubes it depends on. */
 trait BoundFormula[T] {
   def get(at: Point): Option[T]
+  def version(at: Point): Version
 }
 
 /** Cube based on a calculation. */
 object FormulaCube {
-  def apply[T](formula: Formula[T], cubes: Cubes): Cube[T] = FormulaCube(formula, formula.bind(cubes))
+  def apply[T](formula: Formula[T], cubes: Cubes): VersionedCube[T] = FormulaCube(formula, formula.bind(cubes))
 
   def unapply[T](cube: Cube[T]): Option[Formula[T]] = cube match {
     case FormulaCube(formula, _, _, _) ⇒ Some(formula)
@@ -41,11 +42,14 @@ object FormulaCube {
     }
   }
 
-  private case class FormulaCube[T](formula: Formula[T], bound: BoundFormula[T], slice: Point = Point.empty, filters: DimensionFilter = Map.empty) extends AbstractCube[T] {
-    override protected type Self = FormulaCube[T]
+  private case class FormulaCube[T](formula: Formula[T], bound: BoundFormula[T], slice: Point = Point.empty, filters: DimensionFilter = Map.empty)
+    extends AbstractCube[T] with VersionedCube[T] {
+    override type Self = FormulaCube[T]
     override protected def derive(slice: Point = slice, filters: DimensionFilter = filters) = copy(slice = slice, filters = filters)
     override def get(at: Point) = bound.get(at)
     override def dense = allPoints.map(p ⇒ (p, bound.get(p)))
+    override def version = bound.version(slice)
+    override def version(at: Point) = bound.version(at)
     override val allDimensions = formula.dimensions
   }
 }

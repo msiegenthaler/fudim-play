@@ -6,7 +6,7 @@ case class CubeRef[T](name: String, dataType: DataType[T])
 
 trait Cubes {
   def refs: Set[CubeRef[_]]
-  def get[T](ref: CubeRef[T]): Option[Cube[T]]
+  def get[T](ref: CubeRef[T]): Option[VersionedCube[T]]
 
   /** Narrows down this cube to only contain the cubes in refs. */
   def narrow(to: Traversable[CubeRef[_]]): Option[Cubes] = {

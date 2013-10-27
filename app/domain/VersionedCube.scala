@@ -33,3 +33,25 @@ object VersionedCube {
     protected def wrap(cube: VersionedCube[A]): Self = copy(cube = cube)
   }
 }
+
+object VersionedCubeDecorator {
+  def apply[T](cube: VersionedCube[T], decorator: CubeDecorator[T]): CubeDecoratorCube[T] with VersionedCube[T] = {
+    new VersionedCubeWithDecorator(cube, decorator)
+  }
+  def unapply[T](cube: VersionedCube[T]): Option[(VersionedCube[T], CubeDecorator[T])] = cube match {
+    case c: VersionedCubeWithDecorator[T] ⇒ Some(c.underlying, c.decorator)
+    case _ ⇒ None
+  }
+
+  private class VersionedCubeWithDecorator[T](val underlying: VersionedCube[T], val decorator: CubeDecorator[T])
+    extends CubeDecoratorCube[T] with AbstractDecoratedCube[T] with VersionedCube[T] {
+    override type Self = VersionedCubeWithDecorator[T]
+    override type Underlying = Cube[T]
+    override protected def wrap(c: underlying.Self) = new VersionedCubeWithDecorator(c, decorator)
+    override def version = underlying.version
+    override def get(at: Point) = decorator.get(underlying)(at)
+    override def dense = decorator.dense(underlying)
+    override def sparse = decorator.sparse(underlying)
+    override def toString = s"VersionedCubeWithDecorator($underlying, $decorator)"
+  }
+}

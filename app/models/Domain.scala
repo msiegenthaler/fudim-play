@@ -18,7 +18,7 @@ trait Domain {
   def dimensions = dimensionRepo.all.toSet
   def dimension(name: String) = dimensionRepo.get(name)
 
-  def factRepo: FudimFactRepo
+  def factRepo: FactRepo
   def facts = factRepo.all.toSet
   def fact(name: String) = factRepo.get(name)
 

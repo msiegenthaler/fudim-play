@@ -7,18 +7,18 @@ import cube._
 import models._
 import domain._
 
-sealed trait PointDefinition extends (Set[Dimension] ⇒ Point) {
+sealed trait PointDefinition extends (Set[FudimDimension] ⇒ Point) {
   def apply(domain: Domain): Point = apply(domain.dimensions)
   def apply(fact: Fact[_]): Point = apply(fact.dimensions)
   private[support] def raw: Iterable[(String, Long)]
 }
 object PointDefinition {
   implicit def apply(p: Point): PointDefinition = new PointDefinition {
-    override def apply(ds: Set[Dimension]) = p
+    override def apply(ds: Set[FudimDimension]) = p
     override def raw = p.coordinates.map(c ⇒ (c.dimension.name, c.id))
   }
   def empty = new PointDefinition {
-    override def apply(ds: Set[Dimension]) = Point.empty
+    override def apply(ds: Set[FudimDimension]) = Point.empty
     override def raw = Map.empty
   }
 }

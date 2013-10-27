@@ -27,7 +27,7 @@ case class DimensionAction(domainName: String, name: String) extends ActionBuild
   }
 }
 
-class RequestWithFact[A](val fact: FudimFact[_], fudimDomain: Domain, request: Request[A])
+class RequestWithFact[A](val fact: Fact[_], fudimDomain: Domain, request: Request[A])
   extends RequestWithDomain[A](fudimDomain, request)
 case class FactAction(domainName: String, name: String) extends ActionBuilder[RequestWithFact] {
   protected override def invokeBlock[A](request: Request[A], block: (RequestWithFact[A]) ⇒ Future[SimpleResult]) = {

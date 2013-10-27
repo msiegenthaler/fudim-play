@@ -48,7 +48,7 @@ object Facts extends Controller {
   def removeDimension(domainName: String, factName: String, dimensionName: String) = modFactDim(domainName, factName, dimensionName) { (fact, keepAt) ⇒
     fact.removeDimension(keepAt)
   }
-  private def modFactDim(domainName: String, factName: String, dimensionName: String)(f: (FudimFact[_], Coordinate) ⇒ Unit @tx) = FactAction(domainName, factName) { req ⇒
+  private def modFactDim(domainName: String, factName: String, dimensionName: String)(f: (Fact[_], Coordinate) ⇒ Unit @tx) = FactAction(domainName, factName) { req ⇒
     val r = for {
       dimension ← req.fudimDomain.dimensionRepo.get(dimensionName).toSuccess(s"Dimension $dimensionName not found")
       coord ← dimension.all.headOption.toSuccess(s"Dimension $dimensionName has no values")
@@ -66,7 +66,7 @@ object Facts extends Controller {
   }
 
   def setAggregation(domainName: String, factName: String) = FactAction(domainName, factName) { implicit req ⇒
-    def changeAggr[T](fact: FudimFact[T], aggrName: String) = {
+    def changeAggr[T](fact: Fact[T], aggrName: String) = {
       val aggr = fact.dataType.aggregations.find(_.name == aggrName).getOrElse(Aggregation.none)
       Fudim.execTx {
         fact.aggregation = aggr
@@ -84,7 +84,7 @@ object Facts extends Controller {
       getOrElse(NotFound)
   }
   def save(domainName: String, factName: String, at: PointDefinition) = FactAction(domainName, factName) { req ⇒
-    def setValue[T](fact: FudimFact[T], value: String) = fact.editor.map { editor ⇒
+    def setValue[T](fact: Fact[T], value: String) = fact.editor.map { editor ⇒
       val tpe = fact.dataType
       tpe.parse(value).map { v ⇒
         try {

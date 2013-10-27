@@ -16,7 +16,7 @@ class DatabaseDomainRepoSpec extends Specification {
       def remove(name: String) = ???
       def all = Nil
     }
-    def mkFactRepo = new FudimFactRepo {
+    def mkFactRepo = new FactRepo {
       def get(name: String) = ???
       def all = Nil
       def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]) = ???

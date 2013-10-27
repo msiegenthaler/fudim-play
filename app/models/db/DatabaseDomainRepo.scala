@@ -39,10 +39,10 @@ trait DatabaseDomainRepo extends DomainRepo {
   }
 
   protected def dimensionRepo(domain: DomainId): FudimDimensionRepo
-  protected def factRepo(domain: DomainId): FudimFactRepo
+  protected def factRepo(domain: DomainId): FactRepo
 
   private class DatabaseDomain(val id: DomainId, val name: String, val domainVersion: Version,
-    val dimensionRepo: FudimDimensionRepo, val factRepo: FudimFactRepo) extends Domain {
+    val dimensionRepo: FudimDimensionRepo, val factRepo: FactRepo) extends Domain {
     override def version = (List(domainVersion) ++ dimensionRepo.all.map(_.version) ++ factRepo.all.map(_.version)).max
     override def equals(o: Any) = o match {
       case o: DatabaseDomain ⇒ id == o.id

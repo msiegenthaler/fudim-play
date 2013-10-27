@@ -4,7 +4,7 @@ import base._
 import cube._
 import domain._
 
-trait FudimFact[T] {
+trait Fact[T] {
   def name: String
   /** Version of the fact itself (does not include the data, for that use data.version). */
   def version: Version
@@ -23,12 +23,12 @@ trait FudimFact[T] {
   def removeDimension(keepAt: Coordinate): Unit @tx
 }
 
-trait FudimFactRepo {
-  def get(name: String): Option[FudimFact[_]]
-  def all: Iterable[FudimFact[_]]
+trait FactRepo {
+  def get(name: String): Option[Fact[_]]
+  def all: Iterable[Fact[_]]
 
-  def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]): FudimFact[T] @tx
-  def createFormulaBased[T](name: String, dataType: FudimDataType[T], formula: Formula[T], aggregation: Aggregation[T]): FudimFact[T] @tx
+  def createDatabaseBacked[T](name: String, dataType: FudimDataType[T], dimensions: Set[Dimension], aggregation: Aggregation[T]): Fact[T] @tx
+  def createFormulaBased[T](name: String, dataType: FudimDataType[T], formula: Formula[T], aggregation: Aggregation[T]): Fact[T] @tx
 
   def remove(name: String): Unit @tx
 }

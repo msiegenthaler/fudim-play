@@ -78,9 +78,12 @@ object Facts extends Controller {
   }
 
   def get(domainName: String, factName: String, at: PointDefinition) = FactAction(domainName, factName) { req ⇒
-    req.fact.rendered.get(at(req.fact)).
-      map(v ⇒ Ok(v)).
-      getOrElse(NotFound)
+    val point = at(req.fact)
+    HttpCache.cached(req, req.fact.data.version(point)) {
+      req.fact.rendered.get(point).
+        map(v ⇒ Ok(v)).
+        getOrElse(NotFound)
+    }
   }
   def save(domainName: String, factName: String, at: PointDefinition) = FactAction(domainName, factName) { req ⇒
     def setValue[T](fact: Fact[T], value: String) = fact.editor.map { editor ⇒

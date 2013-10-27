@@ -137,7 +137,7 @@ trait DatabaseFactRepo extends FactRepo {
 
   private case class DataStoreFactBackend[T](dataType: FudimDataType[T], cds: CopyableCubeDataStore[T], aggregation: Aggregation[T]) extends FactBackend[T] {
     override def factType = DataStoreFactBackend.key
-    override val data = aggregation.aggregator.map(CubeDecorator(cds.cube, _)).getOrElse(cds.cube)
+    override val data = aggregation.onCube(cds.cube)
     override val editor = Some(cds.editor)
 
     override def aggregation(aggregation: Aggregation[T]) = copy(aggregation = aggregation)

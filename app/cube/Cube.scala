@@ -42,6 +42,19 @@ trait DecoratedCube[T] extends Cube[T] {
   val underlying: Underlying
 }
 
+trait AbstractDecoratedCube[T] extends DecoratedCube[T] {
+  protected def wrap(c: underlying.Self): Self
+  override def get(at: Point) = underlying.get(at)
+  override def dense = underlying.dense
+  override def sparse = underlying.sparse
+  override def slice = underlying.slice
+  override def dimensions = underlying.dimensions
+  override def raw = wrap(underlying.raw)
+  override def slice(to: Point) = wrap(underlying.slice(to))
+  override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = wrap(underlying.dice(dimension, filter))
+  override def toString = underlying.toString
+}
+
 object Cube {
   /** Removes all decoration from a cube. */
   def undecorate[T](cube: Cube[T]): Cube[T] = cube match {

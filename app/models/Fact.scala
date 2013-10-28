@@ -9,7 +9,7 @@ trait Fact[T] {
   /** Version of the fact itself (does not include the data, for that use data.version). */
   def version: Version
 
-  def data: Cube[T]
+  def data: VersionedCube[T]
   def dataType: FudimDataType[T]
   def rendered = data.map(dataType.render)
 

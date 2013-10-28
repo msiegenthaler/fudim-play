@@ -12,7 +12,10 @@ class FormulaCubeSpec extends Specification {
         CubeRef("product", intType) -> productCube,
         CubeRef("sum", intType) -> sumCube)
       def refs = cs.keySet
-      def get[T](ref: CubeRef[T]) = cs.get(ref).map(_.asInstanceOf[Cube[T]])
+      def get[T](ref: CubeRef[T]) = cs.get(ref).map {
+        case c: VersionedCube[T] ⇒ c
+        case cube: Cube[T] ⇒ VersionedCube.fixed(cube, Version(0))
+      }
     }
     def additionFormula(of: Seq[String], over: Traversable[Dimension]) = {
       def sum(vs: Traversable[Option[Int]]): Option[Int] =

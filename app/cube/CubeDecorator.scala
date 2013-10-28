@@ -11,10 +11,6 @@ trait CubeDecorator[T] {
   def sparse(decoratee: Cube[T]) = decoratee.sparse
 }
 
-private[cube] trait WrappedCubeDecorator[T] extends CubeDecorator[T] {
-  protected[cube] def unwrap: CubeDecorator[T]
-}
-
 trait CubeDecoratorCube[T] extends DecoratedCube[T] {
   protected[cube] val decorator: CubeDecorator[T]
 }
@@ -22,7 +18,7 @@ trait CubeDecoratorCube[T] extends DecoratedCube[T] {
 object CubeDecorator {
   def apply[T](cube: Cube[T], decorator: CubeDecorator[T]): CubeDecoratorCube[T] = new CubeWithDecorator(cube, decorator)
   def unapply[T](cube: Cube[T]): Option[(Cube[T], CubeDecorator[T])] = cube match {
-    case c: CubeDecoratorCube[T] ⇒ Some(c.underlying, unwrap(c.decorator))
+    case c: CubeDecoratorCube[T] ⇒ Some(c.underlying, c.decorator)
     case _ ⇒ None
   }
 
@@ -37,12 +33,6 @@ object CubeDecorator {
     case c ⇒ c
   }
 
-  /** Unwraps cube decorators. */
-  private def unwrap[T](d: CubeDecorator[T]): CubeDecorator[T] = d match {
-    case d: WrappedCubeDecorator[T] ⇒ unwrap(d.unwrap)
-    case _ ⇒ d
-  }
-
   def json(decoratorRepo: JsonCubeDecoratorMapperRepository, cubeRepo: JsonCubeMapperRepository): JsonCubeMapper = new JsonCubeMapper {
     override val id = "cubeDecorator"
     override def parser = json ⇒ {
@@ -54,25 +44,19 @@ object CubeDecorator {
     override def serializer = {
       case cube: CubeDecoratorCube[_] ⇒
         for {
-          dec ← decoratorRepo.serialize(unwrap(cube.decorator))
+          dec ← decoratorRepo.serialize(cube.decorator)
           und ← cubeRepo.serialize(cube.underlying)
         } yield Json.obj("decorator" -> dec, "cube" -> und)
     }
   }
 
-  private class CubeWithDecorator[T](val underlying: Cube[T], val decorator: CubeDecorator[T]) extends CubeDecoratorCube[T] {
+  private class CubeWithDecorator[T](val underlying: Cube[T], val decorator: CubeDecorator[T]) extends CubeDecoratorCube[T] with AbstractDecoratedCube[T] {
     override protected type Self = CubeWithDecorator[T]
     override type Underlying = Cube[T]
-    private def wrap(c: Cube[T]) = new CubeWithDecorator(c, decorator)
-
+    override protected def wrap(c: underlying.Self) = new CubeWithDecorator(c, decorator)
     override def get(at: Point) = decorator.get(underlying)(at)
     override def dense = decorator.dense(underlying)
     override def sparse = decorator.sparse(underlying)
-    override def slice = underlying.slice
-    override def dimensions = underlying.dimensions
-    override def raw = wrap(underlying.raw)
-    override def slice(to: Point) = wrap(underlying.slice(to))
-    override def dice(dimension: Dimension, filter: Coordinate ⇒ Boolean) = wrap(underlying.dice(dimension, filter))
     override def toString = s"CubeWithDecorator($underlying, $decorator)"
   }
 }

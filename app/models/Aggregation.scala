@@ -5,10 +5,16 @@ import scalaz._
 import Scalaz._
 import _root_.play.api.libs.json._
 import cube._
+import domain._
 import support.ObjectJsonMapper
 import support.JsonMapper
 
 class Aggregation[T] private (val name: String, val aggregator: Option[Aggregator[T]]) {
+  def onCube(cube: VersionedCube[T]): VersionedCube[T] = aggregator match {
+    case Some(aggr) ⇒ VersionedCubeDecorator(cube, aggr)
+    case None ⇒ cube
+  }
+
   override def toString = name
 }
 

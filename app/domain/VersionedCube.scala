@@ -3,7 +3,7 @@ package domain
 import cube._
 
 /** Cube that tracks a version for each value. */
-trait VersionedCube[T] extends Cube[T] {
+trait VersionedCube[+T] extends Cube[T] {
   type Self <: VersionedCube[T]
 
   /** Version of the newest element in this cube (view). Slice, dice and after are respected. */

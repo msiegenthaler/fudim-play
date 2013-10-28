@@ -5,14 +5,14 @@ import cube._
 import support.{ JsonMapper, JsonMapperRepository }
 
 /** Calculates points based on data in other cubes. */
-trait Formula[T] {
+trait Formula[+T] {
   /** The resulting function must be pure and must only depend on data in the referenced cubes. */
   def bind(cubes: Cubes): BoundFormula[T]
   def dimensions: Set[Dimension]
   def references: Iterable[CubeRef[_]]
 }
 /** Formula that is 'connected' to the cubes it depends on. */
-trait BoundFormula[T] {
+trait BoundFormula[+T] {
   def get(at: Point): Option[T]
   def version(at: Point): Version
 }

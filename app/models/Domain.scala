@@ -32,5 +32,5 @@ trait DomainRepo {
   def get(id: DomainId): Option[Domain]
 
   def create(name: String): Domain @tx
-  def remove(id: Domain): Unit @tx
+  def remove(id: DomainId): Unit @tx
 }

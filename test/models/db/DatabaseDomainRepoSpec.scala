@@ -57,32 +57,32 @@ class DatabaseDomainRepoSpec extends Specification {
     "delete the domain" in new repo {
       val d = exec(repo.create("Test"))
       repo.get("Test") must beSome(d)
-      exec(repo.remove(d))
+      exec(repo.remove(d.id))
       repo.get("Test") must beNone
     }
     "do nothing if the domain does not exist" in new repo {
       val d = exec(repo.create("Test"))
       repo.get("Test") must beSome(d)
-      exec(repo.remove(d))
+      exec(repo.remove(d.id))
       repo.get("Test") must beNone
-      exec(repo.remove(d))
+      exec(repo.remove(d.id))
       repo.get("Test") must beNone
     }
   }
   "DatabaseDomainRepo.all" should {
     "be empty if no domains have been created" in new repo {
-      execTx(repo.all.foreachTx(repo.remove))
+      execTx(repo.all.map(_.id).foreachTx(repo.remove))
 
       repo.all must beEmpty
     }
     "list one domain if one has been created" in new repo {
-      execTx(repo.all.foreachTx(repo.remove))
+      execTx(repo.all.map(_.id).foreachTx(repo.remove))
 
       val d1 = exec(repo.create("Test"))
       repo.all.toSet must_== Set(d1)
     }
     "list all domains" in new repo {
-      execTx(repo.all.foreachTx(repo.remove))
+      execTx(repo.all.map(_.id).foreachTx(repo.remove))
 
       val ds = (1 to 10).map(i ⇒ exec(repo.create("Test " + i))).toSet
       repo.all.toSet must_== ds

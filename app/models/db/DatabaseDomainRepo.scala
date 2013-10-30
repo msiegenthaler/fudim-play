@@ -30,8 +30,8 @@ trait DatabaseDomainRepo extends DomainRepo {
       get(id).getOrElse(throw new IllegalStateException(s"Could not insert domain $name"))
     }
   }
-  def remove(domain: Domain) = {
-    db.delete(SQL("delete from domain where id={id}").on("id" -> domain.id.id))
+  def remove(id: DomainId) = {
+    db.delete(SQL("delete from domain where id={id}").on("id" -> id.id))
   }
 
   private val domain: RowParser[Domain] = long("id").map(DomainId) ~ str("name") ~ long("version") map {

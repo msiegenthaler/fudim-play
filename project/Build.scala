@@ -16,7 +16,7 @@ object ApplicationBuild extends Build {
     "com.github.nscala-time" %% "nscala-time" % "0.4.0")
 
   val main = play.Project(appName, appVersion, appDependencies).settings(
-    scalaVersion := "2.10.2",
+    scalaVersion := "2.10.3",
 
     autoCompilerPlugins := true,
     libraryDependencies += compilerPlugin("org.scala-lang.plugins" % "continuations" % scalaVersion.value),

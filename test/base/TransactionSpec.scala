@@ -2,6 +2,7 @@ package base
 
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
+import scala.util.{ Try, Success, Failure }
 
 class TransactionSpec extends Specification {
   trait txs extends Scope {
@@ -19,15 +20,15 @@ class TransactionSpec extends Specification {
         nv
       }
       def setStateToThis = execute {
-        case Txs(v) ⇒ (Txs(state), Right(()))
+        case Txs(v) ⇒ (Txs(state), Success(()))
       }
       def setThisToState = execute {
         case Txs(v) ⇒
           state = v
-          (Txs(v), Right(()))
+          (Txs(v), Success(()))
       }
       def throwException = executeSafe { _ ⇒ throw MyException() }
-      def throwException2 = execute { _ ⇒ (Txs(666), Left(MyException())) }
+      def throwException2 = execute { _ ⇒ (Txs(666), Failure(MyException())) }
     }
     case class MyException() extends Exception
 
@@ -35,7 +36,7 @@ class TransactionSpec extends Specification {
 
     def run[A](tx: Transaction[A], initialValue: Int = 0) = {
       val (s, r) = tx.run(Txs(initialValue))
-      (s, r.fold(throw _, identity))
+      (s, r.get)
     }
 
     def assertionAction(p: Txs ⇒ Unit): Transaction[Unit] = Transaction.on {
@@ -44,16 +45,16 @@ class TransactionSpec extends Specification {
   }
 
   "Transaction" should {
-    "catch exceptions that occur in ressources.executeSafe and return them as Left()" in new txs {
+    "catch exceptions that occur in ressources.executeSafe and return them as Failure()" in new txs {
       val tx = Res.throwException
       val (s, v) = tx.run(Txs())
-      v must_== Left(MyException())
+      v must_== Failure(MyException())
       s must_== Txs()
     }
-    "catch exceptions that occur in ressources.execute and return them as Left()" in new txs {
+    "catch exceptions that occur in ressources.execute and return them as Failure()" in new txs {
       val tx = Res.throwException2
       val (s, v) = tx.run(Txs())
-      v must_== Left(MyException())
+      v must_== Failure(MyException())
       s must_== Txs(666)
     }
     "be executable more than once" in new txs {
@@ -89,10 +90,10 @@ class TransactionSpec extends Specification {
         v2 must_== v
       }
     }
-    "catch exceptions that occur in the bodies and return them as Left()" in new txs {
+    "catch exceptions that occur in the bodies and return them as Failure()" in new txs {
       val tx = Transaction.pure(throw MyException())
       val (s, v) = tx.run(Txs())
-      v must_== Left(MyException())
+      v must_== Failure(MyException())
     }
   }
 
@@ -132,13 +133,13 @@ class TransactionSpec extends Specification {
     "short circuit on 'safe' exception (not execute the following Txs)" in new txs {
       val tx = Res.set(6) >> Res.throwException >> Res.increment
       val (_, v) = tx.run(Txs())
-      v must_== Left(MyException())
+      v must_== Failure(MyException())
       Res.value must_== 6
     }
     "short circuit on exception (not execute the following Txs)" in new txs {
       val tx = Res.set(6) >> Res.throwException2 >> Res.increment
       val (_, v) = tx.run(Txs())
-      v must_== Left(MyException())
+      v must_== Failure(MyException())
       Res.value must_== 6
     }
     "return the state before the exception on safe ressources" in new txs {

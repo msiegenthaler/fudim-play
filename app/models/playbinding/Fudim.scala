@@ -8,6 +8,7 @@ import play.api.Play.current
 import base._
 import play.api.Logger
 import domain.{ Version, VersionerState }
+import scala.util.Try
 
 object Fudim {
   def exec[A](tx: Transaction[A]): A = {
@@ -15,14 +16,14 @@ object Fudim {
     val decTx = tx <* Db.commit
     val (s, r) = decTx.run(state)
     cleanupTx(s)
-    r.fold(throw _, identity)
+    r.get
   }
   def execTx[A](tx: ⇒ A @tx): A = exec(tx.transaction)
 
   def execReadOnly[A](tx: Transaction[A]): A = {
     val (s, result) = (tx <* Db.rollback).run(TxState.readOnly)
     cleanupTx(s)
-    result.fold(throw _, identity)
+    result.get
   }
   def execReadOnlyTx[A](tx: ⇒ A @tx): A = execReadOnly(tx.transaction)
 
@@ -52,21 +53,14 @@ object Fudim {
       def top = get.headOption.map(_._2)
     }
 
-    private def run[A](f: Connection ⇒ A, c: Connection): Either[Exception, A] = {
-      try {
-        Right(f(c))
-      } catch {
-        case e: Exception ⇒ Left(e)
-      }
-    }
     override def inTransaction[A](b: Connection ⇒ A) = execute {
       case s @ TxState(_, _, Some(conn), _) ⇒
-        (s, run(b, conn))
+        (s, Try { b(conn) })
       case s @ TxState(_, false, None, _) ⇒
         Logger.trace(s"Opening a new DB connection for transaction $s")
         val conn = DB.getConnection(autocommit = false)
         connStack.register(s.id, conn)
-        (s.copy(connection = Some(conn)), run(b, conn))
+        (s.copy(connection = Some(conn)), Try { b(conn) })
       case s @ TxState(_, true, None, _) ⇒
         val conn = {
           //If a transaction is running on the thread, then reuse the tx's connection
@@ -81,7 +75,7 @@ object Fudim {
             c
           }
         }
-        (s.copy(connection = Some(conn)), run(b, conn))
+        (s.copy(connection = Some(conn)), Try { b(conn) })
       case _ ⇒ throw new AssertionError("Unsupported TransactionState: Does not implement Db")
     }
 
